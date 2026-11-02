@@ -11,13 +11,13 @@ function resolveAppPath(pathname) {
   if (pathname.startsWith('/admin')) return { role: 'admin', page: 'home', adminTab: pathname.split('/')[2] || 'dashboard' };
   if (pathname.startsWith('/portal/client/projects/')) return { role: 'client', page: 'workspace', projectId: pathname.split('/')[4] || 'project-01' };
   if (pathname === '/portal/client' || pathname === '/portal') return { role: 'client', page: 'my-projects' };
-  const publicRoutes = { '/': 'home', '/projects': 'projects', '/projects/rumah-teduh': 'project-detail', '/services': 'services', '/about': 'about', '/career': 'career', '/contact': 'contact' };
+  const publicRoutes = { '/': 'home', '/projects': 'projects', '/projects/fr-house': 'project-detail', '/projects/rumah-teduh': 'project-detail', '/services': 'services', '/about': 'about', '/career': 'career', '/contact': 'contact' };
   return { role: 'guest', page: publicRoutes[pathname] || 'home' };
 }
 function routePath(role,page,projectId,adminTab) {
   if (role === 'admin') return `/admin/${adminTab || 'dashboard'}`;
   if (role === 'client') return page === 'workspace' ? `/portal/client/projects/${projectId}` : '/portal/client';
-  return ({ home: '/', projects: '/projects', 'project-detail': '/projects/rumah-teduh', services: '/services', about: '/about', career: '/career', contact: '/contact' })[page] || '/';
+  return ({ home: '/', projects: '/projects', 'project-detail': '/projects/fr-house', services: '/services', about: '/about', career: '/career', contact: '/contact' })[page] || '/';
 }
 
 function App() {
@@ -33,6 +33,15 @@ function App() {
   const [filter, setFilter] = useState('All');
   const [workspaceSection, setWorkspaceSection] = useState('overview');
   const [adminTab, setAdminTab] = useState(initialRoute.adminTab || 'dashboard');
+  const [theme, setTheme] = useState(() => localStorage.getItem('na-theme-mode') || 'light');
+
+  useEffect(() => {
+    localStorage.setItem('na-theme-mode', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   useEffect(() => { localStorage.setItem(STORE_KEY, JSON.stringify(db)); }, [db]);
   useEffect(() => { const path = routePath(role,page,selectedProjectId,adminTab); if (window.location.pathname !== path) window.history.pushState({}, '', path); }, [role,page,selectedProjectId,adminTab]);
@@ -55,14 +64,16 @@ function App() {
     setDb(old => ({ ...old, projects: old.projects.map(p => p.id === projectId ? { ...p, activity: [{ id: uid('act'), date: nowLabel(), actor, action, detail }, ...(p.activity || [])] } : p) }));
   };
   const updateProject = (id, updater) => setDb(old => ({ ...old, projects: old.projects.map(p => p.id === id ? updater(p) : p) }));
-  const resetDemo = () => { setDb(structuredClone(seedData)); setRole('guest'); setPage('home'); setAdminTab('dashboard'); setModal(null); notify('Data demo berhasil direset.'); };
+  const resetDemo = () => { setDb(structuredClone(seedData)); setRole('guest'); setPage('home'); setAdminTab('dashboard'); setModal(null); notify('Data workspace berhasil direset.'); };
   const changeRole = (r) => { setRole(r); setMobileNav(false); if (r === 'guest') setPage('home'); if (r === 'client') setPage('my-projects'); if (r === 'admin') setAdminTab('dashboard'); };
 
-  return <div className="app-shell">
+  const isDarkActive = role !== 'guest' && theme === 'dark';
+
+  return <div className={`app-shell ${isDarkActive ? 'dark-mode' : ''}`} data-theme={isDarkActive ? 'dark' : 'light'}>
     {role === 'guest' && <PublicShell page={page} setPage={setPage} go={goPublic} onLogin={() => setModal({ type: 'login' })} role={role} changeRole={changeRole} mobileNav={mobileNav} setMobileNav={setMobileNav} />}
-    {role === 'client' && <ClientShell db={db} client={client} projects={clientProjects} selectedProject={selectedProject} page={clientPage} setPage={setPage} onOpen={openWorkspace} onBack={() => setPage('my-projects')} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} workspaceSection={workspaceSection} setWorkspaceSection={setWorkspaceSection} mobileNav={mobileNav} setMobileNav={setMobileNav} />}
-    {role === 'admin' && <AdminShell db={db} setDb={setDb} projects={db.projects} clients={db.clients} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={adminTab} setTab={setAdminTab} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} />}
-    {modal && <ModalHost modal={modal} close={() => setModal(null)} db={db} setDb={setDb} selectedProject={selectedProject} updateProject={updateProject} addActivity={addActivity} notify={notify} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} />}
+    {role === 'client' && <ClientShell db={db} client={client} projects={clientProjects} selectedProject={selectedProject} page={clientPage} setPage={setPage} onOpen={openWorkspace} onBack={() => setPage('my-projects')} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} workspaceSection={workspaceSection} setWorkspaceSection={setWorkspaceSection} mobileNav={mobileNav} setMobileNav={setMobileNav} theme={theme} toggleTheme={toggleTheme} />}
+    {role === 'admin' && <AdminShell db={db} setDb={setDb} projects={db.projects} clients={db.clients} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={adminTab} setTab={setAdminTab} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} theme={theme} toggleTheme={toggleTheme} />}
+    {modal && <ModalHost modal={modal} close={() => setModal(null)} db={db} setDb={setDb} selectedProject={selectedProject} updateProject={updateProject} addActivity={addActivity} notify={notify} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} theme={theme} />}
     {toast && <div className="toast"><CheckCircle2 size={17}/>{toast}</div>}
   </div>;
 }

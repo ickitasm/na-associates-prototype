@@ -2,12 +2,11 @@ export const seedData = {
   currentClientId: 'client-01',
   admins: [{ id: 'admin-primary', name: 'NA Owner', email: 'owner@example.com', isPrimary: true, status: 'Active' }],
   clients: [
-    { id: 'client-01', name: 'Aditya Pratama', email: 'aditya@example.com', phone: '+62 812 3456 7890', projects: ['project-01', 'project-02'], status: 'Active' },
-    { id: 'client-02', name: 'Nadia Putri', email: 'nadia@example.com', phone: '+62 813 1111 2222', projects: ['project-03'], status: 'Active' }
+    { id: 'client-01', name: 'Aditya Pratama', email: 'aditya@example.com', phone: '+62 812 3456 7890', projects: ['project-01', 'project-02'], status: 'Active' }
   ],
   projects: [
     {
-      id: 'project-01', code: 'NA-026', name: 'Rumah Teduh', location: 'Kemang, Jakarta Selatan', category: 'Residential', landArea: '240 m²', buildingArea: '185 m²', year: '2026', status: 'Active', progress: 62, clientId: 'client-01', cover: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1800&q=85', startDate: '2026-02-01', targetDate: '2027-01-31', nextMilestone: 'Struktur lantai 2', nextMilestoneDate: '2026-11-12', nextPayment: '2026-11-10',
+      id: 'project-01', code: 'NA-026', name: 'FR HOUSE', location: 'Kemang, Jakarta Selatan', category: 'Residential', landArea: '240 m²', buildingArea: '185 m²', year: '2026', status: 'Active', progress: 62, clientId: 'client-01', cover: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1800&q=85', startDate: '2026-02-01', targetDate: '2027-01-31', nextMilestone: 'Struktur lantai 2', nextMilestoneDate: '2026-11-12', nextPayment: '2026-11-10',
       milestones: [
         { id: 'm1', title: 'Concept & Brief', date: '2026-03-01', status: 'Completed', progress: 100 },
         { id: 'm2', title: 'Schematic Design', date: '2026-04-10', status: 'Completed', progress: 100 },
@@ -17,15 +16,66 @@ export const seedData = {
         { id: 'm6', title: 'Finishing & Handover', date: '2027-01-31', status: 'Upcoming', progress: 0 }
       ],
       files: [
-        { id: 'f1', name: 'Concept Design — Rumah Teduh.pdf', category: 'Presentation', date: '2026-04-12', type: 'PDF', visibility: 'Published', description: 'Konsep awal dan arah desain hunian.' },
+        { id: 'f1', name: 'Concept Design — FR HOUSE.pdf', category: 'Presentation', date: '2026-04-12', type: 'PDF', visibility: 'Published', description: 'Konsep awal dan arah desain hunian.' },
         { id: 'f2', name: 'Living Room — Final Render.jpg', category: 'Rendering', date: '2026-08-18', type: 'JPG', visibility: 'Published', description: 'Visualisasi ruang keluarga.' },
         { id: 'f3', name: 'Working Drawing — Structure.pdf', category: 'Drawing', date: '2026-10-03', type: 'PDF', visibility: 'Published', description: 'Gambar kerja struktur.' },
         { id: 'f4', name: 'Internal Cost Review.xlsx', category: 'Internal', date: '2026-10-15', type: 'XLSX', visibility: 'Internal Only', description: 'Dokumen internal tim.' }
       ],
       reports: [
-        { id: 'r1', date: '2026-10-30', category: 'Struktur', title: 'Pekerjaan balok lantai dua', description: 'Pemasangan bekisting balok dan persiapan pengecoran pada area utama.', progress: 62, visibility: 'Published', photos: 3 },
-        { id: 'r2', date: '2026-10-28', category: 'Masonry', title: 'Pekerjaan dinding area servis', description: 'Pemasangan bata ringan pada area servis dan ruang penyimpanan.', progress: 60, visibility: 'Published', photos: 4 },
-        { id: 'r3', date: '2026-11-01', category: 'Struktur', title: 'Pemeriksaan tulangan', description: 'Catatan pemeriksaan internal sebelum pengecoran.', progress: 63, visibility: 'Draft', photos: 2 }
+        {
+          id: 'r1',
+          date: '2026-10-30',
+          category: 'Struktur',
+          title: 'Pekerjaan balok lantai dua',
+          description: 'Pemasangan bekisting balok dan persiapan pengecoran pada area utama.',
+          progress: 62,
+          visibility: 'Published',
+          photos: 3,
+          photoNames: ['bekisting-balok-lt2.jpg', 'pembesian-utama.jpg', 'inspeksi-sambungan.jpg'],
+          workers: [
+            { id: 'w1', name: 'Pak Joko', attendance: 'Hadir', task: 'Pembesian & perakitan tulangan balok' },
+            { id: 'w2', name: 'Pak Slamet', attendance: 'Hadir', task: 'Pemasangan bekisting kayu & perancah cor' },
+            { id: 'w3', name: 'Pak Asep', attendance: 'Hadir', task: 'Pengecoran & operator mesin molen' },
+            { id: 'w4', name: 'Pak Budi', attendance: 'Hadir', task: 'Penyusunan semen & angkut material pasir' }
+          ],
+          tools: 'Molen beton 1 unit, Vibrator cor 2 unit, Bar bender, Scaffolding 16 set',
+          internalNotes: 'Pengecoran area as balok utama berjalan lancar. Cuaca cerah hingga sore.'
+        },
+        {
+          id: 'r2',
+          date: '2026-10-28',
+          category: 'Masonry',
+          title: 'Pekerjaan dinding area servis',
+          description: 'Pemasangan bata ringan pada area servis dan ruang penyimpanan.',
+          progress: 60,
+          visibility: 'Published',
+          photos: 4,
+          photoNames: ['pasang-bata-ringan.jpg', 'plester-sudut.jpg', 'cek-lot-vertikal.jpg', 'area-servis.jpg'],
+          workers: [
+            { id: 'w5', name: 'Pak Slamet', attendance: 'Hadir', task: 'Pasang bata hebel & perekat semen instan' },
+            { id: 'w6', name: 'Pak Joko', attendance: 'Hadir', task: 'Plesteran dasar & roskam dinding' },
+            { id: 'w7', name: 'Pak Rohim', attendance: 'Izin', task: 'Bantu adukan mortar (izin keperluan keluarga)' }
+          ],
+          tools: 'Waterpass digital, Sendok semen, Palu karet, Ember cor, Steger kayu',
+          internalNotes: 'Kedatangan bata hebel tambahan 5 m3 sudah diterima di lokasi.'
+        },
+        {
+          id: 'r3',
+          date: '2026-11-01',
+          category: 'Struktur',
+          title: 'Pemeriksaan tulangan',
+          description: 'Catatan pemeriksaan internal sebelum pengecoran.',
+          progress: 63,
+          visibility: 'Draft',
+          photos: 2,
+          photoNames: ['cek-selimut-beton.jpg', 'ikatan-kawat-bendrat.jpg'],
+          workers: [
+            { id: 'w8', name: 'Pak Joko', attendance: 'Hadir', task: 'Pemeriksaan jarak sengkang & ikatan bendrat' },
+            { id: 'w9', name: 'Pak Asep', attendance: 'Hadir', task: 'Pembersihan serpihan kayu bekisting balok' }
+          ],
+          tools: 'Meteran laser, Caliper besi, Kompresor angin pembersih bekisting',
+          internalNotes: 'Terdapat 2 titik sengkang yang perlu dirapatkan sebelum izin cor diterbitkan.'
+        }
       ],
       shopping: [
         { id: 's1', date: '2026-11-08', material: 'Besi beton Ø10', specification: 'SNI, panjang 12 m', quantity: 120, unit: 'batang', status: 'Dalam Proses', visibility: 'Published', supplier: 'Baja Sentosa', unitCost: 78000 },
@@ -49,10 +99,10 @@ export const seedData = {
       ]
     },
     {
-      id: 'project-02', code: 'NA-031', name: 'Villa Aruna', location: 'Ubud, Bali', category: 'Residential', landArea: '620 m²', buildingArea: '310 m²', year: '2026', status: 'Active', progress: 28, clientId: 'client-01', cover: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1800&q=85', startDate: '2026-06-01', targetDate: '2027-05-30', nextMilestone: 'Design development', nextMilestoneDate: '2026-11-20', nextPayment: '2026-11-18', milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: []
+      id: 'project-02', code: 'NA-031', name: 'MS HOUSE', location: 'Ubud, Bali', category: 'Residential', landArea: '620 m²', buildingArea: '310 m²', year: '2026', status: 'Active', progress: 28, clientId: 'client-01', cover: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1800&q=85', startDate: '2026-06-01', targetDate: '2027-05-30', nextMilestone: 'Design development', nextMilestoneDate: '2026-11-20', nextPayment: '2026-11-18', milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: []
     },
     {
-      id: 'project-03', code: 'NA-019', name: 'Ruang Karya Office', location: 'Bandung, Jawa Barat', category: 'Commercial', landArea: '410 m²', buildingArea: '520 m²', year: '2025', status: 'Completed', progress: 100, clientId: 'client-02', cover: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=85', startDate: '2025-02-01', targetDate: '2025-12-20', nextMilestone: 'Handover selesai', nextMilestoneDate: '2025-12-20', nextPayment: null, milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: []
+      id: 'project-03', code: 'NA-019', name: 'Ruang Karya Office', location: 'Bandung, Jawa Barat', category: 'Commercial', landArea: '410 m²', buildingArea: '520 m²', year: '2025', status: 'Completed', progress: 100, clientId: null, cover: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=85', startDate: '2025-02-01', targetDate: '2025-12-20', nextMilestone: 'Handover selesai', nextMilestoneDate: '2025-12-20', nextPayment: null, milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: []
     }
   ],
   notifications: [
