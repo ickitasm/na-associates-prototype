@@ -1,0 +1,1099 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+src/
+  components/
+    ModalHost.jsx
+    ui.jsx
+  data/
+    seed.js
+  lib/
+    utils.js
+  pages/
+    AdminDashboard.jsx
+    ClientPortal.jsx
+    PublicSite.jsx
+  App.jsx
+  main.jsx
+  styles.css
+.gitignore
+DEMO_GUIDE.md
+FIGMA_HANDOFF.md
+index.html
+package.json
+PROJECT_SPEC.md
+README.md
+vite.config.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/components/ModalHost.jsx">
+import React, { useState } from 'react';
+import {
+  ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Check,
+  CheckCircle2, ChevronDown, ChevronRight, ClipboardList, Clock3, CreditCard,
+  Download, ExternalLink, FileCheck2, FileImage, FileText, FolderOpen, HardHat,
+  Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, Package, Plus,
+  RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Upload, User, UserPlus,
+  Users, Wallet, X, Eye, Activity, AlertCircle
+} from 'lucide-react';
+import { StatusTag, EmptyState } from './ui';
+import { money, dateFmt, nowLabel, uid } from '../lib/utils';
+
+function ModalHost({modal,close,db,setDb,selectedProject,updateProject,addActivity,notify,changeRole,enterClient,enterAdmin}) {
+  const [form,setForm]=useState({}); const [error,setError]=useState('');
+  const set=(k,v)=>setForm(old=>({...old,[k]:v}));
+  const project=modal.project||selectedProject;
+  const input=(label,key,placeholder='',type='text',required=false)=><label className="field"><span>{label}{required&&<b> *</b>}</span><input type={type} placeholder={placeholder} value={form[key]??''} onChange={e=>set(key,e.target.value)} required={required}/></label>;
+  const select=(label,key,options)=><label className="field"><span>{label}</span><select value={form[key]??options[0][0]} onChange={e=>set(key,e.target.value)}>{options.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>;
+  const textarea=(label,key,placeholder='')=><label className="field"><span>{label}</span><textarea rows="3" placeholder={placeholder} value={form[key]??''} onChange={e=>set(key,e.target.value)}/></label>;
+  const submit=(fn)=>e=>{e.preventDefault();setError('');try{fn();}catch(err){setError(err.message||'Something went wrong');}};
+  const finish=(msg)=>{close();notify(msg);};
+  const titleMap={login:'Enter your project space', 'invite-admin':'Invite an Admin', 'create-project':'Create a new project','invite-client':'Invite a client','payment-upload':'Upload payment proof','verify-payment':'Verify payment','reject-payment':'Reject payment proof','revise-invoice':'Revise invoice','new-invoice':'Create invoice','new-report':'New daily project log','new-document':'Upload project file','new-legal':'Add legal document','new-material':'Add material requirement','new-usage':'Record material usage','invoice-detail':'Invoice details','invoice-detail-admin':'Invoice details','invoice-detail':'Invoice details','file-preview':'File preview','file-list':'Project files','client-notifications':'Notifications','info':modal.title||'Information'};
+  const title=modal.title||titleMap[modal.type]||'Details';
+  const footer=(label='Save changes',disabled=false)=><div className="modal-actions"><button type="button" className="btn btn-outline" onClick={close}>Cancel</button><button className="btn btn-dark" type="submit" disabled={disabled}>{label} <ArrowRight size={15}/></button></div>;
+  let body=null;
+  if(modal.type==='login') body=<><p className="modal-lead">This is an interactive prototype. Choose a demo role to explore the relevant workspace.</p><div className="demo-role-list"><button onClick={()=>{changeRole('client');close();enterClient();}}><span className="role-symbol"><User size={19}/></span><span><strong>Continue as Client</strong><small>Aditya Pratama · aditya@example.com</small></span><ArrowRight/></button><button onClick={()=>{close();enterAdmin();}}><span className="role-symbol"><ShieldCheck size={19}/></span><span><strong>Continue as Admin</strong><small>NA Associates · Primary Admin demo</small></span><ArrowRight/></button><button onClick={()=>{changeRole('guest');close();}}><span className="role-symbol"><Eye size={19}/></span><span><strong>Continue as Guest</strong><small>Browse the public website</small></span><ArrowRight/></button></div><div className="modal-footnote">Google authentication is not connected. Role selection is for demonstration only.</div></>;
+  if(modal.type==='create-project') body=<form onSubmit={submit(()=>{const id=uid('project');const p={id,code:form.code||`NA-${String(db.projects.length+32).padStart(3,'0')}`,name:form.name,location:form.location,category:form.category||'Residential',landArea:form.landArea||'—',buildingArea:form.buildingArea||'—',year:'2026',status:'Active',progress:0,clientId:form.clientId||null,cover:form.cover||'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=85',startDate:form.startDate||'2026-11-02',targetDate:form.targetDate||'2027-11-02',nextMilestone:'Project briefing',nextMilestoneDate:form.targetDate||'2026-11-20',nextPayment:null,milestones:[],files:[],reports:[],shopping:[],usage:[],legal:[],invoices:[],activity:[{id:uid('act'),date:nowLabel(),actor:'Admin NA Associates',action:'Project created',detail:`${form.name} dibuat.`}]};setDb(old=>({...old,projects:[p,...old.projects],clients:old.clients.map(c=>c.id===form.clientId?{...c,projects:[...c.projects,id]}:c)}));finish('Project berhasil dibuat.');})}><div className="form-grid">{input('Project name','name','e.g. Rumah Sore','text',true)}{input('Project code','code','e.g. NA-032')}{input('Location','location','City / area','text',true)}{select('Category','category',[['Residential','Residential'],['Commercial','Commercial'],['Common / Other','Common / Other']])}{input('Land area','landArea','e.g. 240 m²')}{input('Building area','buildingArea','e.g. 185 m²')}{select('Assign client','clientId',[['','Unassigned'],...db.clients.map(c=>[c.id,c.name])])}{input('Target completion','targetDate','','date')}{input('Cover image URL','cover','https://...')}</div>{footer('Create project')}</form>;
+  if(modal.type==='invite-admin') body=<form onSubmit={submit(()=>{if(!form.name||!form.email)throw new Error('Name dan email wajib diisi.');const admin={id:uid('admin'),name:form.name,email:form.email,isPrimary:false,status:'Invited'};setDb(old=>({...old,admins:[...(old.admins||[]),admin]}));finish('Admin invitation demo berhasil dibuat. Invitation email is not sent.');})}><div className="form-grid">{input('Admin name','name','Full name','text',true)}{input('Admin email','email','name@studio.com','email',true)}</div><div className="modal-footnote">Only the seeded Primary Admin can create Admin invitations in this prototype. All Admins share operational rights; only the Primary Admin can add other Admins.</div>{footer('Create Admin invitation')}</form>;
+  if(modal.type==='invite-client') body=<form onSubmit={submit(()=>{if(!form.name||!form.email)throw new Error('Name dan email wajib diisi.');const id=uid('client');const assigned=Array.isArray(form.projects)?form.projects:(form.projectId?[form.projectId]:[]);const c={id,name:form.name,email:form.email,phone:form.phone||'',projects:assigned,status:'Invited'};setDb(old=>({...old,clients:[c,...old.clients.map(existing=>({...existing,projects:existing.projects.filter(pid=>!assigned.includes(pid))}))],projects:old.projects.map(p=>assigned.includes(p.id)?{...p,clientId:id}:p)}));finish('Undangan demo dibuat. Email undangan belum dikirim.');})}><div className="form-grid">{input('Client name','name','Full name','text',true)}{input('Google email','email','name@email.com','email',true)}{input('Phone number','phone','+62 ...')}</div><div className="field"><span>Assign project(s)</span><div className="check-list">{db.projects.map(p=><label key={p.id}><input type="checkbox" checked={(form.projects||[]).includes(p.id)} onChange={e=>set('projects',e.target.checked?[...(form.projects||[]),p.id]:(form.projects||[]).filter(x=>x!==p.id))}/><span>{p.name} <small>{p.code}</small></span></label>)}</div></div><div className="modal-footnote">Client will use the invited Google email. Actual email invitation and Google Auth are not connected in this demo.</div>{footer('Create invitation')}</form>;
+  if(modal.type==='payment-upload') body=<form onSubmit={submit(()=>{const amount=Number(form.amount);if(!amount||amount<=0)throw new Error('Masukkan nominal pembayaran yang valid.');const invoice=project.invoices.find(i=>i.id===form.invoiceId);if(!invoice)throw new Error('Pilih invoice.');const pay={id:uid('payment'),date:form.date||'2026-11-02',claimed:amount,approved:0,status:'Pending',proof:form.proofName||'payment-proof-demo.jpg',receipt:null};updateProject(project.id,p=>({...p,invoices:p.invoices.map(i=>i.id===invoice.id?{...i,status:'Pending Verification',payments:[...i.payments,pay]}:i)}));addActivity(project.id,'Payment proof uploaded',`Bukti pembayaran ${money(amount)} untuk ${invoice.number} menunggu verifikasi.`,db.clients.find(c=>c.id===project.clientId)?.name||'Client Demo');finish('Bukti pembayaran berhasil diunggah (simulasi).');})}><div className="modal-highlight"><Wallet size={18}/><div><strong>Upload payment proof</strong><small>{project.name} · {project.code}</small></div></div>{select('Invoice','invoiceId',project.invoices.filter(i=>i.status!=='Cancelled').map(i=>[i.id,`${i.number} · ${money(i.amount)}`]))}{input('Payment date','date','', 'date')}{input('Claimed payment amount (Rp)','amount','e.g. 4000000','number',true)}<label className="upload-box"><Upload size={18}/><span><strong>Choose payment proof</strong><small>JPG, PNG, or PDF · demo file input</small></span><input type="file" accept="image/*,.pdf" onChange={e=>set('proofName',e.target.files?.[0]?.name||'')}/></label>{form.proofName&&<small className="selected-file">Selected: {form.proofName}</small>}<div className="modal-footnote">Uploaded files are not actually stored. This only creates a demo payment record.</div>{footer('Submit proof')}</form>;
+  if(modal.type==='verify-payment') { const previousPaid=modal.invoice.payments.filter(x=>x.status==='Approved').reduce((s,x)=>s+x.approved,0); const remainingBefore=Math.max(0,modal.invoice.amount-previousPaid); const excess=Math.max(0,Number(form.approved??modal.payment.claimed)-remainingBefore); body=<form onSubmit={submit(()=>{const approved=Number(form.approved??modal.payment.claimed);if(!Number.isFinite(approved)||approved<=0)throw new Error('Nominal persetujuan harus lebih dari nol.');const reason=form.reason||'';if(approved!==modal.payment.claimed&&!reason.trim())throw new Error('Alasan wajib diisi jika nominal berbeda.');if(excess>0&&!form.overpaymentDecision)throw new Error('Pilih penanganan nominal lebih bayar.');updateProject(project.id,p=>{const invoices=p.invoices.map(i=>{if(i.id!==modal.invoice.id)return i;const payments=i.payments.map(x=>x.id===modal.payment.id?{...x,approved,status:'Approved',verifiedAt:nowLabel(),verifiedBy:'Admin NA',reason,overpaymentAmount:Math.max(0,approved-remainingBefore),overpaymentDecision:excess>0?form.overpaymentDecision:null,receipt:`RCPT-${project.code}-${i.payments.indexOf(x)+1}`} : x);const paid=payments.filter(x=>x.status==='Approved').reduce((s,x)=>s+x.approved,0);const pending=payments.some(x=>x.status==='Pending');return {...i,payments,status:paid>=i.amount?'Paid':pending?'Pending Verification':paid>0?'Partially Paid':'Unpaid'};});const stillDue=invoices.some(i=>i.status!=='Cancelled'&&i.amount>i.payments.filter(x=>x.status==='Approved').reduce((s,x)=>s+x.approved,0));return {...p,invoices,status:p.status==='On Hold'&&!stillDue?'Ready to Resume':p.status};});addActivity(project.id,'Payment verified',`${modal.invoice.number}: ${money(approved)} disetujui. ${reason}${excess>0?` Overpayment ${money(excess)}: ${form.overpaymentDecision}.`:''}`);finish('Pembayaran disetujui dan receipt demo diterbitkan.');})}><div className="payment-verify-summary"><small>{modal.invoice.number}</small><strong>{money(modal.payment.claimed)}</strong><span>Claimed by client · {dateFmt(modal.payment.date)}</span></div>{input('Approved amount (Rp)','approved',String(modal.payment.claimed),'number',true)}{excess>0&&<><div className="overpayment-callout"><AlertCircle size={15}/><span>Approved amount exceeds the remaining invoice balance by <strong>{money(excess)}</strong>.</span></div>{select('Overpayment handling','overpaymentDecision',[['','Select decision'],['Credit next invoice','Credit to next invoice'],['Refund','Refund to client']])}</>}{textarea('Reason (required if amount differs)','reason','Explain the adjustment, if any.') }<div className="modal-footnote">A receipt reference will be generated after approval. This is a demo record, not a fiscal receipt.</div>{footer('Approve payment')}</form>; }
+  if(modal.type==='reject-payment') body=<form onSubmit={submit(()=>{if(!form.reason?.trim())throw new Error('Alasan penolakan wajib diisi.');updateProject(project.id,p=>({...p,invoices:p.invoices.map(i=>i.id===modal.invoice.id?{...i,payments:i.payments.map(x=>x.id===modal.payment.id?{...x,status:'Rejected',reason:form.reason}:x),status:i.payments.some(x=>x.id!==modal.payment.id&&x.status==='Pending')?'Pending Verification':i.payments.some(x=>x.status==='Approved')?'Partially Paid':'Unpaid'}:i)}));addActivity(project.id,'Payment rejected',`${modal.invoice.number}: ${form.reason}`);finish('Bukti pembayaran ditolak. Bukti lama tetap tersimpan.');})}><div className="payment-verify-summary"><small>{modal.invoice.number}</small><strong>{money(modal.payment.claimed)}</strong><span>{modal.payment.proof||'Payment proof'}</span></div>{textarea('Rejection reason','reason','Describe why the proof cannot be accepted.')}{footer('Reject proof')}</form>;
+  if(modal.type==='new-invoice') body=<form onSubmit={submit(()=>{const amount=Number(form.amount);if(!amount||amount<=0)throw new Error('Nominal invoice harus lebih dari nol.');const num=`INV-${project.code}-${String(project.invoices.length+1).padStart(3,'0')}`;const inv={id:uid('invoice'),number:num,revision:0,amount,dueDate:form.dueDate||'2026-12-10',issueDate:'2026-11-02',status:'Unpaid',payments:[],replacedBy:null,reason:''};updateProject(project.id,p=>({...p,invoices:[inv,...p.invoices]}));addActivity(project.id,'Invoice issued',`${num} diterbitkan sebesar ${money(amount)}.`);finish('Invoice demo berhasil dibuat.');})}><div className="modal-highlight"><FileText size={18}/><div><strong>New invoice</strong><small>{project.name}</small></div></div>{input('Invoice amount (Rp)','amount','e.g. 10000000','number',true)}{input('Due date','dueDate','','date')}{textarea('Description / billing note','description','Optional billing details.')}{footer('Create invoice')}</form>;
+  if(modal.type==='revise-invoice') body=<form onSubmit={submit(()=>{if(!form.reason?.trim())throw new Error('Revision reason wajib diisi.');const amount=Number(form.amount||modal.invoice.amount);const newId=uid('invoice');const newInv={...modal.invoice,id:newId,number:`${modal.invoice.number}-R${modal.invoice.revision+1}`,revision:modal.invoice.revision+1,amount,dueDate:form.dueDate||modal.invoice.dueDate,issueDate:'2026-11-02',status:'Unpaid',payments:modal.invoice.payments.filter(p=>p.status==='Approved').map((p,i)=>({...p,id:uid('payment'),receipt:`RCPT-RELINK-${i+1}`})),replacedBy:null,reason:form.reason,revisionOf:modal.invoice.id};const paid=newInv.payments.reduce((s,p)=>s+p.approved,0);newInv.status=paid>=amount?'Paid':paid>0?'Partially Paid':'Unpaid';updateProject(project.id,p=>({...p,invoices:p.invoices.map(i=>i.id===modal.invoice.id?{...i,status:'Cancelled',replacedBy:newId,reason:form.reason}:i).concat(newInv)}));addActivity(project.id,'Invoice revised',`${modal.invoice.number} diganti dengan ${newInv.number}. Reason: ${form.reason}`);finish('Invoice direvisi. Histori invoice lama tetap dipertahankan.');})}><div className="payment-verify-summary"><small>REPLACING {modal.invoice.number}</small><strong>{money(modal.invoice.amount)}</strong><span>Original due date · {dateFmt(modal.invoice.dueDate)}</span></div>{input('Revised amount (Rp)','amount',String(modal.invoice.amount),'number',true)}{input('New due date (leave unchanged if same)','dueDate','','date')}{textarea('Mandatory revision reason','reason','Explain why this invoice needs revision.') }<div className="modal-footnote">The old invoice will be archived as Cancelled / Replaced. Approved payments are carried forward without double counting.</div>{footer('Create revised invoice')}</form>;
+  if(modal.type==='new-report') body=<form onSubmit={submit(()=>{if(!form.title||!form.description)throw new Error('Judul dan deskripsi wajib diisi.');const r={id:uid('report'),date:form.date||'2026-11-02',category:form.category||'General',title:form.title,description:form.description,progress:Number(form.progress||project.progress),visibility:form.visibility||'Draft',photos:form.photos?1:0,attendance:form.employeeName?[{employee:form.employeeName,status:form.attendanceStatus||'Present',jobDescription:form.jobDescription||'',tools:form.tools||''}]:[],internalNotes:form.internalNotes||''};updateProject(project.id,p=>({...p,reports:[r,...p.reports],progress:Math.max(p.progress,r.progress)}));addActivity(project.id,'Daily log created',`${r.title} disimpan sebagai ${r.visibility}.`);finish('Daily project log berhasil disimpan.');})}><div className="form-grid">{input('Date','date','','date')}{select('Work category','category',[['Structure','Structure'],['Masonry','Masonry'],['Finishing','Finishing'],['MEP','MEP'],['General','General']])}{input('Report title','title','e.g. Pekerjaan balok lantai dua','text',true)}{input('Progress (%)','progress',String(project.progress),'number')}</div>{textarea('Work description','description','Describe work completed today...')}<div className="internal-form-block"><div><strong>Internal attendance & equipment</strong><small>Admin only · never shown in Client Portal</small></div><div className="form-grid">{input('Employee name','employeeName','Employee name')}{select('Attendance','attendanceStatus',[['Present','Present'],['Absent','Absent'],['Permit','Permit'],['Sick','Sick']])}{input('Job description','jobDescription','Assigned task')}{input('Tools / equipment','tools','Tools used')}</div>{textarea('Internal notes','internalNotes','Internal team notes...')}</div>{select('Visibility','visibility',[['Draft','Draft — internal only'],['Published','Published to Client']])}<label className="upload-box"><Upload size={18}/><span><strong>Add site photos</strong><small>Image attachment · demo only</small></span><input type="file" accept="image/*" multiple onChange={e=>set('photos',e.target.files?.length>0)}/></label>{footer('Save daily log')}</form>;
+  if(modal.type==='new-document') body=<form onSubmit={submit(()=>{const d={id:uid('file'),name:form.name||'Project document.pdf',category:form.category||'Drawing',date:form.date||'2026-11-02',type:form.type||'PDF',visibility:form.visibility||'Internal Only',description:form.description||''};updateProject(project.id,p=>({...p,files:[d,...p.files]}));addActivity(project.id,'Document uploaded',`${d.name} (${d.visibility}).`);finish('Document demo berhasil ditambahkan.');})}>{input('Document name','name','e.g. Floor Plan — Rev 02.pdf','text',true)}<div className="form-grid">{select('Category','category',[['Presentation','Presentation'],['Rendering','Rendering'],['Drawing','Drawing'],['Report','Report'],['Other','Other']])}{select('File type','type',[['PDF','PDF'],['JPG','JPG'],['PNG','PNG'],['XLSX','XLSX']])}{input('Upload date','date','','date')}{select('Visibility','visibility',[['Internal Only','Internal Only'],['Published','Published to Client']])}</div>{textarea('Description','description','Short description of this file.') }<label className="upload-box"><Upload size={18}/><span><strong>Choose file</strong><small>PDF, image, or spreadsheet · demo only</small></span><input type="file" onChange={e=>set('name',e.target.files?.[0]?.name||form.name)}/></label>{footer('Add document')}</form>;
+  if(modal.type==='new-legal') body=<form onSubmit={submit(()=>{const d={id:uid('legal'),name:form.name,version:form.version||'v1.0',date:form.date||'2026-11-02',visibility:form.visibility||'Internal Only'};updateProject(project.id,p=>({...p,legal:[d,...p.legal]}));addActivity(project.id,'Legal document added',d.name);finish('Legal document berhasil ditambahkan.');})}>{input('Document name','name','e.g. Addendum 02','text',true)}<div className="form-grid">{input('Version','version','v1.0')}{input('Document date','date','','date')}{select('Visibility','visibility',[['Internal Only','Internal Only'],['Published','Published to Client']])}</div>{footer('Add legal document')}</form>;
+  if(modal.type==='new-material') body=<form onSubmit={submit(()=>{const s={id:uid('material'),date:form.date||'2026-11-02',material:form.material,specification:form.specification||'',quantity:Number(form.quantity||0),unit:form.unit||'unit',status:'Belum Dibeli',visibility:'Draft',supplier:form.supplier||'',unitCost:Number(form.unitCost||0)};updateProject(project.id,p=>({...p,shopping:[s,...p.shopping]}));addActivity(project.id,'Shopping item added',`${s.material} ditambahkan sebagai Draft.`);finish('Material requirement berhasil ditambahkan.');})}>{input('Material name','material','e.g. Besi beton Ø10','text',true)}{input('Specification','specification','Grade, size, brand, etc.') }<div className="form-grid">{input('Date needed','date','','date')}{input('Quantity','quantity','e.g. 120','number')}{input('Unit','unit','e.g. batang')}{input('Internal unit cost (Rp)','unitCost','Optional','number')}</div>{input('Supplier (internal)','supplier','Supplier name') }<div className="modal-footnote">New shopping items are saved as Draft. Publish them from Shopping & Materials to show them to the Client.</div>{footer('Add material')}</form>;
+  if(modal.type==='new-usage') body=<form onSubmit={submit(()=>{const u={id:uid('usage'),date:form.date||'2026-11-02',material:form.material,quantity:Number(form.quantity||0),unit:form.unit||'unit',area:form.area||''};updateProject(project.id,p=>({...p,usage:[u,...p.usage]}));addActivity(project.id,'Material usage recorded',`${u.material}: ${u.quantity} ${u.unit}.`);finish('Material usage berhasil dicatat.');})}>{input('Material','material','Material name','text',true)}<div className="form-grid">{input('Date','date','','date')}{input('Quantity','quantity','Amount','number')}{input('Unit','unit','e.g. batang')}{input('Work area','area','e.g. Lantai 2')}</div>{footer('Record usage')}</form>;
+  if(modal.type==='invoice-detail'||modal.type==='invoice-detail-admin') {const inv=modal.invoice;const paid=inv.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0);body=<div><div className="invoice-detail-summary"><small>{inv.number}</small><h2>{money(inv.amount)}</h2><StatusTag value={inv.status}/><p>Issue date {dateFmt(inv.issueDate)} · Due {dateFmt(inv.dueDate)}</p><ProgressBar value={inv.amount?paid/inv.amount*100:0}/><div className="detail-amounts"><span>Verified paid <strong>{money(paid)}</strong></span><span>Remaining <strong>{money(Math.max(0,inv.amount-paid))}</strong></span></div></div><h4 className="modal-subtitle">Payment history</h4>{inv.payments.map(p=><div className="payment-history-row" key={p.id}><div><strong>{money(p.approved||p.claimed)}</strong><small>{dateFmt(p.date)} · claimed {money(p.claimed)}</small>{p.reason&&<small>Reason: {p.reason}</small>}{p.overpaymentAmount>0&&<small>Overpayment {money(p.overpaymentAmount)} · {p.overpaymentDecision}</small>}</div><div><StatusTag value={p.status}/>{p.receipt&&<small className="receipt-ref">{p.receipt}</small>}</div></div>)}{!inv.payments.length&&<EmptyState title="No payments yet" detail="Payment records will appear here."/>}{modal.type==='invoice-detail-admin'&&inv.status!=='Paid'&&inv.status!=='Cancelled'&&<button className="btn btn-outline modal-wide-btn" onClick={()=>setTimeout(()=>{},1)}>PDF preview is demo-only</button>}<div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>; }
+  if(modal.type==='file-preview') body=<div className="file-preview-modal"><div className="preview-art"><FileText size={44}/><span>DOCUMENT PREVIEW</span></div><h3>{modal.file?.name}</h3><p>{modal.file?.description||'Preview dokumen demo. File storage belum terhubung.'}</p><div className="file-preview-meta"><span>File type <strong>{modal.file?.type||'PDF'}</strong></span><span>Access <strong>Demo preview</strong></span></div><div className="modal-actions"><button className="btn btn-outline" onClick={close}>Close</button><button className="btn btn-dark" onClick={()=>notify('Download dinonaktifkan: file demo belum tersedia.')}> <Download size={15}/> Download</button></div></div>;
+  if(modal.type==='file-list') body=<div className="document-list">{(project.files||[]).filter(f=>f.visibility==='Published').map(f=><div className="document-row" key={f.id}><span className="document-icon"><FileText/></span><div><strong>{f.name}</strong><small>{f.category} · {dateFmt(f.date)}</small></div><StatusTag value={f.visibility}/></div>)}</div>;
+  if(modal.type==='client-notifications') body=<div className="notification-modal-list">{db.notifications.map(n=><div className="notification-row" key={n.id}><span className="notification-icon"><Bell size={17}/></span><div><strong>{n.title}</strong><p>{n.body}</p><small>{dateFmt(n.date)}</small></div></div>)}</div>;
+  if(modal.type==='info') body=<div><p className="modal-lead preserve-lines">{modal.body}</p><div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>;
+  return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}><section className="modal-card"><header className="modal-header"><div><div className="eyebrow">NA ASSOCIATES / DEMO</div><h2>{title}</h2></div><button className="icon-btn" onClick={close}><X size={19}/></button></header><div className="modal-body">{body}{error&&<div className="form-error"><AlertCircle size={15}/>{error}</div>}</div></section></div>;
+}
+export { ModalHost };
+</file>
+
+<file path="src/components/ui.jsx">
+import React from 'react';
+import { ArrowUpRight, CalendarDays, Clock3, FileText, FolderOpen, Image, Plus, Activity } from 'lucide-react';
+import { money, dateFmt } from '../lib/utils';
+
+export function Brand({ inverse = false }) { return <button className={`brand ${inverse ? 'brand-inverse' : ''}`} onClick={() => window.dispatchEvent(new CustomEvent('na-home'))} aria-label="NA Associates home"><span className="brand-mark">NA</span><span className="brand-copy"><strong>NA ASSOCIATES</strong><small>ARCHITECTURE & DESIGN</small></span></button>; }
+export function PageIntro({ eyebrow, title, italic, desc }) { return <section className="page-intro wrap"><div className="eyebrow">{eyebrow}</div><h1>{title} <em>{italic}</em></h1>{desc && <p>{desc}</p>}</section>; }
+export function Field({ label, required, placeholder, type='text', textarea=false }) { return <label className="field"><span>{label}{required && <b> *</b>}</span>{textarea ? <textarea placeholder={placeholder} required={required} rows="4"/> : <input type={type} placeholder={placeholder} required={required}/>}</label>; }
+export function PublicFooter({ go }) { return <footer className="public-footer"><div className="wrap footer-top"><div><Brand inverse/><p>Architecture shaped by context,<br/>clarity, and everyday life.</p></div><div className="footer-links"><div><small>EXPLORE</small><button onClick={() => go('projects')}>Projects</button><button onClick={() => go('services')}>Services</button><button onClick={() => go('about')}>About</button></div><div><small>CONNECT</small><button onClick={() => go('career')}>Career</button><button onClick={() => go('contact')}>Contact</button><button onClick={() => go('home')}>Back to top ↑</button></div></div></div><div className="wrap footer-bottom"><span>© 2026 NA Associates</span><span>ARCHITECTURE & DESIGN · JAKARTA, INDONESIA</span></div></footer>; }
+export function ProgressBar({ value=0 }) { return <div className="progress-bar"><span style={{width:`${Math.max(0,Math.min(100,value))}%`}}/></div>; }
+export function SectionHeading({ number, title, description, action, onAction }) { return <div className="workspace-section-head"><div><div className="eyebrow">{number} / PROJECT MODULE</div><h2>{title}</h2><p>{description}</p></div>{action && <button className="btn btn-outline" onClick={onAction}>{action} <ArrowUpRight size={14}/></button>}</div>; }
+export function FileTile({ file, onOpen }) { return <button className="file-tile" onClick={onOpen}><div className={`file-thumb ${file.type==='JPG'?'image-thumb':''}`}>{file.type==='JPG'?<Image size={28}/>:<FileText size={28}/>}<span>{file.type}</span></div><div><strong>{file.name}</strong><small>{file.category} · {dateFmt(file.date)}</small></div><ArrowUpRight size={16}/></button>; }
+export function InvoiceClientCard({ invoice, setModal }) { const paid=invoice.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0); const remaining=Math.max(0,invoice.amount-paid); const pending=invoice.payments.filter(p=>p.status==='Pending').reduce((s,p)=>s+p.claimed,0); return <article className="invoice-card"><div className="invoice-card-top"><div><small>{invoice.number}</small><strong>{money(invoice.amount)}</strong></div><StatusTag value={invoice.status}/></div><div className="invoice-meter"><div><span>Paid {money(paid)}</span><span>Remaining {money(remaining)}</span></div><ProgressBar value={invoice.amount ? paid/invoice.amount*100 : 0}/></div>{pending>0 && <div className="pending-inline"><Clock3 size={14}/> {money(pending)} menunggu verifikasi</div>}<div className="invoice-card-bottom"><span>Due date · {dateFmt(invoice.dueDate)}</span><button className="under-link" onClick={()=>setModal({type:'invoice-detail',invoice})}>View details <ArrowUpRight size={14}/></button></div></article>; }
+export function MonthlyRecap({ invoices }) { const months = {}; invoices.filter(i=>i.status!=='Cancelled').forEach(i=>{const key=(i.issueDate||'').slice(0,7)||'Other'; if(!months[key]) months[key]={amount:0,paid:0,count:0}; months[key].amount+=i.amount; months[key].paid+=i.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0); months[key].count++;}); return <div className="recap-list">{Object.entries(months).sort((a,b)=>b[0].localeCompare(a[0])).map(([month,v])=><div className="recap-row" key={month}><div className="recap-month"><CalendarDays size={17}/><strong>{new Date(`${month}-01T00:00:00`).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</strong></div><div><small>INVOICES</small><strong>{v.count}</strong></div><div><small>INVOICED</small><strong>{money(v.amount)}</strong></div><div><small>VERIFIED PAID</small><strong>{money(v.paid)}</strong></div></div>)}{!Object.keys(months).length && <EmptyState title="No monthly records" detail="Monthly financial recap will appear here."/>}</div>; }
+export function StatusTag({ value }) { const cls = String(value||'').toLowerCase().replaceAll(' ','-'); return <span className={`status-tag tag-${cls}`}>{value}</span>; }
+export function EmptyState({ title, detail }) { return <div className="empty-state"><span><FolderOpen size={22}/></span><strong>{title}</strong><p>{detail}</p></div>; }
+export function AdminPageHeader({ eyebrow, title, description, action, onAction }) { return <div className="admin-page-header"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div>{action && <button className="btn btn-dark" onClick={onAction}><Plus size={16}/>{action}</button>}</div>; }
+export function Metric({icon:Icon,label,value,note,accent}) { return <div className={`metric-card ${accent?'metric-alert':''}`}><span className="metric-icon"><Icon size={18}/></span><small>{label}</small><strong>{value}</strong><p>{note}</p></div>; }
+export function ActivityTable({projects,limit}) { const items=projects.flatMap(p=>(p.activity||[]).map(a=>({...a,project:p.name}))).slice(0,limit||100); return <div className="activity-table">{items.map(a=><div className="activity-row" key={a.id}><span className="activity-dot"><Activity size={14}/></span><div><strong>{a.action}</strong><p>{a.detail}</p><small>{a.actor} · {a.date} · {a.project}</small></div></div>)}{!items.length&&<EmptyState title="No activity recorded" detail="Changes to project records will appear here."/>}</div>; }
+</file>
+
+<file path="src/data/seed.js">
+export const seedData = {
+  currentClientId: 'client-01',
+  admins: [{ id: 'admin-primary', name: 'NA Owner', email: 'owner@example.com', isPrimary: true, status: 'Active' }],
+  clients: [
+    { id: 'client-01', name: 'Aditya Pratama', email: 'aditya@example.com', phone: '+62 812 3456 7890', projects: ['project-01', 'project-02'], status: 'Active' },
+    { id: 'client-02', name: 'Nadia Putri', email: 'nadia@example.com', phone: '+62 813 1111 2222', projects: ['project-03'], status: 'Active' }
+  ],
+  projects: [
+    {
+      id: 'project-01', code: 'NA-026', name: 'Rumah Teduh', location: 'Kemang, Jakarta Selatan', category: 'Residential', landArea: '240 m²', buildingArea: '185 m²', year: '2026', status: 'Active', progress: 62, clientId: 'client-01', cover: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1800&q=85', startDate: '2026-02-01', targetDate: '2027-01-31', nextMilestone: 'Struktur lantai 2', nextMilestoneDate: '2026-11-12', nextPayment: '2026-11-10',
+      milestones: [
+        { id: 'm1', title: 'Concept & Brief', date: '2026-03-01', status: 'Completed', progress: 100 },
+        { id: 'm2', title: 'Schematic Design', date: '2026-04-10', status: 'Completed', progress: 100 },
+        { id: 'm3', title: 'Design Development', date: '2026-06-15', status: 'Completed', progress: 100 },
+        { id: 'm4', title: 'Construction Documentation', date: '2026-08-20', status: 'Completed', progress: 100 },
+        { id: 'm5', title: 'Struktur & Pekerjaan Lapangan', date: '2026-11-12', status: 'In Progress', progress: 62 },
+        { id: 'm6', title: 'Finishing & Handover', date: '2027-01-31', status: 'Upcoming', progress: 0 }
+      ],
+      files: [
+        { id: 'f1', name: 'Concept Design — Rumah Teduh.pdf', category: 'Presentation', date: '2026-04-12', type: 'PDF', visibility: 'Published', description: 'Konsep awal dan arah desain hunian.' },
+        { id: 'f2', name: 'Living Room — Final Render.jpg', category: 'Rendering', date: '2026-08-18', type: 'JPG', visibility: 'Published', description: 'Visualisasi ruang keluarga.' },
+        { id: 'f3', name: 'Working Drawing — Structure.pdf', category: 'Drawing', date: '2026-10-03', type: 'PDF', visibility: 'Published', description: 'Gambar kerja struktur.' },
+        { id: 'f4', name: 'Internal Cost Review.xlsx', category: 'Internal', date: '2026-10-15', type: 'XLSX', visibility: 'Internal Only', description: 'Dokumen internal tim.' }
+      ],
+      reports: [
+        { id: 'r1', date: '2026-10-30', category: 'Struktur', title: 'Pekerjaan balok lantai dua', description: 'Pemasangan bekisting balok dan persiapan pengecoran pada area utama.', progress: 62, visibility: 'Published', photos: 3 },
+        { id: 'r2', date: '2026-10-28', category: 'Masonry', title: 'Pekerjaan dinding area servis', description: 'Pemasangan bata ringan pada area servis dan ruang penyimpanan.', progress: 60, visibility: 'Published', photos: 4 },
+        { id: 'r3', date: '2026-11-01', category: 'Struktur', title: 'Pemeriksaan tulangan', description: 'Catatan pemeriksaan internal sebelum pengecoran.', progress: 63, visibility: 'Draft', photos: 2 }
+      ],
+      shopping: [
+        { id: 's1', date: '2026-11-08', material: 'Besi beton Ø10', specification: 'SNI, panjang 12 m', quantity: 120, unit: 'batang', status: 'Dalam Proses', visibility: 'Published', supplier: 'Baja Sentosa', unitCost: 78000 },
+        { id: 's2', date: '2026-11-12', material: 'Semen Portland', specification: '50 kg / sak', quantity: 80, unit: 'sak', status: 'Belum Dibeli', visibility: 'Published', supplier: 'Toko Bangunan Jaya', unitCost: 69000 },
+        { id: 's3', date: '2026-11-15', material: 'Pasir beton', specification: 'Kualitas cor', quantity: 4, unit: 'm³', status: 'Sudah Dibeli', visibility: 'Draft', supplier: 'CV Sumber Alam', unitCost: 280000 }
+      ],
+      usage: [{ id: 'u1', date: '2026-10-30', material: 'Besi beton Ø10', quantity: 36, unit: 'batang', area: 'Balok lantai 2' }],
+      legal: [
+        { id: 'l1', name: 'Perjanjian Jasa Arsitektur', version: 'v1.0', date: '2026-02-01', visibility: 'Published' },
+        { id: 'l2', name: 'Addendum 01 — Penyesuaian Area', version: 'v1.0', date: '2026-06-20', visibility: 'Published' },
+        { id: 'l3', name: 'Legal Review Internal', version: 'v1.0', date: '2026-10-01', visibility: 'Internal Only' }
+      ],
+      invoices: [
+        { id: 'i1', number: 'INV-NA-026-001', revision: 0, amount: 10000000, dueDate: '2026-11-10', issueDate: '2026-10-25', status: 'Partially Paid', payments: [{ id: 'p1', date: '2026-11-01', claimed: 4000000, approved: 4000000, status: 'Approved', receipt: 'RCPT-026-001', proof: 'Bukti-transfer-1.jpg' }] , replacedBy: null, reason: '' },
+        { id: 'i2', number: 'INV-NA-026-002', revision: 0, amount: 7500000, dueDate: '2026-12-10', issueDate: '2026-11-01', status: 'Unpaid', payments: [], replacedBy: null, reason: '' }
+      ],
+      activity: [
+        { id: 'a1', date: '2026-11-01 10:42', actor: 'Admin NA', action: 'Payment verified', detail: 'Pembayaran Rp4.000.000 pada INV-NA-026-001 disetujui.' },
+        { id: 'a2', date: '2026-10-30 16:10', actor: 'Admin NA', action: 'Progress published', detail: 'Pekerjaan balok lantai dua dipublikasikan.' },
+        { id: 'a3', date: '2026-10-25 09:30', actor: 'Admin NA', action: 'Invoice issued', detail: 'INV-NA-026-001 diterbitkan.' }
+      ]
+    },
+    {
+      id: 'project-02', code: 'NA-031', name: 'Villa Aruna', location: 'Ubud, Bali', category: 'Residential', landArea: '620 m²', buildingArea: '310 m²', year: '2026', status: 'Active', progress: 28, clientId: 'client-01', cover: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1800&q=85', startDate: '2026-06-01', targetDate: '2027-05-30', nextMilestone: 'Design development', nextMilestoneDate: '2026-11-20', nextPayment: '2026-11-18', milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: []
+    },
+    {
+      id: 'project-03', code: 'NA-019', name: 'Ruang Karya Office', location: 'Bandung, Jawa Barat', category: 'Commercial', landArea: '410 m²', buildingArea: '520 m²', year: '2025', status: 'Completed', progress: 100, clientId: 'client-02', cover: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=85', startDate: '2025-02-01', targetDate: '2025-12-20', nextMilestone: 'Handover selesai', nextMilestoneDate: '2025-12-20', nextPayment: null, milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: []
+    }
+  ],
+  notifications: [
+    { id: 'n1', title: 'Bukti pembayaran diterima', body: 'Bukti transfer untuk INV-NA-026-001 sedang menunggu pemeriksaan.', date: '2026-11-01', read: false },
+    { id: 'n2', title: 'Progress proyek diperbarui', body: 'Laporan pekerjaan balok lantai dua telah dipublikasikan.', date: '2026-10-30', read: true }
+  ]
+};
+</file>
+
+<file path="src/lib/utils.js">
+import { seedData } from '../data/seed';
+
+export const STORE_KEY = 'na-associates-demo-v1';
+export const money = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(n || 0));
+export const dateFmt = (d) => d ? new Date(`${d}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+export const nowLabel = () => new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+export const uid = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+export const loadDB = () => {
+  try { const raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : structuredClone(seedData); }
+  catch { return structuredClone(seedData); }
+};
+</file>
+
+<file path="src/pages/AdminDashboard.jsx">
+import React, { useState } from 'react';
+import {
+  ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Check,
+  CheckCircle2, ChevronDown, ChevronRight, ClipboardList, Clock3, CreditCard,
+  Download, ExternalLink, FileCheck2, FileImage, FileText, FolderOpen, HardHat,
+  Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, Package, Plus,
+  RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Upload, User, UserPlus,
+  Users, Wallet, X, Eye, Activity, AlertCircle
+} from 'lucide-react';
+import { Brand, ProgressBar, StatusTag, EmptyState, AdminPageHeader, Metric, ActivityTable } from '../components/ui';
+import { money, dateFmt } from '../lib/utils';
+
+const adminNav = [
+  ['dashboard','Dashboard',LayoutDashboard],['projects','Projects',Building2],['clients','Clients & Accounts',Users],['operations','Field Operations',HardHat],['documents','Documents & Legal',FileText],['materials','Shopping & Materials',Package],['billing','Billing & Payments',Wallet],['notifications','Notifications',Bell],['activity','Activity Log',Activity],['content','Website Content',GlobeIcon],['settings','Settings',Settings]
+];
+function GlobeIcon(props) { return <ExternalLink {...props}/>; }
+function AdminShell({ db,setDb,projects,clients,selectedProject,selectedProjectId,setSelectedProjectId,tab,setTab,onLogout,onReset,onNotify,setModal,updateProject,addActivity }) {
+  const [sidebarOpen,setSidebarOpen] = useState(false);
+  return <div className="admin-app"><aside className={`admin-sidebar ${sidebarOpen?'admin-sidebar-open':''}`}><div className="admin-brand"><Brand inverse/><span className="admin-label">STUDIO MANAGEMENT</span></div><div className="admin-nav-title">WORKSPACE</div><nav className="admin-nav">{adminNav.map(([id,label,Icon])=><button key={id} onClick={()=>{setTab(id);setSidebarOpen(false);}} className={tab===id?'active':''}><Icon size={17}/><span>{label}</span>{id==='billing' && <i className="nav-count">{db.projects.reduce((s,p)=>s+p.invoices.reduce((t,i)=>t+i.payments.filter(x=>x.status==='Pending').length,0),0)||''}</i>}</button>)}</nav><div className="admin-sidebar-bottom"><div className="admin-profile"><span className="avatar">NA</span><div><strong>NA Associates</strong><small>Primary Admin · Demo</small></div><MoreHorizontal size={16}/></div><button className="admin-reset" onClick={onReset}><RotateCcw size={14}/> Reset demo data</button><button className="admin-logout" onClick={onLogout}><ArrowLeft size={15}/> Back to public website</button></div></aside><main className="admin-main"><header className="admin-topbar"><div className="admin-top-left"><button className="icon-btn mobile-menu" onClick={()=>setSidebarOpen(v=>!v)}><Menu/></button><div className="breadcrumb">NA Associates <ChevronRight size={13}/> <strong>{adminNav.find(x=>x[0]===tab)?.[1]}</strong></div></div><div className="admin-top-actions"><span className="demo-label"><i/> DEMO ENVIRONMENT</span><button className="icon-btn" onClick={()=>setTab('notifications')}><Bell size={18}/><i className="notification-dot"/></button><span className="avatar">NA</span></div></header><div className="admin-content">{tab==='dashboard' && <AdminDashboard db={db} setTab={setTab} setModal={setModal}/>} {tab==='projects' && <AdminProjects projects={projects} clients={clients} setSelectedProjectId={setSelectedProjectId} setTab={setTab} setModal={setModal}/>} {tab==='clients' && <AdminClients clients={clients} projects={projects} setModal={setModal}/>} {tab==='operations' && <AdminOperations projects={projects} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>} {tab==='documents' && <AdminDocuments projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>} {tab==='materials' && <AdminMaterials projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>} {tab==='billing' && <AdminBilling projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>} {tab==='notifications' && <AdminNotifications db={db} setDb={setDb}/>} {tab==='activity' && <AdminActivity projects={projects}/>} {tab==='content' && <AdminContent/>} {tab==='settings' && <AdminSettings onReset={onReset} admins={db.admins||[]} setModal={setModal}/>}</div></main></div>;
+}
+
+function AdminDashboard({ db,setTab,setModal }) {
+  const projects=db.projects;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const invoices=projects.flatMap(p=>p.invoices).filter(i=>i.status!=='Cancelled');
+  const pending=invoices.reduce((s,i)=>s+i.payments.filter(p=>p.status==='Pending').length,0);
+  const overdue=invoices.filter(i=>{const paid=i.payments.filter(p=>p.status==='Approved').reduce((sum,p)=>sum+p.approved,0);return i.status!=='Paid'&&i.amount>paid&&new Date(`${i.dueDate}T00:00:00`)<today;}).length;
+  const onHold=projects.filter(p=>p.status==='On Hold').length;
+  return <><AdminPageHeader eyebrow={`${today.toLocaleDateString('en-US',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}).toUpperCase()} / OVERVIEW`} title="Good morning, NA team." description="Here is what is happening across your studio projects."/><div className="admin-metrics dashboard-metrics"><Metric icon={Building2} label="Total projects" value={projects.length} note="Across all categories"/><Metric icon={Activity} label="Ongoing projects" value={projects.filter(p=>p.status==='Active').length} note="Currently in progress"/><Metric icon={Users} label="Active clients" value={db.clients.filter(c=>c.status==='Active').length} note="Active client accounts"/><Metric icon={Wallet} label="Pending verification" value={pending} note="Payments to review" accent={pending>0}/><Metric icon={AlertCircle} label="Overdue invoices" value={overdue} note="Outstanding past due date" accent={overdue>0}/><Metric icon={Clock3} label="Projects on hold" value={onHold} note="Operational updates paused" accent={onHold>0}/></div><div className="admin-dashboard-grid"><section className="admin-panel"><div className="admin-panel-head"><div><h3>Project overview</h3><p>Progress across active projects</p></div><button className="under-link" onClick={()=>setTab('projects')}>All projects <ArrowUpRight size={14}/></button></div><div className="admin-project-list">{projects.slice(0,4).map(p=><div className="admin-project-row" key={p.id}><img src={p.cover}/><div className="admin-project-name"><strong>{p.name}</strong><small>{p.code} · {p.location}</small></div><div className="admin-project-progress"><div><span>{p.status}</span><strong>{p.progress}%</strong></div><ProgressBar value={p.progress}/></div><ChevronRight size={16}/></div>)}</div></section><section className="admin-panel"><div className="admin-panel-head"><div><h3>Quick actions</h3><p>Common studio tasks</p></div></div><div className="quick-actions"><button onClick={()=>setModal({type:'create-project'})}><span><Plus/></span><strong>Create project</strong><small>Set up a new project</small><ArrowUpRight size={15}/></button><button onClick={()=>setModal({type:'invite-client'})}><span><UserPlus/></span><strong>Invite client</strong><small>Give a client project access</small><ArrowUpRight size={15}/></button><button onClick={()=>setTab('operations')}><span><ClipboardList/></span><strong>Add progress report</strong><small>Record a site update</small><ArrowUpRight size={15}/></button><button onClick={()=>setTab('billing')}><span><CreditCard/></span><strong>Review payments</strong><small>{pending} waiting for review</small><ArrowUpRight size={15}/></button></div></section></div><section className="admin-panel recent-panel"><div className="admin-panel-head"><div><h3>Recent activity</h3><p>Latest changes across your projects</p></div><button className="under-link" onClick={()=>setTab('activity')}>View activity log <ArrowUpRight size={14}/></button></div><ActivityTable projects={projects} limit={5}/></section></>;
+}
+function AdminProjects({ projects,clients,setSelectedProjectId,setTab,setModal }) { const [q,setQ]=useState(''); const [status,setStatus]=useState('All'); const filtered=projects.filter(p=>(status==='All'||p.status===status)&&`${p.name} ${p.code} ${p.location}`.toLowerCase().includes(q.toLowerCase())); return <><AdminPageHeader eyebrow="STUDIO / PROJECTS" title="Projects" description="Manage project information, assignments, and progress." action="Create project" onAction={()=>setModal({type:'create-project'})}/><div className="admin-toolbar"><div className="search-field"><Search size={16}/><input placeholder="Search projects..." value={q} onChange={e=>setQ(e.target.value)}/></div><select value={status} onChange={e=>setStatus(e.target.value)}><option>All</option><option>Active</option><option>Completed</option><option>On Hold</option></select><span className="muted">{filtered.length} projects</span></div><div className="admin-project-cards">{filtered.map(p=><article className="admin-project-card" key={p.id}><div className="admin-project-card-photo"><img src={p.cover}/><span className={`status-pill ${p.status==='Completed'?'complete':''}`}>{p.status}</span></div><div className="admin-project-card-body"><div className="eyebrow">{p.code} · {p.category}</div><h3>{p.name}</h3><p><MapPin size={13}/>{p.location}</p><div className="admin-card-progress"><div><small>PROGRESS</small><strong>{p.progress}%</strong></div><ProgressBar value={p.progress}/></div><div className="admin-project-card-foot"><span>{clients.find(c=>c.id===p.clientId)?.name||'Unassigned'}</span><button className="under-link" onClick={()=>{setSelectedProjectId(p.id);setTab('operations');}}>Manage project <ArrowUpRight size={14}/></button></div></div></article>)}</div>{!filtered.length&&<EmptyState title="No matching projects" detail="Try a different search or filter."/>}</>; }
+function AdminClients({ clients,projects,setModal }) { const [q,setQ]=useState(''); const filtered=clients.filter(c=>`${c.name} ${c.email}`.toLowerCase().includes(q.toLowerCase())); return <><AdminPageHeader eyebrow="STUDIO / ACCOUNTS" title="Clients & Accounts" description="Manage client invitations and their project access." action="Invite client" onAction={()=>setModal({type:'invite-client'})}/><div className="admin-toolbar"><div className="search-field"><Search size={16}/><input placeholder="Search clients..." value={q} onChange={e=>setQ(e.target.value)}/></div><span className="muted">{filtered.length} client accounts</span></div><div className="admin-panel table-panel"><table className="data-table"><thead><tr><th>CLIENT</th><th>EMAIL</th><th>PHONE</th><th>ASSIGNED PROJECTS</th><th>STATUS</th><th></th></tr></thead><tbody>{filtered.map(c=><tr key={c.id}><td><div className="table-person"><span className="avatar">{c.name.split(' ').map(x=>x[0]).slice(0,2).join('')}</span><strong>{c.name}</strong></div></td><td>{c.email}</td><td>{c.phone||'—'}</td><td>{c.projects.map(id=>projects.find(p=>p.id===id)?.name).filter(Boolean).join(', ')||'—'}</td><td><StatusTag value={c.status}/></td><td><button className="icon-btn" onClick={()=>setModal({type:'info',title:c.name,body:`${c.email}\n${c.phone}\n\nProject access: ${c.projects.map(id=>projects.find(p=>p.id===id)?.name).join(', ')}`})}><MoreHorizontal size={17}/></button></td></tr>)}</tbody></table>{!filtered.length&&<EmptyState title="No clients found" detail="Invite your first client to get started."/>}</div></>; }
+function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updateProject,addActivity,setModal }) { const p=projects.find(x=>x.id===selectedProjectId)||projects[0]; const [filter,setFilter]=useState('All'); const reports=p?.reports||[]; return <><AdminPageHeader eyebrow="STUDIO / FIELD OPERATIONS" title="Field Operations" description="Record daily work, site conditions, and publish client-facing progress." action={p?.status!=='Active'?null:'New daily log'} onAction={()=>setModal({type:'new-report',project:p})}/><div className="admin-toolbar"><select value={p?.id||''} onChange={e=>setSelectedProjectId(e.target.value)}>{projects.map(x=><option value={x.id} key={x.id}>{x.name}</option>)}</select><select value={filter} onChange={e=>setFilter(e.target.value)}><option>All</option><option>Published</option><option>Draft</option></select><span className="muted">{reports.length} daily records</span></div><div className="admin-panel project-control-panel"><div><strong>Project status · {p?.status}</strong><p>{p?.status==='On Hold'?'Operational progress updates are paused. Existing reports and project records remain available.':p?.status==='Ready to Resume'?'Payment conditions are cleared. Confirm to resume operational updates.':p?.status==='Completed'?'This project is marked completed.':'Project operations are active.'}</p></div>{p?.status==='Active'&&<button className="btn btn-small btn-outline" onClick={()=>{if(window.confirm('Place this project on hold? Existing client access and records will remain available.')){updateProject(p.id,x=>({...x,status:'On Hold'}));addActivity(p.id,'Project placed on hold','Admin confirmed operational hold.');}}}>Place on hold</button>}{p?.status==='On Hold'&&<button className="btn btn-small btn-outline" onClick={()=>{updateProject(p.id,x=>({...x,status:'Ready to Resume'}));addActivity(p.id,'Project ready to resume','Admin marked project ready for resume review.');}}>Mark ready to resume</button>}{p?.status==='Ready to Resume'&&<button className="btn btn-small btn-dark" onClick={()=>{updateProject(p.id,x=>({...x,status:'Active'}));addActivity(p.id,'Project resumed','Admin confirmed project resume.');}}>Confirm resume</button>}</div><div className="admin-panel"><div className="admin-panel-head"><div><h3>{p?.name} / Daily project logs</h3><p>Reports are private until Admin publishes them.</p></div><span className="subtle-tag">{p?.code}</span></div><div className="log-list">{reports.filter(r=>filter==='All'||r.visibility===filter).map(r=><article className="log-card" key={r.id}><div className="log-card-date">{dateFmt(r.date)}<span>{r.category}</span></div><div className="log-card-main"><h4>{r.title}</h4><p>{r.description}</p><small>{r.photos} attachments · Progress {r.progress}%</small></div><div className="log-card-actions"><StatusTag value={r.visibility}/><button className="btn btn-small btn-outline" onClick={()=>{updateProject(p.id,x=>({...x,reports:x.reports.map(y=>y.id===r.id?{...y,visibility:y.visibility==='Published'?'Draft':'Published'}:y)}));addActivity(p.id,'Report visibility changed',`${r.title} diubah menjadi ${r.visibility==='Published'?'Draft':'Published'}.`);}}> {r.visibility==='Published'?'Unpublish':'Publish'} </button></div></article>)}{!reports.length&&<EmptyState title="No daily logs" detail="Create the first field report for this project."/>}</div></div><div className="admin-panel note-panel"><ShieldCheck size={19}/><div><strong>Client visibility rule</strong><p>Hanya laporan berstatus Published yang tampil di Client Portal. Attendance dan catatan internal tetap disembunyikan.</p></div></div></>; }
+function AdminDocuments({projects,updateProject,addActivity,setModal}) { const [pid,setPid]=useState(projects[0]?.id); const p=projects.find(x=>x.id===pid)||projects[0]; const docs=p?.files||[]; return <><AdminPageHeader eyebrow="STUDIO / DOCUMENT CONTROL" title="Documents & Legal" description="Manage project files, contract versions, and client visibility." action="Upload document" onAction={()=>setModal({type:'new-document',project:p})}/><div className="admin-toolbar"><select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><span className="muted">Design files and legal records</span></div><div className="admin-panel"><div className="admin-panel-head"><div><h3>{p?.name}</h3><p>Project files</p></div></div><div className="document-list admin-doc-list">{docs.map(d=><div className="document-row" key={d.id}><span className="document-icon"><FileText size={19}/></span><div><strong>{d.name}</strong><small>{d.category} · {dateFmt(d.date)}</small></div><StatusTag value={d.visibility}/><button className="btn btn-small btn-outline" onClick={()=>{updateProject(p.id,x=>({...x,files:x.files.map(y=>y.id===d.id?{...y,visibility:y.visibility==='Published'?'Internal Only':'Published'}:y)}));addActivity(p.id,'File visibility changed',`${d.name} visibility diperbarui.`);}}> {d.visibility==='Published'?'Make internal':'Publish'} </button></div>)}{!docs.length&&<EmptyState title="No documents" detail="Upload a project file to begin."/>}</div></div><div className="admin-panel"><div className="admin-panel-head"><div><h3>Legal documents</h3><p>Contracts and addenda visible to the selected project.</p></div><button className="btn btn-outline btn-small" onClick={()=>setModal({type:'new-legal',project:p})}><Plus size={14}/> Add legal document</button></div>{(p?.legal||[]).map(d=><div className="document-row" key={d.id}><span className="document-icon"><FileCheck2 size={19}/></span><div><strong>{d.name}</strong><small>{d.version} · {dateFmt(d.date)}</small></div><StatusTag value={d.visibility}/><button className="btn btn-small btn-outline" onClick={()=>updateProject(p.id,x=>({...x,legal:x.legal.map(y=>y.id===d.id?{...y,visibility:y.visibility==='Published'?'Internal Only':'Published'}:y)}))}>{d.visibility==='Published'?'Make internal':'Publish'}</button></div>)}</div></>; }
+function AdminMaterials({projects,updateProject,addActivity,setModal}) { const [pid,setPid]=useState(projects[0]?.id); const p=projects.find(x=>x.id===pid)||projects[0]; return <><AdminPageHeader eyebrow="STUDIO / PROCUREMENT" title="Shopping & Materials" description="Track material requirements, procurement, and actual site usage." action="Add material" onAction={()=>setModal({type:'new-material',project:p})}/><div className="admin-toolbar"><select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><span className="subtle-tag">{p?.code}</span></div><div className="admin-panel"><div className="admin-panel-head"><div><h3>Shopping list / Procurement</h3><p>Internal purchasing details are not shared with clients.</p></div></div><div className="material-table">{(p?.shopping||[]).map(s=><div className="material-row" key={s.id}><div className="material-main"><strong>{s.material}</strong><small>{s.specification} · Need by {dateFmt(s.date)}</small></div><div>{s.quantity} {s.unit}</div><div className="material-cost"><small>INTERNAL ESTIMATE</small><strong>{money(s.unitCost*s.quantity)}</strong></div><select value={s.status} onChange={e=>updateProject(p.id,x=>({...x,shopping:x.shopping.map(y=>y.id===s.id?{...y,status:e.target.value}:y)}))}><option>Belum Dibeli</option><option>Dalam Proses</option><option>Sudah Dibeli</option></select><div className="material-publish"><StatusTag value={s.visibility}/><button className="btn btn-small btn-outline" onClick={()=>{updateProject(p.id,x=>({...x,shopping:x.shopping.map(y=>y.id===s.id?{...y,visibility:y.visibility==='Published'?'Draft':'Published'}:y)}));addActivity(p.id,'Shopping list visibility changed',`${s.material} visibility diperbarui.`);}}>{s.visibility==='Published'?'Unpublish':'Publish'}</button></div></div>)}{!p?.shopping?.length&&<EmptyState title="No materials yet" detail="Add requirements for this project."/>}</div></div><div className="admin-panel"><div className="admin-panel-head"><div><h3>Material usage</h3><p>Materials recorded as actually used on site.</p></div><button className="btn btn-outline btn-small" onClick={()=>setModal({type:'new-usage',project:p})}><Plus size={14}/> Record usage</button></div>{(p?.usage||[]).map(u=><div className="usage-row" key={u.id}><span><Package size={17}/></span><div><strong>{u.material}</strong><small>{dateFmt(u.date)} · {u.area}</small></div><strong>{u.quantity} {u.unit}</strong></div>)}{!p?.usage?.length&&<EmptyState title="No usage records" detail="Record material usage from daily site activity."/>}</div></>; }
+function AdminBilling({projects,updateProject,addActivity,setModal}) { const [pid,setPid]=useState(projects[0]?.id); const p=projects.find(x=>x.id===pid)||projects[0]; const invoices=p?.invoices||[]; const activeInvoices=invoices.filter(i=>i.status!=='Cancelled'); const pending=activeInvoices.flatMap(i=>i.payments.map(pay=>({...pay,invoice:i}))).filter(x=>x.status==='Pending'); const today=new Date(); today.setHours(0,0,0,0); const holdCandidates=invoices.filter(i=>{const paid=i.payments.filter(x=>x.status==='Approved').reduce((s,x)=>s+x.approved,0);const daysLate=Math.floor((today-new Date(`${i.dueDate}T00:00:00`))/86400000);return i.status!=='Cancelled'&&i.status!=='Paid'&&paid<i.amount&&daysLate>=7&&!i.payments.some(x=>x.status==='Pending');}); return <><AdminPageHeader eyebrow="STUDIO / FINANCIAL MANAGEMENT" title="Billing & Payments" description="Issue invoices, review payment proofs, and maintain financial history." action="Create invoice" onAction={()=>setModal({type:'new-invoice',project:p})}/><div className="admin-toolbar"><select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><span className="muted">{invoices.length} invoices</span></div><div className="admin-metrics billing-metrics"><Metric icon={FileText} label="Active invoices" value={invoices.filter(i=>i.status!=='Cancelled').length} note="Issued documents"/><Metric icon={Clock3} label="Pending proofs" value={pending.length} note="Require verification" accent={pending.length>0}/><Metric icon={Wallet} label="Verified payments" value={money(activeInvoices.reduce((s,i)=>s+i.payments.filter(x=>x.status==='Approved').reduce((t,x)=>t+x.approved,0),0))} note="Approved payment total"/><Metric icon={AlertCircle} label="Outstanding" value={money(invoices.filter(i=>i.status!=='Cancelled').reduce((s,i)=>s+Math.max(0,i.amount-i.payments.filter(x=>x.status==='Approved').reduce((t,x)=>t+x.approved,0)),0))} note="Remaining amount"/></div>{holdCandidates.length>0&&p?.status==='Active'&&<div className="admin-panel hold-recommendation"><div><strong><AlertCircle size={16}/> Hold recommendation · H+7</strong><p>{holdCandidates.map(i=>i.number).join(', ')} has remaining payment beyond seven days after due date. Pending verification pauses this clock.</p></div><button className="btn btn-small btn-dark" onClick={()=>{if(window.confirm('Confirm placing this project on hold? Existing portal access and payment uploads will remain available.')){updateProject(p.id,x=>({...x,status:'On Hold'}));addActivity(p.id,'Project placed on hold','H+7 payment recommendation confirmed by Admin.');}}}>Confirm hold</button></div>}<div className="admin-panel"><div className="admin-panel-head"><div><h3>Payment verification</h3><p>Review claims and approve only the verified amount.</p></div><span className="subtle-tag">{pending.length} pending</span></div>{pending.map(pay=><div className="payment-review-row" key={pay.id}><div className="proof-placeholder"><FileImage size={22}/><small>PROOF</small></div><div className="payment-review-main"><strong>{pay.invoice.number}</strong><small>{dateFmt(pay.date)} · Claimed {money(pay.claimed)}</small><span>{pay.proof||'Payment proof uploaded'}</span></div><div className="payment-review-actions"><button className="btn btn-small btn-dark" onClick={()=>setModal({type:'verify-payment',project:p,invoice:pay.invoice,payment:pay})}><Check size={14}/> Review & verify</button><button className="btn btn-small btn-outline" onClick={()=>setModal({type:'reject-payment',project:p,invoice:pay.invoice,payment:pay})}>Reject</button></div></div>)}{!pending.length&&<EmptyState title="All caught up" detail="There are no payment proofs waiting for review."/>}</div><div className="admin-panel"><div className="admin-panel-head"><div><h3>Invoice register</h3><p>Issued invoices are retained as financial history.</p></div></div>{invoices.map(i=><InvoiceAdminRow key={i.id} invoice={i} setModal={setModal} project={p}/>)}{!invoices.length&&<EmptyState title="No invoices" detail="Create an invoice for this project."/>}</div></>; }
+function InvoiceAdminRow({invoice,setModal,project}) { const paid=invoice.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0); return <div className="invoice-admin-row"><div><strong>{invoice.number}</strong><small>Issued {dateFmt(invoice.issueDate)} · Due {dateFmt(invoice.dueDate)}</small></div><strong>{money(invoice.amount)}</strong><span>{money(paid)} paid</span><StatusTag value={invoice.status}/><div className="invoice-actions"><button className="icon-btn" title="Details" onClick={()=>setModal({type:'invoice-detail-admin',invoice,project})}><Eye size={16}/></button>{invoice.status!=='Paid'&&invoice.status!=='Cancelled'&&<button className="icon-btn" title="Revise invoice" onClick={()=>setModal({type:'revise-invoice',project,invoice})}><RotateCcw size={16}/></button>}</div></div>; }
+function AdminNotifications({db,setDb}) { return <><AdminPageHeader eyebrow="STUDIO / COMMUNICATION" title="Notifications" description="Monitor events and communication activity across projects."/><div className="admin-panel"><div className="admin-panel-head"><div><h3>Recent notifications</h3><p>Demo notifications from project activity.</p></div><button className="under-link" onClick={()=>setDb(old=>({...old,notifications:old.notifications.map(n=>({...n,read:true}))}))}>Mark all read</button></div>{db.notifications.map(n=><div className={`notification-row ${n.read?'read':''}`} key={n.id}><span className="notification-icon"><Bell size={17}/></span><div><strong>{n.title}</strong><p>{n.body}</p><small>{dateFmt(n.date)}</small></div>{!n.read&&<i className="unread-dot"/>}</div>)}</div></>; }
+function AdminActivity({projects}) { return <><AdminPageHeader eyebrow="STUDIO / AUDIT TRAIL" title="Activity Log" description="A chronological record of important actions across project workspaces."/><div className="admin-panel"><ActivityTable projects={projects}/></div><div className="admin-panel note-panel"><ShieldCheck size={19}/><div><strong>Production security note</strong><p>Prototype activity records are editable demo data. For production, critical logs should be append-only and enforced by Supabase database policies or trusted server functions.</p></div></div></>; }
+function AdminContent() { return <><AdminPageHeader eyebrow="STUDIO / PUBLIC WEBSITE" title="Website Content" description="Manage the public-facing pages and featured portfolio content."/><div className="admin-content-grid">{[['Projects','Portfolio items and project detail pages','Manage portfolio'],['Services','Service descriptions and supporting images','Edit services'],['About','Studio profile and approach','Edit about'],['Career','Career introduction and positions','Edit career'],['Contact','Studio email, phone, and WhatsApp','Edit contact'],['Homepage','Hero text and featured projects','Edit homepage']].map(([title,desc,cta])=><div className="admin-panel content-manage-card" key={title}><span><FileText size={19}/></span><h3>{title}</h3><p>{desc}</p><button className="under-link" onClick={()=>alert('Demo: content editor belum dihubungkan.')}>{cta} <ArrowUpRight size={14}/></button></div>)}</div></>; }
+function AdminSettings({onReset,admins,setModal}) { return <><AdminPageHeader eyebrow="STUDIO / CONFIGURATION" title="Settings" description="Studio preferences, accounts, and prototype configuration."/><div className="admin-panel settings-section"><div className="settings-row"><div><strong>Studio profile</strong><p>NA Associates · Architecture & Design · Jakarta, Indonesia</p></div><button className="btn btn-outline btn-small" onClick={()=>alert('Demo: studio profile editor belum aktif.')}>Edit profile</button></div><div className="settings-row"><div><strong>Admin accounts</strong><p>Only the Primary Admin can invite or promote another Admin. All Admin accounts share operational permissions.</p><div className="admin-account-list">{admins.map(a=><span key={a.id}><strong>{a.name}</strong><small>{a.email} · {a.isPrimary?'Primary Admin':'Admin'}</small></span>)}</div></div><button className="btn btn-outline btn-small" onClick={()=>setModal({type:'invite-admin'})}><UserPlus size={14}/> Invite Admin</button></div><div className="settings-row"><div><strong>Backend connection</strong><p>Supabase Auth, Database, and Storage are not connected in this prototype.</p></div><StatusTag value="Not connected"/></div><div className="settings-row"><div><strong>Reset prototype data</strong><p>Restore all sample projects, invoices, and activity to their initial state.</p></div><button className="btn btn-outline btn-small" onClick={onReset}><RotateCcw size={14}/> Reset demo</button></div></div></>; }
+export { AdminShell };
+</file>
+
+<file path="src/pages/ClientPortal.jsx">
+import React, { useEffect, useState } from 'react';
+import {
+  ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Check,
+  CheckCircle2, ChevronDown, ChevronRight, ClipboardList, Clock3, CreditCard,
+  Download, ExternalLink, FileCheck2, FileImage, FileText, FolderOpen, HardHat,
+  Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, Package, Plus,
+  RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Upload, User, UserPlus,
+  Users, Wallet, X, Eye, Activity, AlertCircle
+} from 'lucide-react';
+import { Brand, ProgressBar, SectionHeading, FileTile, InvoiceClientCard, MonthlyRecap, StatusTag, EmptyState } from '../components/ui';
+import { money, dateFmt } from '../lib/utils';
+
+function ClientShell({ db, client, projects, selectedProject, page, setPage, onOpen, onBack, onLogout, onReset, onNotify, setModal, updateProject, addActivity, workspaceSection, setWorkspaceSection, mobileNav, setMobileNav }) {
+  if (page === 'my-projects') return <ClientProjectsView client={client} projects={projects} onOpen={onOpen} onLogout={onLogout} onReset={onReset} setModal={setModal}/>;
+  return <ClientWorkspace db={db} client={client} project={selectedProject} onBack={onBack} onLogout={onLogout} onReset={onReset} setModal={setModal} updateProject={updateProject} addActivity={addActivity} onNotify={onNotify} workspaceSection={workspaceSection} setWorkspaceSection={setWorkspaceSection} mobileNav={mobileNav} setMobileNav={setMobileNav}/>;
+}
+function ClientTopbar({ client, onBack, onLogout, onReset, setModal }) { return <header className="portal-topbar"><div className="portal-top-left"><Brand/><span className="portal-label">CLIENT PORTAL</span></div><div className="portal-top-right"><button className="icon-btn" onClick={() => setModal({type:'client-notifications'})}><Bell size={18}/><i className="notification-dot"/></button><div className="user-chip"><span className="avatar">{client?.name?.split(' ').map(x=>x[0]).slice(0,2).join('')}</span><span><strong>{client?.name || 'Client Demo'}</strong><small>Client account</small></span></div><button className="text-link" onClick={onLogout}>Sign out</button><button className="icon-btn mobile-menu" onClick={onReset} title="Reset demo"><RotateCcw size={16}/></button></div></header>; }
+function ClientProjectsView({ client, projects, onOpen, onLogout, onReset, setModal }) { return <div className="client-app"><ClientTopbar client={client} onLogout={onLogout} onReset={onReset} setModal={setModal}/><main className="client-list-page"><div className="client-welcome"><div><div className="eyebrow">CLIENT SPACE / YOUR PROJECTS</div><h1>Good morning,<br/><em>{client?.name?.split(' ')[0] || 'there'}.</em></h1><p>Here is an overview of your projects with NA Associates.</p></div><div className="welcome-stamp">NA<br/><span>CLIENT SPACE</span></div></div><div className="list-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h2>My projects <small>{projects.length.toString().padStart(2,'0')}</small></h2></div><span className="muted">Select a project to view its details and updates.</span></div><div className="client-project-grid">{projects.map(p => <button className="client-project-card" key={p.id} onClick={() => onOpen(p.id)}><div className="client-project-image"><img src={p.cover}/><span className={`status-pill ${p.status === 'Completed' ? 'complete' : ''}`}>{p.status}</span></div><div className="client-project-info"><div className="project-card-top"><span>{p.code}</span><ArrowUpRight size={17}/></div><h3>{p.name}</h3><p><MapPin size={13}/>{p.location}</p><div className="progress-row"><span>PROJECT PROGRESS</span><strong>{p.progress}%</strong></div><ProgressBar value={p.progress}/><div className="client-project-bottom"><span>Next milestone</span><strong>{p.nextMilestone || '—'}</strong></div></div></button>)}</div>{!projects.length && <EmptyState title="Belum ada proyek" detail="Tim NA Associates akan menambahkan proyek ke akun Anda."/>}</main><div className="demo-bottom-note">DEMO MODE · Data tersimpan hanya di browser ini <button onClick={onReset}>Reset demo data</button></div></div>; }
+
+const workspaceNav = [
+  ['overview','Overview',Home],['design','A. Output & Design',Image],['progress','B. Progress & Field Ops',Activity],['legal','C. Legal Documents',FileText],['billing','D. Billing & Payments',Wallet],['shopping','E. Shopping List',ShoppingBag],['recap','F. Monthly Recap',CalendarDays]
+];
+function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setModal, updateProject, addActivity, onNotify, workspaceSection, setWorkspaceSection, mobileNav, setMobileNav }) {
+  const [openSection, setOpenSection] = useState('overview');
+  useEffect(() => { setOpenSection('overview'); }, [project?.id]);
+  useEffect(() => {
+    const handler = () => { const ids = workspaceNav.map(x=>x[0]); let current='overview'; ids.forEach(id => { const el=document.getElementById(`section-${id}`); if(el && el.getBoundingClientRect().top < 170) current=id; }); setOpenSection(current); };
+    window.addEventListener('scroll', handler); return () => window.removeEventListener('scroll', handler);
+  }, []);
+  const jump = (id) => { setWorkspaceSection(id); setOpenSection(id); document.getElementById(`section-${id}`)?.scrollIntoView({behavior:'smooth',block:'start'}); setMobileNav(false); };
+  const publishedReports = (project.reports||[]).filter(r=>r.visibility==='Published');
+  const publishedFiles = (project.files||[]).filter(f=>f.visibility==='Published');
+  const publishedLegal = (project.legal||[]).filter(f=>f.visibility==='Published');
+  const publishedShopping = (project.shopping||[]).filter(s=>s.visibility==='Published');
+  const invoices = project.invoices||[];
+  const totalRemaining = invoices.filter(i=>i.status!=='Cancelled').reduce((sum,i)=>sum + Math.max(0,i.amount - i.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0)),0);
+  return <div className="client-app"><ClientTopbar client={client} onBack={onBack} onLogout={onLogout} onReset={onReset} setModal={setModal}/><div className="workspace-shell"><aside className={`workspace-sidebar ${mobileNav?'sidebar-open':''}`}><button className="back-projects" onClick={onBack}><ArrowLeft size={15}/> All projects</button><div className="sidebar-project"><img src={project.cover}/><small>{project.code}</small><strong>{project.name}</strong><span><MapPin size={12}/>{project.location}</span></div><div className="workspace-nav-label">PROJECT WORKSPACE</div><nav className="workspace-nav">{workspaceNav.map(([id,label,Icon])=><button key={id} className={openSection===id?'active':''} onClick={()=>jump(id)}><Icon size={16}/><span>{label}</span>{id==='billing' && <i className="nav-count"/>}</button>)}</nav><div className="sidebar-progress"><div><small>OVERALL PROGRESS</small><strong>{project.progress}%</strong></div><ProgressBar value={project.progress}/><span>Target completion · {dateFmt(project.targetDate)}</span></div></aside><main className="workspace-main"><div className="workspace-topline"><div className="breadcrumb">My Projects <ChevronRight size={13}/> {project.name}</div><span className={`status-pill ${project.status==='Completed'?'complete':''}`}>{project.status}</span></div>
+      <section className="workspace-hero" id="section-overview"><div className="workspace-hero-img"><img src={project.cover}/><div className="workspace-hero-overlay"/></div><div className="workspace-hero-content"><div className="eyebrow light">{project.code} / PROJECT OVERVIEW</div><h1>{project.name}<span>.</span></h1><p><MapPin size={14}/>{project.location}</p><div className="hero-progress"><span>PROJECT PROGRESS</span><strong>{project.progress}%</strong></div><ProgressBar value={project.progress}/></div></section>
+      {(project.status==='On Hold'||project.status==='Ready to Resume')&&<div className={`project-status-notice ${project.status==='Ready to Resume'?'ready':''}`}><AlertCircle size={17}/><div><strong>{project.status==='On Hold'?'Project operations are on hold':'Project is ready to resume'}</strong><p>{project.status==='On Hold'?'You can still access existing reports, documents, invoices, and upload payment proof. New operational updates are paused.':'The studio is reviewing the next steps to resume project operations.'}</p></div></div>}<div className="workspace-stats"><div><small>LAND AREA</small><strong>{project.landArea || '—'}</strong></div><div><small>BUILDING AREA</small><strong>{project.buildingArea || '—'}</strong></div><div><small>NEXT MILESTONE</small><strong>{project.nextMilestone || '—'}</strong><span>{dateFmt(project.nextMilestoneDate)}</span></div><div><small>OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div></div>
+      <section className="workspace-section" id="section-design"><SectionHeading number="A" title="Output & Design" description="Design development and project deliverables shared by the studio." action="Browse files" onAction={()=>setModal({type:'file-list',project})}/><div className="file-grid">{publishedFiles.map(f=><FileTile key={f.id} file={f} onOpen={()=>setModal({type:'file-preview',file:f})}/>)}{!publishedFiles.length && <EmptyState title="No files published yet" detail="New design outputs will appear here once shared by the studio."/>}</div></section>
+      <section className="workspace-section" id="section-progress"><SectionHeading number="B" title="Progress & Field Operations" description="A transparent view of milestones and published site updates."/><div className="progress-two-col"><div className="panel"><div className="panel-heading"><h3>Project timeline</h3><span className="subtle-tag">{project.milestones?.length||0} milestones</span></div><div className="timeline">{(project.milestones||[]).map((m,i)=><div className={`timeline-item ${m.status==='Completed'?'done':''} ${m.status==='In Progress'?'current':''}`} key={m.id}><div className="timeline-marker">{m.status==='Completed'?<Check size={12}/>:i+1}</div><div className="timeline-body"><div><strong>{m.title}</strong><span>{dateFmt(m.date)}</span></div><small>{m.status}</small>{m.status==='In Progress' && <ProgressBar value={m.progress}/>}</div></div>)}</div>{!project.milestones?.length && <EmptyState title="Timeline not available" detail="Milestones will appear here."/>}</div><div className="panel updates-panel"><div className="panel-heading"><h3>Latest updates</h3><span className="subtle-tag">Published</span></div>{publishedReports.slice(0,4).map(r=><article className="update-item" key={r.id}><div className="update-date">{dateFmt(r.date)}</div><div><strong>{r.title}</strong><p>{r.description}</p><span className="update-meta">{r.category} · {r.photos} site photos</span></div></article>)}{!publishedReports.length && <EmptyState title="No updates yet" detail="Published field reports will appear here."/>}</div></div></section>
+      <section className="workspace-section" id="section-legal"><SectionHeading number="C" title="Legal Documents" description="Contracts, addenda, and approved supporting documents."/><div className="document-list">{publishedLegal.map(l=><div className="document-row" key={l.id}><span className="document-icon"><FileText size={19}/></span><div><strong>{l.name}</strong><small>{l.version} · {dateFmt(l.date)}</small></div><button className="icon-btn" onClick={()=>setModal({type:'file-preview',file:{name:l.name,type:'PDF',description:`${l.version} · ${dateFmt(l.date)}`}})}><Eye size={17}/></button><button className="icon-btn" onClick={()=>setModal({type:'info',title:'Demo document',body:'Preview/download dokumen akan terhubung ke Supabase Storage pada tahap backend.'})}><Download size={17}/></button></div>)}{!publishedLegal.length && <EmptyState title="No legal documents" detail="Approved documents will be shared here."/>}</div></section>
+      <section className="workspace-section" id="section-billing"><SectionHeading number="D" title="Billing & Payments" description="Invoices, payment records, and official receipts." action="Upload payment proof" onAction={()=>setModal({type:'payment-upload',project})}/><div className="billing-summary"><div><small>TOTAL OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div><div><small>INVOICES</small><strong>{invoices.filter(i=>i.status!=='Cancelled').length}</strong></div><div><small>PAYMENTS UNDER REVIEW</small><strong>{invoices.filter(i=>i.status!=='Cancelled').reduce((s,i)=>s+i.payments.filter(p=>p.status==='Pending').length,0)}</strong></div></div><div className="invoice-list">{invoices.filter(i=>i.status!=='Cancelled').map(inv=><InvoiceClientCard key={inv.id} invoice={inv} setModal={setModal}/>)}{!invoices.length && <EmptyState title="No invoices yet" detail="Invoices issued by the studio will appear here."/>}</div></section>
+      <section className="workspace-section" id="section-shopping"><SectionHeading number="E" title="Shopping List" description="Materials planned for your project and their procurement status."/><div className="shopping-list">{publishedShopping.map(s=><div className="shopping-row" key={s.id}><div className="shopping-date">{dateFmt(s.date)}</div><div className="shopping-name"><strong>{s.material}</strong><small>{s.specification}</small></div><div className="shopping-qty">{s.quantity} {s.unit}</div><StatusTag value={s.status}/></div>)}{!publishedShopping.length && <EmptyState title="No materials published" detail="Material requirements will appear here."/>}</div></section>
+      <section className="workspace-section" id="section-recap"><SectionHeading number="F" title="Monthly Recapitulation" description="A monthly overview of your invoices and verified payments."/><MonthlyRecap invoices={invoices}/></section>
+      <footer className="workspace-footer"><Brand/><span>Need assistance? Contact the NA Associates team.</span><button className="under-link" onClick={()=>setModal({type:'info',title:'Contact the studio',body:'For project questions, contact hello@naassociates.com or use the official studio WhatsApp channel.'})}>Contact studio <ArrowUpRight size={14}/></button></footer><div className="demo-bottom-note">DEMO MODE · Simulasi UI, pembayaran, dan file. Bukan transaksi nyata.</div>
+    </main></div><button className="mobile-workspace-nav" onClick={()=>setMobileNav(v=>!v)}><Menu size={17}/> Project sections <ChevronDown size={16}/></button></div>;
+}
+export { ClientShell };
+</file>
+
+<file path="src/pages/PublicSite.jsx">
+import React, { useEffect, useState } from 'react';
+import {
+  ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Check,
+  CheckCircle2, ChevronDown, ChevronRight, ClipboardList, Clock3, CreditCard,
+  Download, ExternalLink, FileCheck2, FileImage, FileText, FolderOpen, HardHat,
+  Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, Package, Plus,
+  RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Upload, User, UserPlus,
+  Users, Wallet, X, Eye, Activity, AlertCircle
+} from 'lucide-react';
+import { Brand, PageIntro, Field, PublicFooter } from '../components/ui';
+
+function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMobileNav }) {
+  useEffect(() => { const fn = () => go('home'); window.addEventListener('na-home', fn); return () => window.removeEventListener('na-home', fn); }, []);
+  const links = [['Projects','projects'],['Services','services'],['About','about'],['Career','career'],['Contact','contact']];
+  return <>
+    <header className="public-header"><div className="public-header-inner"><Brand/><nav className={`public-nav ${mobileNav ? 'nav-open' : ''}`}>{links.map(([label, key]) => <button key={key} className={page === key ? 'active' : ''} onClick={() => go(key)}>{label}</button>)}</nav><div className="header-actions"><button className="text-link portal-link" onClick={onLogin}>Client Portal <ArrowUpRight size={15}/></button><button className="icon-btn mobile-menu" onClick={() => setMobileNav(v => !v)} aria-label="Open menu">{mobileNav ? <X/> : <Menu/>}</button></div></div></header>
+    <main>{page === 'home' && <HomePage go={go} onLogin={onLogin}/>} {page === 'projects' && <ProjectsPage go={go}/>} {page === 'project-detail' && <ProjectDetailPage go={go}/>} {page === 'services' && <ServicesPage go={go}/>} {page === 'about' && <AboutPage go={go}/>} {page === 'career' && <CareerPage/>} {page === 'contact' && <ContactPage/>}</main>
+    <PublicFooter go={go}/>
+  </>;
+}
+
+function HomePage({ go, onLogin }) {
+  return <>
+    <section className="hero"><div className="hero-image"/><div className="hero-shade"/><div className="hero-content wrap"><div className="eyebrow light"><span/> INDEPENDENT ARCHITECTURE STUDIO · JAKARTA</div><h1>Spaces that<br/><em>feel like home.</em></h1><p>Thoughtful architecture shaped by context, clarity, and the way people live.</p><div className="hero-buttons"><button className="btn btn-light" onClick={() => go('projects')}>Explore our work <ArrowUpRight size={16}/></button><button className="btn btn-outline-light" onClick={() => go('contact')}>Start a conversation</button></div><div className="hero-index">01 <span/> 04</div></div><div className="hero-caption">SELECTED ARCHITECTURE / 2024—2026</div></section>
+    <section className="intro-section wrap"><div className="eyebrow">01 / THE STUDIO</div><div className="intro-grid"><h2>Designing with<br/><em>intention.</em></h2><div className="intro-text"><p className="lead">We believe architecture is more than a built form. It is a response to place, a reflection of its people, and a framework for everyday life.</p><p>NA Associates is an architecture and design practice creating considered spaces through a collaborative and context-led process.</p><button className="under-link" onClick={() => go('about')}>Discover our approach <ArrowUpRight size={15}/></button></div></div></section>
+    <section className="featured-section"><div className="wrap"><div className="section-heading"><div><div className="eyebrow">02 / SELECTED WORKS</div><h2>Spaces with <em>character.</em></h2></div><button className="under-link" onClick={() => go('projects')}>View all projects <ArrowUpRight size={15}/></button></div><div className="featured-grid"><button className="featured-card featured-large" onClick={() => go('project-detail')}><img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1400&q=85"/><span className="featured-meta"><strong>01 / Rumah Teduh</strong><small>RESIDENTIAL · JAKARTA</small></span></button><button className="featured-card" onClick={() => go('project-detail')}><img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=85"/><span className="featured-meta"><strong>02 / Villa Aruna</strong><small>RESIDENTIAL · BALI</small></span></button></div></div></section>
+    <section className="services-strip wrap"><div className="eyebrow">03 / WHAT WE DO</div><div className="services-strip-grid"><h2>From first sketch<br/>to <em>final detail.</em></h2><div className="service-mini-list"><div><span>01</span> Architecture <ArrowUpRight size={15}/></div><div><span>02</span> Interior Design <ArrowUpRight size={15}/></div><div><span>03</span> Design Development <ArrowUpRight size={15}/></div><div><span>04</span> Project Coordination <ArrowUpRight size={15}/></div></div></div></section>
+    <section className="contact-band"><div className="wrap contact-band-inner"><div><div className="eyebrow light">04 / LET’S WORK TOGETHER</div><h2>Have a project<br/><em>in mind?</em></h2></div><button className="circle-arrow" onClick={() => go('contact')} aria-label="Contact NA Associates"><ArrowUpRight size={26}/></button></div></section>
+  </>;
+}
+
+function ProjectsPage({ go }) {
+  const [category, setCategory] = useState('All'); const [status, setStatus] = useState('All'); const [q, setQ] = useState('');
+  const projects = [
+    { name: 'Rumah Teduh', loc: 'Kemang, Jakarta Selatan', cat: 'Residential', status: 'Ongoing', year: '2026', img: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1400&q=85' },
+    { name: 'Villa Aruna', loc: 'Ubud, Bali', cat: 'Residential', status: 'Ongoing', year: '2026', img: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1400&q=85' },
+    { name: 'Ruang Karya Office', loc: 'Bandung, Jawa Barat', cat: 'Commercial', status: 'Completed', year: '2025', img: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=85' },
+    { name: 'Courtyard House', loc: 'Tangerang, Banten', cat: 'Residential', status: 'Completed', year: '2024', img: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1400&q=85' }
+  ];
+  const visible = projects.filter(p => (category === 'All' || p.cat === category) && (status === 'All' || p.status === status) && `${p.name} ${p.loc}`.toLowerCase().includes(q.toLowerCase()));
+  return <><PageIntro eyebrow="PORTFOLIO / 2024—2026" title="Selected" italic="projects." desc="A collection of spaces shaped by their context, purpose, and the people who inhabit them."/><section className="wrap portfolio-section"><div className="portfolio-toolbar"><div className="filter-pills">{['All','Residential','Commercial'].map(v => <button key={v} className={category === v ? 'selected' : ''} onClick={() => setCategory(v)}>{v}</button>)}</div><div className="toolbar-right"><select value={status} onChange={e => setStatus(e.target.value)}><option>All</option><option>Ongoing</option><option>Completed</option></select><div className="search-field"><Search size={15}/><input placeholder="Search projects" value={q} onChange={e => setQ(e.target.value)}/></div></div></div><div className="portfolio-grid">{visible.map((p,i) => <button className="portfolio-card" key={p.name} onClick={() => go('project-detail')}><div className="portfolio-photo"><img src={p.img}/><span className="photo-number">0{i+1}</span></div><div className="portfolio-card-info"><div><strong>{p.name}</strong><small>{p.loc}</small></div><span className="portfolio-type">{p.cat} / {p.year}</span></div></button>)}</div>{!visible.length && <EmptyState title="No projects found" detail="Coba ubah kata kunci atau filter."/>}</section></>;
+}
+function ProjectDetailPage({ go }) { return <><div className="detail-hero"><img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=2000&q=90"/><div className="detail-hero-overlay"><div className="eyebrow light">SELECTED PROJECT / 2026</div><h1>Rumah <em>Teduh.</em></h1><p>Residential · Kemang, Jakarta Selatan</p></div></div><section className="wrap project-detail-content"><div className="project-facts"><div><small>LOCATION</small><strong>Jakarta Selatan</strong></div><div><small>LAND AREA</small><strong>240 m²</strong></div><div><small>BUILDING AREA</small><strong>185 m²</strong></div><div><small>STATUS</small><strong>Ongoing</strong></div></div><div className="project-story"><div className="eyebrow">THE PROJECT</div><div><h2>A quieter rhythm<br/>for <em>everyday life.</em></h2><p>Rumah Teduh explores the relationship between light, material, and the everyday rituals of a family home. The design balances openness and privacy through a sequence of connected spaces and carefully framed views.</p><button className="under-link" onClick={() => go('contact')}>Discuss a similar project <ArrowUpRight size={15}/></button></div></div><div className="detail-gallery"><img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85"/><img src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=85"/></div><button className="under-link back-link" onClick={() => go('projects')}><ArrowLeft size={15}/> Back to projects</button></section></>; }
+function ServicesPage({ go }) { const items = [['01','Architecture','From spatial planning and concept design to detailed construction documentation.'],['02','Interior Design','Interior environments that connect material, light, function, and atmosphere.'],['03','Design Development','A collaborative process that translates an initial idea into a considered design.'],['04','Project Coordination','Design coordination and documentation support throughout the project journey.']]; return <><PageIntro eyebrow="OUR CAPABILITIES" title="What we" italic="do." desc="A considered approach to architecture and design, from the first conversation to the smallest detail."/><section className="wrap service-page-list">{items.map(([n,t,d]) => <div className="service-page-row" key={n}><span>{n}</span><h2>{t}</h2><p>{d}</p><ArrowUpRight size={19}/></div>)}</section><section className="contact-band"><div className="wrap contact-band-inner"><h2>Let’s shape<br/><em>something meaningful.</em></h2><button className="circle-arrow" onClick={() => go('contact')}><ArrowUpRight/></button></div></section></>; }
+function AboutPage({ go }) { return <><PageIntro eyebrow="ABOUT NA ASSOCIATES" title="A practice built on" italic="consideration." desc="We approach every project as a conversation between people, place, and possibility."/><section className="wrap about-layout"><img src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1400&q=85"/><div><div className="eyebrow">OUR APPROACH</div><h2>Context first.<br/><em>Always.</em></h2><p>We are an architecture and design practice interested in creating spaces that are purposeful, enduring, and deeply connected to their surroundings.</p><p>Our process is collaborative: listening carefully, testing ideas, and refining every decision with intention.</p><button className="under-link" onClick={() => go('contact')}>Get in touch <ArrowUpRight size={15}/></button></div></section></>; }
+function ContactPage() { const [sent,setSent] = useState(false); return <><PageIntro eyebrow="CONTACT / START A CONVERSATION" title="Tell us about" italic="your project." desc="Have an idea, a site, or simply a question? We would love to hear from you."/><section className="wrap contact-layout"><form className="public-form" onSubmit={e => {e.preventDefault();setSent(true);}}><div className="form-grid"><Field label="Your name" required placeholder="Full name"/><Field label="Email address" required type="email" placeholder="name@email.com"/><Field label="Phone number" placeholder="+62"/><label className="field"><span>Project type</span><select defaultValue=""><option value="" disabled>Select project type</option><option>Residential</option><option>Commercial</option><option>Interior</option><option>Other</option></select></label></div><Field label="Tell us a little about your project" required textarea placeholder="A short introduction to your project..."/><button className="btn btn-dark" type="submit">Send inquiry <ArrowUpRight size={16}/></button><button className="btn btn-outline" type="button" disabled>WhatsApp contact · number pending</button>{sent && <p className="form-success"><CheckCircle2 size={16}/> Demo: inquiry berhasil disiapkan. Integrasi email belum aktif.</p>}</form><aside className="contact-aside"><div><small>EMAIL</small><strong>Official studio email — to be confirmed</strong></div><div><small>LOCATION</small><strong>Jakarta, Indonesia</strong></div><div><small>WHATSAPP</small><strong>Official WhatsApp number — to be confirmed</strong></div></aside></section></>; }
+function CareerPage() { const [sent,setSent] = useState(false); return <><PageIntro eyebrow="CAREER / WORK WITH US" title="Make room for" italic="possibility." desc="We are always interested in meeting thoughtful people who care about the built environment."/><section className="wrap career-layout"><div><div className="eyebrow">OPEN CONVERSATION</div><h2>Tell us what<br/><em>you bring.</em></h2><p>Share a little about yourself, your interests, and the work you are proud of.</p></div><form className="public-form" onSubmit={e => {e.preventDefault();setSent(true);}}><div className="form-grid"><Field label="Full name" required placeholder="Your name"/><Field label="Email" required type="email" placeholder="name@email.com"/><label className="field full"><span>Position of interest</span><select><option>Architecture Intern</option><option>Junior Architect</option><option>Interior Designer</option><option>Other</option></select></label></div><Field label="Introduction" textarea placeholder="Tell us about yourself..."/><label className="upload-box"><Upload size={18}/><span><strong>Attach CV / Portfolio</strong><small>PDF, max. 10 MB — demo upload field</small></span><input type="file" accept=".pdf,.doc,.docx"/></label><button className="btn btn-dark" type="submit">Submit application <ArrowUpRight size={16}/></button>{sent && <p className="form-success"><CheckCircle2 size={16}/> Demo: application berhasil disiapkan. Pengiriman email belum aktif.</p>}</form></section></>; }
+export { PublicShell };
+</file>
+
+<file path="src/App.jsx">
+import React, { useEffect, useState } from 'react';
+import { PublicShell } from './pages/PublicSite';
+import { ClientShell } from './pages/ClientPortal';
+import { AdminShell } from './pages/AdminDashboard';
+import { ModalHost } from './components/ModalHost';
+import { STORE_KEY, loadDB, uid, nowLabel } from './lib/utils';
+import { seedData } from './data/seed';
+import { CheckCircle2 } from 'lucide-react';
+
+function resolveAppPath(pathname) {
+  if (pathname.startsWith('/admin')) return { role: 'admin', page: 'home', adminTab: pathname.split('/')[2] || 'dashboard' };
+  if (pathname.startsWith('/portal/client/projects/')) return { role: 'client', page: 'workspace', projectId: pathname.split('/')[4] || 'project-01' };
+  if (pathname === '/portal/client' || pathname === '/portal') return { role: 'client', page: 'my-projects' };
+  const publicRoutes = { '/': 'home', '/projects': 'projects', '/projects/rumah-teduh': 'project-detail', '/services': 'services', '/about': 'about', '/career': 'career', '/contact': 'contact' };
+  return { role: 'guest', page: publicRoutes[pathname] || 'home' };
+}
+function routePath(role,page,projectId,adminTab) {
+  if (role === 'admin') return `/admin/${adminTab || 'dashboard'}`;
+  if (role === 'client') return page === 'workspace' ? `/portal/client/projects/${projectId}` : '/portal/client';
+  return ({ home: '/', projects: '/projects', 'project-detail': '/projects/rumah-teduh', services: '/services', about: '/about', career: '/career', contact: '/contact' })[page] || '/';
+}
+
+function App() {
+  const [db, setDb] = useState(loadDB);
+  const [initialRoute] = useState(() => resolveAppPath(window.location.pathname));
+  const [role, setRole] = useState(initialRoute.role);
+  const [page, setPage] = useState(initialRoute.page || 'home');
+  const [selectedProjectId, setSelectedProjectId] = useState(initialRoute.projectId || 'project-01');
+  const [modal, setModal] = useState(null);
+  const [mobileNav, setMobileNav] = useState(false);
+  const [toast, setToast] = useState('');
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('All');
+  const [workspaceSection, setWorkspaceSection] = useState('overview');
+  const [adminTab, setAdminTab] = useState(initialRoute.adminTab || 'dashboard');
+
+  useEffect(() => { localStorage.setItem(STORE_KEY, JSON.stringify(db)); }, [db]);
+  useEffect(() => { const path = routePath(role,page,selectedProjectId,adminTab); if (window.location.pathname !== path) window.history.pushState({}, '', path); }, [role,page,selectedProjectId,adminTab]);
+  useEffect(() => { const onPopState = () => { const next = resolveAppPath(window.location.pathname); setRole(next.role); setPage(next.page || 'home'); setAdminTab(next.adminTab || 'dashboard'); if (next.projectId) setSelectedProjectId(next.projectId); }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState); }, []);
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 3200); return () => clearTimeout(t); }, [toast]);
+  useEffect(() => { const goHome = () => { setRole('guest'); setPage('home'); setMobileNav(false); }; window.addEventListener('na-home', goHome); return () => window.removeEventListener('na-home', goHome); }, []);
+
+  const client = db.clients.find(c => c.id === db.currentClientId) || db.clients[0];
+  const clientProjects = db.projects.filter(p => p.clientId === client?.id && client?.projects.includes(p.id));
+  const selectedProject = role === 'client'
+    ? (clientProjects.find(p => p.id === selectedProjectId) || clientProjects[0] || null)
+    : (db.projects.find(p => p.id === selectedProjectId) || db.projects[0]);
+  const clientPage = page === 'workspace' && !selectedProject ? 'my-projects' : page;
+  const notify = (msg) => setToast(msg);
+  const goPublic = (p) => { setRole('guest'); setPage(p); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const enterClient = () => { setRole('client'); setPage('my-projects'); setSelectedProjectId(clientProjects[0]?.id || 'project-01'); setMobileNav(false); };
+  const enterAdmin = () => { setRole('admin'); setAdminTab('dashboard'); setMobileNav(false); };
+  const openWorkspace = (id) => { setSelectedProjectId(id); setRole('client'); setPage('workspace'); setWorkspaceSection('overview'); setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 20); };
+  const addActivity = (projectId, action, detail, actor = role === 'admin' ? 'Admin NA Associates' : client?.name || 'Guest') => {
+    setDb(old => ({ ...old, projects: old.projects.map(p => p.id === projectId ? { ...p, activity: [{ id: uid('act'), date: nowLabel(), actor, action, detail }, ...(p.activity || [])] } : p) }));
+  };
+  const updateProject = (id, updater) => setDb(old => ({ ...old, projects: old.projects.map(p => p.id === id ? updater(p) : p) }));
+  const resetDemo = () => { setDb(structuredClone(seedData)); setRole('guest'); setPage('home'); setAdminTab('dashboard'); setModal(null); notify('Data demo berhasil direset.'); };
+  const changeRole = (r) => { setRole(r); setMobileNav(false); if (r === 'guest') setPage('home'); if (r === 'client') setPage('my-projects'); if (r === 'admin') setAdminTab('dashboard'); };
+
+  return <div className="app-shell">
+    {role === 'guest' && <PublicShell page={page} setPage={setPage} go={goPublic} onLogin={() => setModal({ type: 'login' })} role={role} changeRole={changeRole} mobileNav={mobileNav} setMobileNav={setMobileNav} />}
+    {role === 'client' && <ClientShell db={db} client={client} projects={clientProjects} selectedProject={selectedProject} page={clientPage} setPage={setPage} onOpen={openWorkspace} onBack={() => setPage('my-projects')} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} workspaceSection={workspaceSection} setWorkspaceSection={setWorkspaceSection} mobileNav={mobileNav} setMobileNav={setMobileNav} />}
+    {role === 'admin' && <AdminShell db={db} setDb={setDb} projects={db.projects} clients={db.clients} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={adminTab} setTab={setAdminTab} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} />}
+    {modal && <ModalHost modal={modal} close={() => setModal(null)} db={db} setDb={setDb} selectedProject={selectedProject} updateProject={updateProject} addActivity={addActivity} notify={notify} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} />}
+    {toast && <div className="toast"><CheckCircle2 size={17}/>{toast}</div>}
+  </div>;
+}
+
+export default App;
+</file>
+
+<file path="src/main.jsx">
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.jsx';
+import './styles.css';
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode><App /></React.StrictMode>
+);
+</file>
+
+<file path="src/styles.css">
+:root{font-family:'DM Sans',sans-serif;color:#272a27;background:#f7f6f2;font-synthesis:none;text-rendering:optimizeLegibility;font-optical-sizing:auto;font-weight:400;--ink:#272a27;--muted:#777b75;--line:#e6e5df;--paper:#f7f6f2;--white:#fff;--olive:#737b65;--olive-dark:#525b48;--sand:#e9e5dc;--warm:#f0eee8;--radius:5px;--shadow:0 18px 50px rgba(31,34,29,.09)}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:110px}body{margin:0;min-width:320px;background:var(--paper)}button,input,select,textarea{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #8b947b;outline-offset:2px}button:disabled{opacity:.5;cursor:not-allowed}img{display:block;max-width:100%}.app-shell{min-height:100vh}.wrap{width:min(1200px,calc(100% - 64px));margin:0 auto}.brand{display:inline-flex;align-items:center;gap:10px;border:0;background:none;padding:0;color:var(--ink);text-align:left}.brand-mark{width:38px;height:38px;border:1px solid currentColor;display:grid;place-items:center;font:600 15px 'Manrope',sans-serif;letter-spacing:-1px}.brand-copy{display:flex;flex-direction:column;gap:2px}.brand-copy strong{font:800 11px 'Manrope',sans-serif;letter-spacing:1.55px}.brand-copy small{font-size:8px;letter-spacing:1.6px;color:#8d9088}.brand-inverse{color:#f7f6f2}.brand-inverse .brand-copy small{color:#aaa99f}.public-header{height:82px;background:rgba(247,246,242,.96);border-bottom:1px solid rgba(45,48,43,.08);position:sticky;top:0;z-index:30;backdrop-filter:blur(12px)}.public-header-inner{width:min(1400px,calc(100% - 64px));height:100%;margin:auto;display:flex;align-items:center;justify-content:space-between}.public-nav{display:flex;gap:34px;align-items:center;margin-left:auto;margin-right:54px}.public-nav button,.text-link{border:0;background:none;color:#5f625c;font-size:12px;padding:8px 0}.public-nav button.active,.public-nav button:hover,.text-link:hover{color:var(--ink)}.public-nav button.active{box-shadow:0 1px var(--ink)}.header-actions{display:flex;align-items:center;gap:15px}.text-link{display:inline-flex;align-items:center;gap:8px;font-weight:600}.portal-link{letter-spacing:.02em}.icon-btn{border:0;background:transparent;color:inherit;padding:8px;display:inline-flex;align-items:center;justify-content:center;position:relative}.mobile-menu{display:none}.hero{height:min(770px,calc(100vh - 82px));min-height:620px;position:relative;color:#fff;overflow:hidden;background:#505449}.hero-image{position:absolute;inset:0;background-image:url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2200&q=90');background-size:cover;background-position:center 48%;transform:scale(1.015)}.hero-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(22,26,23,.70) 0%,rgba(25,28,25,.34) 48%,rgba(25,28,25,.08) 100%),linear-gradient(0deg,rgba(18,20,18,.35),transparent 35%)}.hero-content{position:relative;height:100%;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding-top:34px}.eyebrow{font-size:9px;letter-spacing:1.65px;text-transform:uppercase;color:#858a7f;font-weight:700}.eyebrow.light{color:rgba(255,255,255,.72)}.eyebrow span{display:inline-block;width:23px;height:1px;background:currentColor;vertical-align:middle;margin-right:10px}.hero h1,.page-intro h1{font:500 clamp(58px,7.7vw,104px)/.99 'Manrope',sans-serif;letter-spacing:-5px;margin:26px 0 20px}.hero h1 em,.page-intro h1 em,.intro-section h2 em,.section-heading h2 em,.services-strip h2 em,.contact-band h2 em,.project-story h2 em,.about-layout h2 em,.career-layout h2 em,.client-welcome h1 em{font-family:Georgia,serif;font-weight:400}.hero-content>p{max-width:430px;color:rgba(255,255,255,.82);font-size:14px;line-height:1.8;margin:0 0 31px}.hero-buttons{display:flex;gap:10px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:1px solid transparent;padding:12px 17px;font-size:11px;font-weight:700;transition:.2s ease;min-height:42px}.btn:hover{transform:translateY(-1px)}.btn-light{background:#f7f6f2;color:#282b27}.btn-outline-light{border-color:rgba(255,255,255,.58);color:#fff;background:transparent}.btn-dark{background:#343a32;color:#fff}.btn-dark:hover{background:#4c5648}.btn-outline{background:transparent;border-color:#d5d6ce;color:#41463e}.btn-outline:hover{border-color:#828978;background:#f4f4ee}.btn-small{min-height:32px;padding:7px 10px;font-size:10px}.hero-index{position:absolute;bottom:45px;left:0;font-size:10px;letter-spacing:2px;display:flex;align-items:center;gap:12px}.hero-index span{width:52px;height:1px;background:rgba(255,255,255,.6)}.hero-caption{position:absolute;right:34px;bottom:42px;writing-mode:vertical-rl;font-size:8px;letter-spacing:1.8px;color:rgba(255,255,255,.65)}.intro-section{padding-top:120px;padding-bottom:124px}.intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:70px;margin-top:30px}.intro-section h2,.section-heading h2,.services-strip h2,.contact-band h2,.project-story h2,.about-layout h2,.career-layout h2{font:500 clamp(42px,5vw,66px)/1.06 'Manrope',sans-serif;letter-spacing:-2.8px;margin:0}.intro-text{max-width:470px;padding-top:6px}.intro-text p,.about-layout p,.career-layout p{font-size:13px;line-height:1.9;color:#71756e}.intro-text .lead{font-size:17px;line-height:1.7;color:#373b35;margin-top:0}.under-link{border:0;border-bottom:1px solid #8e9388;padding:0 0 7px;background:none;color:#3a4037;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:9px}.under-link:hover{color:var(--olive-dark);border-color:var(--olive-dark)}.featured-section{background:#eeede7;padding:95px 0 108px}.section-heading{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:34px}.section-heading h2{margin-top:18px}.featured-grid{display:grid;grid-template-columns:1.3fr .85fr;gap:24px;align-items:start}.featured-card{border:0;padding:0;background:none;text-align:left;color:var(--ink);width:100%}.featured-card img{width:100%;height:410px;object-fit:cover;transition:transform .6s}.featured-large img{height:510px}.featured-card:hover img{transform:scale(1.012)}.featured-meta{display:flex;justify-content:space-between;align-items:center;padding-top:15px}.featured-meta strong{font:600 15px 'Manrope',sans-serif}.featured-meta small{font-size:8px;letter-spacing:1.2px;color:#898e83}.services-strip{padding:115px 0 120px}.services-strip-grid{display:grid;grid-template-columns:1fr 1fr;gap:70px;margin-top:30px}.service-mini-list{border-top:1px solid var(--line)}.service-mini-list div{display:grid;grid-template-columns:48px 1fr 20px;align-items:center;border-bottom:1px solid var(--line);padding:19px 0;font:600 14px 'Manrope',sans-serif}.service-mini-list span{font:500 10px 'DM Sans',sans-serif;color:#989d92}.contact-band{background:#424b40;color:#f7f6f2;padding:77px 0 82px}.contact-band-inner{display:flex;justify-content:space-between;align-items:center}.contact-band h2{font-size:clamp(40px,5vw,62px);margin-top:19px}.circle-arrow{width:66px;height:66px;border:1px solid rgba(255,255,255,.55);border-radius:50%;background:transparent;color:#fff;display:grid;place-items:center;transition:.2s}.circle-arrow:hover{background:#f4f2eb;color:#333}.public-footer{background:#242924;color:#eeeee8;padding:66px 0 22px}.footer-top{display:flex;justify-content:space-between;padding-bottom:60px}.footer-top p{font-size:12px;line-height:1.8;color:#aeb1a7;margin-top:24px}.footer-links{display:flex;gap:100px}.footer-links div{display:flex;flex-direction:column;gap:13px}.footer-links small{font-size:8px;letter-spacing:1.6px;color:#878e82;margin-bottom:5px}.footer-links button{padding:0;border:0;background:none;color:#d2d5cc;text-align:left;font-size:11px}.footer-bottom{border-top:1px solid rgba(255,255,255,.12);padding-top:19px;display:flex;justify-content:space-between;font-size:8px;letter-spacing:1px;color:#8c9389}.page-intro{padding-top:100px;padding-bottom:54px}.page-intro h1{font-size:clamp(58px,7vw,90px);margin:23px 0 18px}.page-intro p{font-size:14px;line-height:1.8;color:#73786f;max-width:510px}.portfolio-section{padding-bottom:110px}.portfolio-toolbar,.toolbar-right{display:flex;align-items:center;justify-content:space-between;gap:12px}.portfolio-toolbar{padding:14px 0 27px;border-bottom:1px solid var(--line);margin-bottom:28px}.filter-pills{display:flex;gap:5px}.filter-pills button{border:1px solid transparent;padding:9px 13px;background:none;color:#85897f;font-size:10px}.filter-pills button.selected{border-color:#cbd0c3;color:#31382f;background:#eeefe8}.toolbar-right select,.admin-toolbar select{border:1px solid #dedfd8;background:#f8f7f3;padding:10px 12px;color:#4d534a;font-size:11px}.search-field{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e3dc;padding:0 11px;min-width:190px;color:#899084}.search-field input{border:0;outline:0;padding:10px 0;width:100%;min-width:0;background:transparent;font-size:11px;color:#333}.portfolio-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:47px 24px}.portfolio-card{padding:0;text-align:left;border:0;background:none;color:var(--ink)}.portfolio-photo{height:390px;position:relative;overflow:hidden;background:#ddd}.portfolio-photo img{width:100%;height:100%;object-fit:cover;transition:transform .5s}.portfolio-card:hover img{transform:scale(1.025)}.photo-number{position:absolute;top:15px;left:15px;color:#fff;font-size:10px;letter-spacing:1px;text-shadow:0 1px 6px #333}.portfolio-card-info{display:flex;justify-content:space-between;align-items:flex-start;padding-top:15px}.portfolio-card-info strong{font:600 17px 'Manrope',sans-serif;display:block}.portfolio-card-info small{display:block;color:#81867c;font-size:10px;margin-top:5px}.portfolio-type{font-size:8px;letter-spacing:1px;color:#858a80}.detail-hero{height:570px;position:relative;color:#fff}.detail-hero img{width:100%;height:100%;object-fit:cover}.detail-hero:after{content:'';position:absolute;inset:0;background:linear-gradient(0deg,rgba(20,23,20,.7),transparent 75%)}.detail-hero-overlay{position:absolute;z-index:1;bottom:60px;left:max(32px,calc((100% - 1200px)/2));}.detail-hero h1{font:500 82px/1 'Manrope',sans-serif;letter-spacing:-4px;margin:20px 0 9px}.detail-hero h1 em{font-family:Georgia,serif;font-weight:400}.detail-hero p{font-size:12px;color:#e3e5df}.project-detail-content{padding-bottom:100px}.project-facts{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line);padding:31px 0}.project-facts div{display:flex;flex-direction:column;gap:9px;border-right:1px solid var(--line);padding-left:24px}.project-facts div:first-child{padding-left:0}.project-facts div:last-child{border:0}.project-facts small,.contact-aside small{font-size:8px;letter-spacing:1.2px;color:#888e82}.project-facts strong{font:600 14px 'Manrope',sans-serif}.project-story{display:grid;grid-template-columns:1fr 1.35fr;gap:60px;padding:90px 0}.project-story h2{font-size:53px}.project-story p{font-size:13px;line-height:1.9;color:#73786f;max-width:570px;margin:25px 0}.detail-gallery{display:grid;grid-template-columns:1fr 1fr;gap:20px}.detail-gallery img{width:100%;height:390px;object-fit:cover}.back-link{margin-top:35px}.service-page-list{padding-bottom:110px}.service-page-row{display:grid;grid-template-columns:60px 1fr 1.1fr 30px;gap:25px;align-items:center;padding:29px 0;border-top:1px solid var(--line)}.service-page-row:last-child{border-bottom:1px solid var(--line)}.service-page-row>span{font-size:10px;color:#92978e}.service-page-row h2{font:600 22px 'Manrope',sans-serif;margin:0}.service-page-row p{font-size:12px;line-height:1.7;color:#81867d;max-width:400px}.about-layout{display:grid;grid-template-columns:1.1fr .9fr;gap:85px;padding-bottom:120px;align-items:center}.about-layout img{width:100%;height:570px;object-fit:cover}.about-layout h2{margin-top:18px}.about-layout p{max-width:450px}.about-layout .under-link{margin-top:15px}.contact-layout{display:grid;grid-template-columns:1.5fr .6fr;gap:100px;padding:5px 0 130px}.public-form{display:flex;flex-direction:column;gap:19px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.field{display:flex;flex-direction:column;gap:8px;min-width:0}.field>span{font-size:10px;font-weight:700;color:#596055}.field b{color:#8c6f53}.field input,.field select,.field textarea{width:100%;border:1px solid #dedfd7;background:#fbfaf7;padding:12px 13px;font-size:12px;color:#333;outline:none;resize:vertical}.field input:focus,.field textarea:focus,.field select:focus{border-color:#8a9380}.contact-aside{border-top:1px solid var(--line);align-self:start}.contact-aside div{padding:19px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:9px}.contact-aside strong{font:600 13px 'Manrope',sans-serif}.form-success{margin:0;color:#52634b;font-size:11px;display:flex;gap:8px;align-items:center}.career-layout{display:grid;grid-template-columns:.8fr 1.2fr;gap:95px;padding:0 0 120px}.career-layout h2{margin-top:20px}.career-layout .public-form{border-top:1px solid var(--line);padding-top:23px}.upload-box{border:1px dashed #c8ccc1;padding:16px;display:flex;align-items:center;gap:12px;color:#778071;position:relative}.upload-box span{display:flex;flex-direction:column;gap:4px}.upload-box strong{font-size:11px;color:#434a3f}.upload-box small{font-size:9px;color:#92978e}.upload-box input{position:absolute;inset:0;opacity:0;cursor:pointer}.full{grid-column:1/-1}
+/* Shared portal primitives */
+.portal-topbar{height:72px;background:#fbfaf7;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 34px;position:sticky;top:0;z-index:25}.portal-top-left,.portal-top-right{display:flex;align-items:center;gap:20px}.portal-label{font-size:8px;letter-spacing:1.7px;color:#8b9085;border-left:1px solid var(--line);padding-left:19px}.portal-top-right{gap:17px}.user-chip{display:flex;gap:9px;align-items:center}.user-chip>span:last-child{display:flex;flex-direction:column;gap:3px}.user-chip strong{font-size:10px}.user-chip small{font-size:9px;color:#898f84}.avatar{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#e5e8df;color:#56604d;font-size:9px;font-weight:700;flex-shrink:0}.notification-dot{position:absolute;right:6px;top:6px;width:6px;height:6px;border-radius:50%;background:#a66c4f;border:1px solid #fbfaf7}.client-app{min-height:100vh;background:#f7f6f2}.client-list-page{width:min(1150px,calc(100% - 64px));margin:auto;padding:70px 0 100px;min-height:calc(100vh - 72px)}.client-welcome{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:61px;border-bottom:1px solid var(--line)}.client-welcome h1{font:500 clamp(50px,6vw,72px)/1.02 'Manrope',sans-serif;letter-spacing:-3.5px;margin:20px 0 13px}.client-welcome p{font-size:13px;color:#7b8077}.welcome-stamp{width:100px;height:100px;border:1px solid #cdd0c6;display:flex;align-items:center;justify-content:center;flex-direction:column;font:600 27px 'Manrope',sans-serif;color:#6b7462;letter-spacing:-2px;transform:rotate(-5deg)}.welcome-stamp span{font:700 7px 'DM Sans',sans-serif;letter-spacing:1.1px}.list-heading{display:flex;align-items:flex-end;justify-content:space-between;padding:47px 0 25px}.list-heading h2{font:600 25px 'Manrope',sans-serif;margin:10px 0 0}.list-heading h2 small{font:400 11px 'DM Sans',sans-serif;color:#858a80;vertical-align:middle;margin-left:5px}.muted{font-size:10px;color:#888e83}.client-project-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}.client-project-card{text-align:left;border:1px solid #e5e5de;background:#fbfaf7;padding:0;color:var(--ink);transition:.2s}.client-project-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:#d2d5cb}.client-project-image{height:245px;position:relative;overflow:hidden}.client-project-image img{height:100%;width:100%;object-fit:cover;transition:transform .5s}.client-project-card:hover .client-project-image img{transform:scale(1.025)}.status-pill{position:absolute;left:15px;top:15px;background:rgba(250,249,245,.94);padding:6px 9px;font-size:8px;letter-spacing:.5px;font-weight:700;color:#616c55;text-transform:uppercase}.status-pill.complete{color:#5e7662}.client-project-info{padding:20px 21px}.project-card-top{display:flex;justify-content:space-between;color:#8b9186;font-size:9px;letter-spacing:1px}.project-card-top svg{color:#555f4d}.client-project-info h3{font:600 22px 'Manrope',sans-serif;margin:8px 0 7px}.client-project-info>p{font-size:10px;color:#858b80;display:flex;align-items:center;gap:6px;margin:0 0 23px}.progress-row,.hero-progress{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.progress-row span,.hero-progress span{font-size:8px;letter-spacing:1.2px;color:#8a8f85}.progress-row strong,.hero-progress strong{font:600 13px 'Manrope',sans-serif}.progress-bar{height:4px;width:100%;background:#e8e9e2;overflow:hidden}.progress-bar span{height:100%;display:block;background:#78836c;transition:width .3s}.client-project-bottom{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:14px;margin-top:17px;font-size:9px;color:#8a8f84}.client-project-bottom strong{color:#535b4d;font-size:9px}.demo-bottom-note{background:#eeede6;color:#878d81;text-align:center;padding:10px;font-size:8px;letter-spacing:.45px}.demo-bottom-note button{border:0;background:none;color:#59664f;text-decoration:underline;font-size:8px;margin-left:8px}.workspace-shell{display:grid;grid-template-columns:254px minmax(0,1fr);min-height:calc(100vh - 72px)}.workspace-sidebar{background:#eeede7;border-right:1px solid #e1e2da;padding:26px 18px 26px 24px;position:sticky;top:72px;height:calc(100vh - 72px);overflow:auto;align-self:start;z-index:20}.back-projects{border:0;background:none;display:flex;align-items:center;gap:7px;font-size:10px;color:#6f756b;padding:0 0 22px}.sidebar-project{border-bottom:1px solid #d9dbd2;padding-bottom:21px;display:flex;flex-direction:column;align-items:flex-start}.sidebar-project img{width:100%;height:112px;object-fit:cover;margin-bottom:13px}.sidebar-project small{font-size:8px;letter-spacing:1.3px;color:#92988b}.sidebar-project strong{font:600 17px 'Manrope',sans-serif;margin:5px 0}.sidebar-project span{display:flex;align-items:center;gap:5px;color:#888d83;font-size:9px}.workspace-nav-label{font-size:8px;letter-spacing:1.5px;color:#94998f;margin:22px 0 10px}.workspace-nav{display:flex;flex-direction:column;gap:3px}.workspace-nav button{display:flex;gap:10px;align-items:center;border:0;background:none;padding:11px 9px;color:#72786d;font-size:10px;text-align:left;transition:.15s}.workspace-nav button.active,.workspace-nav button:hover{background:#dfe3d8;color:#394336}.workspace-nav button.active{font-weight:700}.nav-count{margin-left:auto;width:5px;height:5px;border-radius:50%;background:#ab795c}.sidebar-progress{border-top:1px solid #d9dbd2;margin-top:28px;padding-top:19px}.sidebar-progress>div:first-child{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.sidebar-progress small{font-size:7px;letter-spacing:1px;color:#90968b}.sidebar-progress strong{font:600 12px 'Manrope',sans-serif}.sidebar-progress>span{display:block;margin-top:9px;font-size:8px;color:#8b9086}.workspace-main{padding:0 clamp(25px,4.2vw,65px) 45px;min-width:0;max-width:1480px;width:100%;margin:0 auto}.workspace-topline{height:55px;display:flex;align-items:center;justify-content:space-between}.breadcrumb{font-size:9px;color:#8a9086;display:flex;align-items:center;gap:8px}.status-pill{border-radius:0}.workspace-hero{height:330px;position:relative;overflow:hidden;color:#fff;background:#4c5549;scroll-margin-top:90px}.workspace-hero-img,.workspace-hero-img img,.workspace-hero-overlay{position:absolute;inset:0;width:100%;height:100%}.workspace-hero-img img{object-fit:cover;object-position:center 52%}.workspace-hero-overlay{background:linear-gradient(90deg,rgba(24,29,24,.69),rgba(24,29,24,.12) 90%),linear-gradient(0deg,rgba(22,25,22,.27),transparent 65%)}.workspace-hero-content{position:absolute;left:34px;bottom:28px;width:min(440px,calc(100% - 68px))}.workspace-hero-content h1{font:500 clamp(35px,4vw,53px)/1 'Manrope',sans-serif;letter-spacing:-2px;margin:13px 0 9px}.workspace-hero-content h1 span{color:#d1d4c9}.workspace-hero-content>p{font-size:10px;color:#e2e3dc;display:flex;align-items:center;gap:6px;margin:0 0 22px}.workspace-hero-content .progress-bar{background:rgba(255,255,255,.25)}.workspace-hero-content .progress-bar span{background:#f3f0e7}.workspace-stats{display:grid;grid-template-columns:repeat(4,1fr);background:#efeee8;margin-bottom:65px}.workspace-stats>div{padding:19px 20px;border-right:1px solid #dedfd7;display:flex;flex-direction:column;gap:7px}.workspace-stats>div:last-child{border:0}.workspace-stats small{font-size:7px;letter-spacing:1.1px;color:#8c9286}.workspace-stats strong{font:600 13px 'Manrope',sans-serif}.workspace-stats span{font-size:9px;color:#8d9288}.workspace-section{padding:0 0 64px;scroll-margin-top:93px}.workspace-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding-bottom:20px;border-bottom:1px solid var(--line);margin-bottom:23px}.workspace-section-head h2{font:600 26px 'Manrope',sans-serif;letter-spacing:-.8px;margin:8px 0 6px}.workspace-section-head p{font-size:10px;color:#858b80;margin:0;line-height:1.7}.workspace-section-head .btn{white-space:nowrap}.file-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.file-tile{border:1px solid #e4e5de;background:#fbfaf7;padding:12px;display:flex;align-items:center;gap:12px;text-align:left;min-width:0;color:var(--ink)}.file-tile:hover{border-color:#aeb6a5}.file-tile>div:nth-child(2){display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}.file-tile strong{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.file-tile small{font-size:8px;color:#8b9187}.file-tile>svg{color:#8b9285}.file-thumb{height:48px;width:42px;background:#eceee7;color:#7c8672;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}.file-thumb span{position:absolute;bottom:3px;font-size:6px;font-weight:700}.file-thumb.image-thumb{background:#dfe5dc}.progress-two-col{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.panel{border:1px solid #e5e5de;background:#fbfaf7;padding:20px;min-width:0}.panel-heading,.admin-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:18px}.panel-heading h3,.admin-panel-head h3{font:600 13px 'Manrope',sans-serif;margin:0}.subtle-tag{font-size:8px;letter-spacing:.6px;color:#7e8872;background:#edf0e8;padding:6px 8px}.timeline{position:relative}.timeline:before{content:'';position:absolute;top:9px;bottom:12px;left:10px;width:1px;background:#dce0d6}.timeline-item{position:relative;display:flex;gap:13px;padding-bottom:20px}.timeline-item:last-child{padding-bottom:0}.timeline-marker{width:21px;height:21px;border-radius:50%;border:1px solid #cdd2c7;background:#f7f6f2;display:grid;place-items:center;font-size:8px;color:#899183;z-index:1;flex-shrink:0}.timeline-item.done .timeline-marker{background:#6d7d62;border-color:#6d7d62;color:#fff}.timeline-item.current .timeline-marker{border:2px solid #7f8b70;color:#56624d}.timeline-body{flex:1;min-width:0}.timeline-body>div{display:flex;justify-content:space-between;gap:10px}.timeline-body strong{font-size:10px}.timeline-body>div span{font-size:8px;color:#969b91}.timeline-body>small{font-size:8px;color:#8a9185;display:block;margin-top:4px}.timeline-body .progress-bar{margin-top:8px}.update-item{display:grid;grid-template-columns:78px 1fr;gap:12px;padding:14px 0;border-top:1px solid #ecece6}.update-item:first-of-type{border-top:0}.update-date{font-size:8px;color:#92988c}.update-item strong{font-size:10px}.update-item p{font-size:9px;line-height:1.65;color:#7c8278;margin:6px 0}.update-meta{font-size:8px;color:#92988e}.document-list{border-top:1px solid #e8e8e1}.document-row{display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid #e8e8e1;min-width:0}.document-icon{width:38px;height:42px;background:#eceee7;color:#79836f;display:grid;place-items:center;flex-shrink:0}.document-row>div{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}.document-row strong{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.document-row small{font-size:8px;color:#92978d}.document-row .icon-btn{color:#7d8677}.billing-summary{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:1px;background:#e5e6df;border:1px solid #e5e6df;margin-bottom:15px}.billing-summary>div{background:#f1f0ea;padding:15px 17px;display:flex;flex-direction:column;gap:7px}.billing-summary small{font-size:7px;letter-spacing:1px;color:#899084}.billing-summary strong{font:600 14px 'Manrope',sans-serif}.invoice-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.invoice-card{border:1px solid #e4e5de;background:#fbfaf7;padding:16px}.invoice-card-top{display:flex;justify-content:space-between;gap:10px}.invoice-card-top>div{display:flex;flex-direction:column;gap:5px}.invoice-card-top small{font-size:8px;letter-spacing:.7px;color:#858b80}.invoice-card-top strong{font:600 17px 'Manrope',sans-serif}.status-tag{display:inline-flex;align-items:center;justify-content:center;padding:5px 7px;font-size:7px;letter-spacing:.35px;font-weight:700;background:#eef0e9;color:#65715a;white-space:nowrap;text-transform:uppercase}.tag-unpaid,.tag-rejected,.tag-cancelled,.tag-on-hold{background:#f3eae5;color:#96654e}.tag-pending-verification,.tag-pending,.tag-in-process{background:#f2eee1;color:#927844}.tag-partially-paid,.tag-draft,.tag-belum-dibeli{background:#eeeae0;color:#8b7955}.tag-paid,.tag-approved,.tag-published,.tag-sudah-dibeli,.tag-completed,.tag-active{background:#e8eee5;color:#59714f}.tag-internal-only{background:#eeeae8;color:#81756f}.invoice-meter{margin-top:20px}.invoice-meter>div:first-child{display:flex;justify-content:space-between;font-size:8px;color:#80867b;margin-bottom:7px}.pending-inline{font-size:8px;color:#957b43;display:flex;align-items:center;gap:5px;margin-top:9px}.invoice-card-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid #ebebe5}.invoice-card-bottom>span{font-size:8px;color:#92988d}.invoice-card-bottom .under-link{font-size:9px;padding-bottom:4px}.shopping-list{border-top:1px solid #e4e5de}.shopping-row{display:grid;grid-template-columns:95px 1fr 90px 110px;align-items:center;gap:15px;padding:14px 0;border-bottom:1px solid #e7e8e1}.shopping-date{font-size:8px;color:#8b9186}.shopping-name{display:flex;flex-direction:column;gap:5px}.shopping-name strong{font-size:10px}.shopping-name small{font-size:8px;color:#8c9287}.shopping-qty{font-size:9px;color:#626b5d}.recap-list{border-top:1px solid #e5e6df}.recap-row{display:grid;grid-template-columns:1.3fr .5fr 1fr 1fr;gap:15px;align-items:center;padding:16px 0;border-bottom:1px solid #e5e6df}.recap-row>div:not(.recap-month){display:flex;flex-direction:column;gap:5px}.recap-row small{font-size:7px;color:#92988d;letter-spacing:.9px}.recap-row strong{font:600 11px 'Manrope',sans-serif}.recap-month{display:flex;align-items:center;gap:10px;color:#65705c}.recap-month strong{font-size:11px}.workspace-footer{padding:25px 0;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:15px}.workspace-footer .brand-mark{width:30px;height:30px;font-size:12px}.workspace-footer .brand-copy strong{font-size:9px}.workspace-footer .brand-copy small{font-size:7px}.workspace-footer>span{font-size:9px;color:#8b9087}.mobile-workspace-nav{display:none}.empty-state{border:1px dashed #d6d9cf;padding:30px 15px;text-align:center;display:flex;align-items:center;flex-direction:column;gap:8px;color:#77816e;grid-column:1/-1}.empty-state>span{width:38px;height:38px;background:#eef0e9;display:grid;place-items:center}.empty-state strong{font:600 12px 'Manrope',sans-serif;color:#555e4e}.empty-state p{font-size:9px;color:#8c9288;margin:0;line-height:1.6}
+/* Admin workspace */
+.admin-app{min-height:100vh;background:#f6f6f2;display:grid;grid-template-columns:245px minmax(0,1fr)}.admin-sidebar{height:100vh;position:sticky;top:0;background:#292f29;color:#e9ebe3;padding:26px 15px 17px;display:flex;flex-direction:column;z-index:32}.admin-brand{padding:0 10px 27px;border-bottom:1px solid rgba(255,255,255,.12)}.admin-brand .brand-mark{width:34px;height:34px;font-size:13px}.admin-brand .brand-copy strong{font-size:10px}.admin-brand .brand-copy small{font-size:7px}.admin-label{display:block;font-size:7px;letter-spacing:1.3px;color:#92998e;margin-top:15px}.admin-nav-title{font-size:8px;letter-spacing:1.5px;color:#899187;margin:22px 10px 9px}.admin-nav{display:flex;flex-direction:column;gap:3px}.admin-nav button{border:0;background:transparent;color:#b5bcb0;padding:11px 10px;display:flex;align-items:center;gap:11px;text-align:left;font-size:10px;transition:.15s}.admin-nav button span{flex:1}.admin-nav button:hover,.admin-nav button.active{background:#414a40;color:#fff}.admin-nav button.active{box-shadow:inset 2px 0 #c8cfbd}.admin-nav .nav-count{color:#fff;background:#a87558;width:17px;height:17px;border-radius:50%;font-style:normal;display:grid;place-items:center;font-size:8px}.admin-sidebar-bottom{margin-top:auto}.admin-profile{border-top:1px solid rgba(255,255,255,.12);padding:17px 5px 13px;display:flex;gap:9px;align-items:center}.admin-profile>div{display:flex;flex-direction:column;gap:3px;flex:1}.admin-profile strong{font-size:9px}.admin-profile small{font-size:8px;color:#9ca498}.admin-profile>svg{color:#9ca498}.admin-profile .avatar{background:#465243;color:#e7ebdf}.admin-reset,.admin-logout{width:100%;display:flex;align-items:center;gap:8px;border:0;background:none;color:#aeb5a9;font-size:9px;text-align:left;padding:9px 6px}.admin-reset:hover,.admin-logout:hover{color:#fff}.admin-main{min-width:0}.admin-topbar{height:66px;background:#fbfaf7;border-bottom:1px solid #e7e7e1;display:flex;justify-content:space-between;align-items:center;padding:0 32px;position:sticky;top:0;z-index:20}.admin-top-actions,.admin-top-left{display:flex;align-items:center;gap:17px}.admin-topbar .breadcrumb{color:#858b81}.admin-topbar .breadcrumb strong{color:#363c34;font-weight:600}.demo-label{display:flex;align-items:center;gap:7px;color:#92988d;font-size:7px;letter-spacing:1px}.demo-label i{width:6px;height:6px;background:#b18a56;border-radius:50%}.admin-content{padding:34px clamp(24px,3.3vw,48px) 70px;max-width:1550px;margin:0 auto}.admin-page-header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:29px}.admin-page-header h1{font:600 clamp(27px,3vw,36px)/1.1 'Manrope',sans-serif;letter-spacing:-1.25px;margin:9px 0 7px}.admin-page-header p{font-size:10px;color:#858b80;margin:0;line-height:1.6}.admin-page-header>.btn{white-space:nowrap}.admin-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}.metric-card{background:#fbfaf7;border:1px solid #e5e6df;padding:17px 17px 16px;display:flex;flex-direction:column;align-items:flex-start;min-width:0}.metric-icon{width:32px;height:32px;background:#eef0e9;color:#65715c;display:grid;place-items:center;margin-bottom:15px}.metric-card small{font-size:8px;color:#8c9287;letter-spacing:.7px}.metric-card>strong{font:600 25px 'Manrope',sans-serif;letter-spacing:-1px;margin-top:4px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}.metric-card p{font-size:8px;color:#999e95;margin:6px 0 0}.metric-alert .metric-icon{background:#f2eee4;color:#9b7b47}.admin-dashboard-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:15px;margin-bottom:15px}.admin-panel{border:1px solid #e5e6df;background:#fbfaf7;padding:20px;margin-bottom:15px;min-width:0}.admin-panel-head{align-items:center}.admin-panel-head p{font-size:9px;color:#90968b;margin:5px 0 0}.admin-panel-head .under-link{font-size:9px}.admin-project-list{border-top:1px solid #e8e9e2}.admin-project-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #e8e9e2}.admin-project-row img{width:53px;height:45px;object-fit:cover}.admin-project-name{display:flex;flex-direction:column;gap:5px;flex:1;min-width:100px}.admin-project-name strong{font-size:10px}.admin-project-name small{font-size:8px;color:#93998f}.admin-project-progress{width:145px}.admin-project-progress>div:first-child{display:flex;justify-content:space-between;margin-bottom:6px}.admin-project-progress span{font-size:8px;color:#8d9387}.admin-project-progress strong{font-size:9px}.admin-project-row>svg{color:#9ba095}.quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.quick-actions button{border:1px solid #e8e9e2;background:#f8f7f3;padding:13px;text-align:left;display:grid;grid-template-columns:30px 1fr 15px;column-gap:8px;align-items:center;color:#343a32}.quick-actions button:hover{border-color:#aeb7a5;background:#f2f2ec}.quick-actions button>span{grid-row:span 2;width:29px;height:29px;background:#e9ede4;display:grid;place-items:center;color:#68735e}.quick-actions button>span svg{width:15px}.quick-actions button strong{font-size:9px}.quick-actions button small{font-size:8px;color:#90968c;grid-column:2}.quick-actions button>svg{grid-column:3;grid-row:1/3;color:#899184}.recent-panel{margin-bottom:0}.activity-table{border-top:1px solid #e8e9e2}.activity-row{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid #e8e9e2}.activity-dot{width:27px;height:27px;display:grid;place-items:center;background:#edf0e9;color:#75816a;flex-shrink:0}.activity-row>div{min-width:0}.activity-row strong{font-size:9px}.activity-row p{font-size:9px;color:#747b70;margin:4px 0;line-height:1.5}.activity-row small{font-size:8px;color:#9a9f96}.admin-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px}.admin-toolbar .search-field{min-width:240px}.admin-toolbar .muted{margin-left:auto}.admin-project-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.admin-project-card{border:1px solid #e5e6df;background:#fbfaf7;min-width:0}.admin-project-card-photo{height:185px;position:relative}.admin-project-card-photo img{width:100%;height:100%;object-fit:cover}.admin-project-card-body{padding:16px}.admin-project-card-body h3{font:600 17px 'Manrope',sans-serif;margin:7px 0}.admin-project-card-body>p{display:flex;align-items:center;gap:5px;color:#858b80;font-size:9px;margin:0 0 18px}.admin-card-progress>div:first-child{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}.admin-card-progress small{font-size:7px;letter-spacing:1px;color:#969c91}.admin-card-progress strong{font-size:10px}.admin-project-card-foot{border-top:1px solid #e9e9e3;margin-top:17px;padding-top:13px;display:flex;justify-content:space-between;align-items:center;gap:10px}.admin-project-card-foot>span{font-size:8px;color:#90968b}.admin-project-card-foot .under-link{font-size:9px}.table-panel{padding:0;overflow:hidden}.data-table{width:100%;border-collapse:collapse;text-align:left}.data-table th{font-size:7px;letter-spacing:1px;color:#92988d;background:#f3f2ec;padding:13px 15px}.data-table td{font-size:9px;color:#62695f;padding:13px 15px;border-top:1px solid #e9eae3}.table-person{display:flex;align-items:center;gap:9px}.table-person strong{font-size:9px;color:#363d35}.table-person .avatar{width:27px;height:27px}.log-list{border-top:1px solid #e8e9e2}.log-card{display:grid;grid-template-columns:100px 1fr auto;gap:15px;padding:16px 0;border-bottom:1px solid #e8e9e2;align-items:start}.log-card-date{display:flex;flex-direction:column;gap:6px;font-size:9px;color:#767d72}.log-card-date span{font-size:7px;color:#959b91}.log-card-main h4{margin:0 0 6px;font-size:11px}.log-card-main p{margin:0 0 6px;font-size:9px;color:#7f857b;line-height:1.6}.log-card-main small{font-size:8px;color:#9ba096}.log-card-actions{display:flex;flex-direction:column;align-items:flex-end;gap:9px}.note-panel{display:flex;gap:12px;align-items:flex-start;background:#f0f1eb;color:#68735e}.note-panel>div strong{font-size:10px}.note-panel p{font-size:9px;line-height:1.7;color:#7d8577;margin:5px 0 0}.admin-doc-list{border-top:0}.admin-doc-list .document-row:first-child{border-top:0}.material-table{border-top:1px solid #e8e9e2}.material-row{display:grid;grid-template-columns:1.2fr .5fr .8fr 125px 150px;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid #e8e9e2}.material-main{display:flex;flex-direction:column;gap:5px}.material-main strong{font-size:10px}.material-main small{font-size:8px;color:#8d9389}.material-row>div:nth-child(2){font-size:9px;color:#72796e}.material-cost{display:flex;flex-direction:column;gap:4px}.material-cost small{font-size:7px;color:#9a9f95;letter-spacing:.7px}.material-cost strong{font-size:9px}.material-row select{border:1px solid #e1e2db;background:#f8f7f3;padding:8px;font-size:8px;color:#62695e}.material-publish{display:flex;align-items:center;gap:7px;justify-content:flex-end}.material-publish .btn{padding:6px}.usage-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #e9e9e3}.usage-row>span{width:32px;height:32px;display:grid;place-items:center;background:#eef0e9;color:#718068}.usage-row>div{display:flex;flex-direction:column;gap:4px;flex:1}.usage-row strong{font-size:9px}.usage-row small{font-size:8px;color:#8e948a}.usage-row>strong{font-size:9px}.billing-metrics .metric-card>strong{font-size:17px}.payment-review-row{display:flex;align-items:center;gap:13px;padding:14px 0;border-top:1px solid #e9e9e3}.proof-placeholder{width:48px;height:53px;background:#eceee8;color:#78836f;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;flex-shrink:0}.proof-placeholder small{font-size:6px;letter-spacing:1px}.payment-review-main{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}.payment-review-main strong{font-size:10px}.payment-review-main small,.payment-review-main span{font-size:8px;color:#8b9187}.payment-review-actions{display:flex;gap:6px}.invoice-admin-row{display:grid;grid-template-columns:1.4fr .8fr .8fr 120px 55px;gap:10px;align-items:center;padding:13px 0;border-top:1px solid #e9e9e3}.invoice-admin-row>div:first-child{display:flex;flex-direction:column;gap:5px;min-width:0}.invoice-admin-row>div:first-child strong{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.invoice-admin-row>div:first-child small{font-size:8px;color:#90968b}.invoice-admin-row>strong,.invoice-admin-row>span:not(.status-tag){font-size:9px}.invoice-actions{display:flex;justify-content:flex-end}.notification-row{display:flex;align-items:flex-start;gap:12px;padding:15px 0;border-top:1px solid #e9e9e3;position:relative}.notification-row.read{opacity:.63}.notification-icon{width:31px;height:31px;background:#edf0e9;color:#74806b;display:grid;place-items:center;flex-shrink:0}.notification-row>div{flex:1}.notification-row strong{font-size:10px}.notification-row p{font-size:9px;color:#80867c;margin:5px 0;line-height:1.5}.notification-row small{font-size:8px;color:#9a9f96}.unread-dot{width:6px;height:6px;border-radius:50%;background:#a66d4e;margin:8px}.admin-content-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.content-manage-card>span{width:34px;height:34px;background:#edf0e9;color:#76816d;display:grid;place-items:center}.content-manage-card h3{font:600 14px 'Manrope',sans-serif;margin:14px 0 5px}.content-manage-card p{font-size:9px;color:#858b81;line-height:1.6;min-height:29px}.content-manage-card .under-link{font-size:9px;margin-top:8px}.settings-section{padding:0 20px}.settings-row{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:19px 0;border-bottom:1px solid #e9e9e3}.settings-row:last-child{border:0}.settings-row strong{font-size:10px}.settings-row p{font-size:9px;color:#858b81;margin:5px 0 0;line-height:1.5}.admin-logout{margin-top:2px}.status-tag.tag-primary-admin,.status-tag.tag-not-connected{background:#eeece6;color:#7c8176}
+/* Modal, forms, feedback */
+.modal-backdrop{position:fixed;inset:0;z-index:100;background:rgba(24,27,23,.48);display:grid;place-items:center;padding:20px;backdrop-filter:blur(3px)}.modal-card{width:min(590px,100%);max-height:min(88vh,850px);overflow:auto;background:#fbfaf7;box-shadow:0 24px 80px rgba(0,0,0,.2);animation:modal-in .2s ease}.modal-header{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 25px 18px;border-bottom:1px solid #e8e8e1;position:sticky;top:0;background:#fbfaf7;z-index:2}.modal-header h2{font:600 21px 'Manrope',sans-serif;letter-spacing:-.6px;margin:8px 0 0}.modal-body{padding:22px 25px 25px}.modal-body form{display:flex;flex-direction:column;gap:16px}.modal-body .form-grid{gap:13px}.modal-lead{font-size:11px;line-height:1.7;color:#757b70;margin:0 0 16px}.demo-role-list{display:flex;flex-direction:column;gap:8px}.demo-role-list button{border:1px solid #e2e4dc;background:#f8f7f3;display:flex;align-items:center;gap:12px;padding:14px;text-align:left;color:#353c33}.demo-role-list button:hover{border-color:#aab3a0;background:#f0f1eb}.role-symbol{width:35px;height:35px;background:#e9ede4;color:#69755e;display:grid;place-items:center}.demo-role-list button>span:nth-child(2){display:flex;flex-direction:column;gap:4px;flex:1}.demo-role-list strong{font-size:10px}.demo-role-list small{font-size:8px;color:#8b9186}.modal-footnote{background:#f0f0e9;padding:10px 12px;font-size:8px;line-height:1.6;color:#81887b}.modal-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:4px}.modal-actions .btn{min-width:105px}.check-list{display:flex;flex-direction:column;gap:9px;padding:11px;background:#f5f4ee;border:1px solid #e4e5de}.check-list label{display:flex;align-items:center;gap:9px;font-size:10px}.check-list small{color:#92988d;margin-left:5px}.modal-highlight{display:flex;align-items:center;gap:11px;background:#f0f1eb;color:#697560;padding:13px}.modal-highlight div{display:flex;flex-direction:column;gap:4px}.modal-highlight strong{font-size:10px;color:#444c3e}.modal-highlight small{font-size:8px;color:#899183}.selected-file{font-size:8px;color:#707a67}.payment-verify-summary{background:#f0f1eb;padding:15px;display:flex;flex-direction:column;gap:6px}.payment-verify-summary small{font-size:8px;letter-spacing:.8px;color:#7d8872}.payment-verify-summary strong{font:600 23px 'Manrope',sans-serif}.payment-verify-summary span{font-size:8px;color:#858c7e}.form-error{background:#f4e9e4;color:#905f49;padding:10px 12px;font-size:9px;display:flex;align-items:center;gap:7px;margin-top:13px}.invoice-detail-summary{background:#f0f1eb;padding:17px}.invoice-detail-summary>small{font-size:8px;letter-spacing:1px;color:#848d79}.invoice-detail-summary h2{font:600 26px 'Manrope',sans-serif;margin:6px 0 11px}.invoice-detail-summary p{font-size:8px;color:#888f83;margin:10px 0}.detail-amounts{display:flex;justify-content:space-between;margin-top:12px;font-size:8px;color:#7d8578}.detail-amounts span{display:flex;flex-direction:column;gap:5px}.detail-amounts strong{font-size:10px;color:#41493d}.modal-subtitle{font:600 11px 'Manrope',sans-serif;margin:19px 0 8px}.payment-history-row{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e8e8e1;padding:11px 0}.payment-history-row>div{display:flex;flex-direction:column;gap:5px}.payment-history-row strong{font-size:10px}.payment-history-row small{font-size:8px;color:#8d9389}.payment-history-row>div:last-child{align-items:flex-end}.receipt-ref{color:#65765a!important}.modal-wide-btn{width:100%;margin-top:14px}.preview-art{height:180px;background:#eeefe9;color:#74816b;display:flex;flex-direction:column;gap:10px;justify-content:center;align-items:center}.preview-art span{font-size:7px;letter-spacing:1.6px}.file-preview-modal h3{font:600 14px 'Manrope',sans-serif;margin:17px 0 6px}.file-preview-modal p{font-size:9px;color:#82887e;line-height:1.6}.file-preview-meta{display:flex;gap:25px;border-top:1px solid #e8e8e1;padding:12px 0;margin-top:15px}.file-preview-meta span{display:flex;flex-direction:column;gap:4px;font-size:8px;color:#92988e}.file-preview-meta strong{font-size:9px;color:#555e50}.preserve-lines{white-space:pre-line}.toast{position:fixed;right:22px;bottom:22px;z-index:130;background:#313a30;color:#f7f6f2;padding:12px 17px;display:flex;align-items:center;gap:9px;font-size:10px;box-shadow:var(--shadow);max-width:min(420px,calc(100% - 44px));animation:modal-in .2s ease}@keyframes modal-in{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1100px){.public-nav{gap:20px;margin-right:25px}.admin-app{grid-template-columns:220px minmax(0,1fr)}.admin-metrics{grid-template-columns:repeat(2,1fr)}.admin-dashboard-grid{grid-template-columns:1fr}.material-row{grid-template-columns:1fr .45fr .75fr 115px}.material-publish{grid-column:1/-1;justify-content:flex-start}.material-publish .status-tag{margin-right:auto}.workspace-shell{grid-template-columns:225px minmax(0,1fr)}.workspace-sidebar{padding-left:17px;padding-right:14px}.workspace-stats>div{padding:16px 13px}.workspace-section-head h2{font-size:23px}}
+@media(max-width:780px){.wrap{width:calc(100% - 40px)}.public-header{height:68px}.public-header-inner{width:calc(100% - 36px)}.brand-mark{width:33px;height:33px}.brand-copy strong{font-size:9px}.brand-copy small{font-size:7px}.public-nav{display:none;position:absolute;top:68px;left:0;right:0;margin:0;padding:12px 20px 18px;background:#f7f6f2;border-bottom:1px solid var(--line);flex-direction:column;align-items:stretch;gap:0}.public-nav.nav-open{display:flex}.public-nav button{text-align:left;padding:13px 4px;border-bottom:1px solid #e8e8e2}.public-nav button.active{box-shadow:none}.portal-link{font-size:10px}.mobile-menu{display:inline-flex}.hero{height:calc(85vh - 68px);min-height:560px}.hero h1{font-size:clamp(57px,11vw,84px);letter-spacing:-3.5px}.hero-content>p{font-size:12px;max-width:350px}.hero-caption{right:15px}.intro-section{padding:80px 0}.intro-grid,.services-strip-grid{grid-template-columns:1fr;gap:25px}.intro-section h2,.section-heading h2,.services-strip h2{font-size:49px}.featured-section{padding:72px 0}.featured-grid{grid-template-columns:1fr}.featured-card img,.featured-large img{height:350px}.section-heading{align-items:flex-start;flex-direction:column;gap:18px}.services-strip{padding:80px 0}.contact-band{padding:60px 0}.contact-band h2{font-size:47px}.circle-arrow{width:55px;height:55px}.footer-top{gap:30px}.footer-links{gap:45px}.page-intro{padding-top:72px;padding-bottom:35px}.page-intro h1{font-size:clamp(53px,10vw,75px);letter-spacing:-3px}.portfolio-toolbar{align-items:flex-start;flex-direction:column}.toolbar-right{width:100%;justify-content:space-between}.search-field{flex:1;min-width:0}.portfolio-grid{gap:28px 14px}.portfolio-photo{height:280px}.portfolio-card-info{flex-direction:column;gap:9px}.detail-hero{height:450px}.detail-hero h1{font-size:62px}.detail-hero-overlay{left:20px;bottom:45px}.project-facts{grid-template-columns:1fr 1fr;row-gap:18px}.project-facts div:nth-child(2){border:0}.project-facts div:nth-child(3){padding-left:0}.project-story{grid-template-columns:1fr;gap:23px;padding:60px 0}.project-story h2{font-size:46px}.detail-gallery{gap:10px}.detail-gallery img{height:250px}.service-page-row{grid-template-columns:33px 1fr 20px;gap:10px;padding:21px 0}.service-page-row p{grid-column:2/3;margin:0}.service-page-row>svg{grid-column:3;grid-row:1}.service-page-row h2{font-size:18px}.about-layout,.contact-layout,.career-layout{grid-template-columns:1fr;gap:35px;padding-bottom:80px}.about-layout img{height:380px}.about-layout h2,.career-layout h2{font-size:48px}.contact-aside{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.contact-aside div:last-child{grid-column:1/-1}.form-grid{gap:13px}.portal-topbar{height:64px;padding:0 17px}.portal-top-left{gap:10px}.portal-label{display:none}.portal-top-right{gap:8px}.user-chip>span:last-child{display:none}.user-chip .avatar{width:29px;height:29px}.client-list-page{width:calc(100% - 40px);padding:50px 0 70px}.client-welcome{padding-bottom:42px}.client-welcome h1{font-size:55px}.welcome-stamp{width:70px;height:70px;font-size:20px}.welcome-stamp span{font-size:5px}.list-heading{align-items:flex-start;flex-direction:column;gap:8px;padding:35px 0 20px}.client-project-grid{grid-template-columns:1fr}.client-project-image{height:230px}.workspace-shell{display:block;min-height:calc(100vh - 64px)}.workspace-sidebar{position:fixed;top:64px;left:0;bottom:0;height:auto;width:275px;transform:translateX(-101%);transition:transform .25s;box-shadow:var(--shadow);z-index:50}.workspace-sidebar.sidebar-open{transform:translateX(0)}.workspace-main{padding:0 19px 90px}.workspace-topline{height:48px}.workspace-hero{height:300px}.workspace-hero-content{left:20px;bottom:21px;width:calc(100% - 40px)}.workspace-hero-content h1{font-size:41px}.workspace-stats{grid-template-columns:1fr 1fr;margin-bottom:50px}.workspace-stats>div:nth-child(2){border-right:0}.workspace-stats>div:nth-child(-n+2){border-bottom:1px solid #dedfd7}.workspace-section{padding-bottom:49px}.workspace-section-head{align-items:flex-start;flex-direction:column;gap:12px}.workspace-section-head h2{font-size:23px}.file-grid,.progress-two-col,.invoice-list{grid-template-columns:1fr}.billing-summary{grid-template-columns:1fr 1fr}.billing-summary>div:first-child{grid-column:1/-1}.shopping-row{grid-template-columns:74px 1fr auto;gap:8px}.shopping-row .status-tag{grid-column:2/4;justify-self:start}.shopping-qty{font-size:8px;text-align:right}.recap-row{grid-template-columns:1fr 1fr;gap:12px}.recap-month{grid-column:1/-1}.workspace-footer{flex-wrap:wrap}.workspace-footer>span{order:3;width:100%}.mobile-workspace-nav{position:fixed;z-index:40;bottom:15px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#343d32;color:#fff;border:0;padding:12px 17px;box-shadow:var(--shadow);font-size:10px;white-space:nowrap}.admin-app{display:block}.admin-sidebar{position:fixed;left:0;top:0;bottom:0;width:245px;transform:translateX(-101%);transition:transform .25s;box-shadow:var(--shadow)}.admin-sidebar.admin-sidebar-open{transform:translateX(0)}.admin-topbar{height:60px;padding:0 17px}.admin-topbar .mobile-menu{display:inline-flex}.admin-top-actions{gap:10px}.demo-label{font-size:6px}.admin-content{padding:25px 17px 55px}.admin-page-header{align-items:flex-start;flex-direction:column;gap:14px}.admin-page-header h1{font-size:29px}.admin-page-header>.btn{align-self:flex-start}.admin-metrics{grid-template-columns:1fr 1fr;gap:8px}.metric-card{padding:13px}.metric-card>strong{font-size:22px}.admin-project-cards{grid-template-columns:1fr}.admin-toolbar{flex-wrap:wrap}.admin-toolbar .search-field{min-width:100%;width:100%}.admin-toolbar .muted{margin-left:0}.admin-project-row{gap:8px}.admin-project-row img{width:44px;height:40px}.admin-project-progress{width:80px}.admin-project-name small{font-size:7px}.quick-actions{gap:7px}.quick-actions button{padding:10px;grid-template-columns:25px 1fr 12px}.quick-actions button>span{width:25px;height:25px}.admin-panel{padding:15px}.log-card{grid-template-columns:72px 1fr;gap:10px}.log-card-actions{grid-column:2;flex-direction:row;justify-content:flex-start;align-items:center}.material-row{grid-template-columns:1fr auto;gap:9px}.material-row>div:nth-child(2){text-align:right}.material-cost{grid-column:1}.material-row select{grid-column:2}.material-publish{grid-column:1/-1}.payment-review-row{flex-wrap:wrap}.payment-review-main{min-width:calc(100% - 70px)}.payment-review-actions{width:100%;margin-left:61px}.invoice-admin-row{grid-template-columns:1fr auto;gap:6px;padding:14px 0}.invoice-admin-row>div:first-child{grid-column:1/2}.invoice-admin-row>strong{grid-column:2;grid-row:1}.invoice-admin-row>span:not(.status-tag){grid-column:1}.invoice-admin-row>.status-tag{grid-column:2;grid-row:2;justify-self:end}.invoice-actions{grid-column:2;grid-row:3}.data-table{min-width:720px}.table-panel{overflow-x:auto}.admin-content-grid{grid-template-columns:1fr 1fr}.settings-row{align-items:flex-start;flex-direction:column}.footer-top{flex-direction:column}.footer-links{gap:75px}.footer-bottom{gap:12px;flex-direction:column}.modal-backdrop{padding:10px;align-items:end}.modal-card{max-height:90vh}.modal-header{padding:18px 18px 14px}.modal-body{padding:17px 18px 20px}.modal-header h2{font-size:19px}.modal-body .form-grid{grid-template-columns:1fr 1fr}.client-project-grid .client-project-card{max-width:100%}}
+@media(max-width:480px){.wrap{width:calc(100% - 32px)}.header-actions{gap:4px}.portal-link{font-size:9px}.hero-buttons{flex-wrap:wrap}.btn{padding:11px 13px}.hero-index{bottom:29px}.hero-caption{display:none}.intro-section h2,.section-heading h2,.services-strip h2{font-size:43px}.featured-card img,.featured-large img{height:275px}.footer-links{gap:45px}.page-intro h1{font-size:50px}.portfolio-photo{height:220px}.portfolio-card-info strong{font-size:14px}.portfolio-type{font-size:7px}.detail-hero{height:380px}.detail-hero h1{font-size:51px}.detail-gallery img{height:185px}.contact-band h2{font-size:40px}.form-grid{grid-template-columns:1fr}.contact-aside{grid-template-columns:1fr}.contact-aside div:last-child{grid-column:auto}.client-welcome h1{font-size:46px}.welcome-stamp{width:58px;height:58px}.client-project-image{height:195px}.workspace-main{padding-left:13px;padding-right:13px}.workspace-hero{height:265px}.workspace-hero-content h1{font-size:35px}.workspace-stats>div{padding:13px 10px}.workspace-stats strong{font-size:11px}.file-tile{padding:9px;gap:8px}.file-tile strong{font-size:9px}.workspace-section-head h2{font-size:21px}.shopping-row{grid-template-columns:1fr auto}.shopping-date{grid-column:1/-1}.shopping-name{grid-column:1}.shopping-qty{grid-column:2}.shopping-row .status-tag{grid-column:1/-1}.admin-content{padding-left:12px;padding-right:12px}.admin-metrics{gap:7px}.metric-card>strong{font-size:19px}.metric-card small{font-size:7px}.quick-actions{grid-template-columns:1fr}.admin-content-grid{grid-template-columns:1fr}.admin-topbar{padding:0 10px}.admin-top-actions{gap:5px}.demo-label{display:none}.modal-body .form-grid{grid-template-columns:1fr}.modal-actions .btn{flex:1}.payment-review-actions{margin-left:0}.workspace-footer .under-link{font-size:8px}}
+.project-status-notice{display:flex;gap:12px;align-items:flex-start;background:#f4eee4;border:1px solid #e7ddca;padding:15px 17px;margin:-43px 0 25px;color:#8d7449}.project-status-notice.ready{background:#edf1e8;border-color:#dce4d5;color:#657b59}.project-status-notice>div{display:flex;flex-direction:column;gap:5px}.project-status-notice strong{font-size:10px}.project-status-notice p{margin:0;font-size:9px;line-height:1.6;color:#817b6c}.project-status-notice.ready p{color:#77846e}.project-control-panel{display:flex;align-items:center;justify-content:space-between;gap:15px;background:#f0f1eb}.project-control-panel>div{display:flex;flex-direction:column;gap:5px}.project-control-panel strong{font-size:10px}.project-control-panel p{font-size:9px;line-height:1.6;color:#858c7e;margin:0;max-width:570px}
+.internal-form-block{border:1px solid #e4e5de;background:#f4f3ed;padding:13px;display:flex;flex-direction:column;gap:12px}.internal-form-block>div:first-child{display:flex;flex-direction:column;gap:4px}.internal-form-block>div:first-child strong{font-size:9px}.internal-form-block>div:first-child small{font-size:8px;color:#91978d}.internal-form-block .form-grid{grid-template-columns:1fr 1fr}.hold-recommendation{display:flex;align-items:center;justify-content:space-between;gap:15px;background:#f4eee4;border-color:#e7ddca}.hold-recommendation>div{display:flex;flex-direction:column;gap:6px}.hold-recommendation strong{display:flex;align-items:center;gap:7px;font-size:10px;color:#8a6d44}.hold-recommendation p{font-size:9px;line-height:1.6;color:#847967;margin:0;max-width:650px}
+@media(max-width:780px){.hold-recommendation{align-items:flex-start;flex-direction:column}.internal-form-block .form-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.internal-form-block .form-grid{grid-template-columns:1fr}}
+.overpayment-callout{display:flex;gap:8px;align-items:flex-start;background:#f4eee4;padding:10px 12px;color:#8b7048;font-size:9px;line-height:1.6}.overpayment-callout strong{color:#6e5738}
+.admin-account-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.admin-account-list>span{display:flex;flex-direction:column;gap:3px;background:#f0f1eb;padding:8px 10px}.admin-account-list strong{font-size:8px}.admin-account-list small{font-size:7px;color:#899184}
+
+.dashboard-metrics{grid-template-columns:repeat(3,1fr)}
+</file>
+
+<file path=".gitignore">
+node_modules
+dist
+.DS_Store
+.env
+.env.*
+</file>
+
+<file path="DEMO_GUIDE.md">
+# Demo guide — NA Associates
+
+Use this sequence to test the key end-to-end flows.
+
+## 1. Public website
+1. Start at `/`.
+2. Open Projects, use the category filters and search.
+3. Open a project detail page.
+4. Open Contact or Career and submit a demo form.
+5. Click Client Portal.
+
+## 2. Client experience
+1. Choose **Continue as Client**.
+2. On My Projects, open **Rumah Teduh**.
+3. Use the left anchor navigation on desktop, or the bottom **Project sections** control on mobile.
+4. Inspect published design files, reports, legal documents, Shopping List, billing, and monthly recap.
+5. In Billing & Payments, click **Upload payment proof**.
+6. Choose an invoice, enter a payment amount, and submit. A new Pending Verification item is created.
+
+## 3. Admin review
+1. Sign out to the public page, click Client Portal, then choose **Continue as Admin**.
+2. Open Billing & Payments.
+3. Choose the project and review the pending proof.
+4. Approve an amount. If the approved amount differs from the client's claim, enter a reason.
+5. If the payment exceeds the remaining invoice balance, select Credit to next invoice or Refund.
+6. Inspect the invoice register and Activity Log.
+
+## 4. Progress and publication
+1. Open Field Operations.
+2. Choose a project and create a daily log.
+3. Fill out the public work details and optional internal attendance/equipment fields.
+4. Save as Draft, then publish it from the report list.
+5. Return to Client Portal and confirm that only Published reports are visible.
+
+## 5. Shopping and materials
+1. Open Shopping & Materials.
+2. Add a new material requirement; it starts as Draft.
+3. Change status and publish it.
+4. Switch back to Client Portal and inspect Shopping List.
+5. Record Material Usage separately to see the distinction between planned procurement and actual use.
+
+## 6. Invoice revision and project hold
+1. In Billing & Payments, create an invoice or revise an existing unpaid invoice.
+2. Add a mandatory reason for the revision. The old invoice stays archived as Cancelled / Replaced.
+3. In Field Operations, use **Place on hold** to simulate the project's operational hold.
+4. Visit Client Portal: old records and payment upload remain available, while the project displays a hold notice.
+5. In Admin, move the project to Ready to Resume, then confirm Resume.
+
+## 7. Reset
+Use **Reset demo data** from Client or Admin to restore the starting sample data.
+</file>
+
+<file path="FIGMA_HANDOFF.md">
+# NA Associates — Figma Handoff
+
+Use this checklist to recreate/refine the interactive prototype as editable Figma frames and components. The browser prototype is a behavior and layout reference; it does not automatically generate an editable `.fig` file.
+
+## Suggested Figma pages
+
+### 00 — Cover & Project Notes
+- Project cover.
+- Scope summary.
+- Prototype limitations and open decisions.
+
+### 01 — Foundations
+- Color variables.
+- Typography styles.
+- Spacing scale.
+- Grid and breakpoints.
+- Buttons, inputs, selects, textareas.
+- Status tags, progress bars, cards, tables, upload controls.
+- Modal, drawer, toast, empty/loading/error states.
+
+### 02 — Public Website
+- Home / desktop.
+- Home / mobile.
+- Projects / desktop + filters.
+- Project Detail / desktop + mobile.
+- Services.
+- About.
+- Career / default + submitted state.
+- Contact / default + submitted state.
+- Public navigation / mobile menu.
+
+### 03 — Client Portal
+- Login / role chooser (demo only).
+- My Projects / desktop.
+- My Projects / mobile.
+- Project Workspace / Overview / desktop.
+- Project Workspace / mobile navigation.
+- A. Output & Design.
+- B. Progress & Field Operations.
+- C. Legal Documents.
+- D. Billing & Payments.
+- E. Shopping List.
+- F. Monthly Recapitulation.
+- Upload Payment Proof modal.
+- Invoice detail modal.
+- File preview modal.
+- Project On Hold state.
+
+### 04 — Admin Dashboard
+- Dashboard.
+- Projects list + Create Project modal.
+- Clients & Accounts + Invite Client modal.
+- Field Operations + New Daily Log modal.
+- Documents & Legal + upload modal.
+- Shopping & Materials + Draft/Published states.
+- Billing & Payments + verification/rejection/revision modals.
+- Notifications.
+- Activity Log.
+- Website Content.
+- Settings / Primary Admin account state.
+
+### 05 — Responsive & UI States
+- Desktop reference: 1440px wide.
+- Tablet reference: 768px wide.
+- Mobile reference: 375px wide.
+- Hover, focus, active, selected, disabled.
+- Empty, loading, success, validation error, server/backend unavailable.
+- Mobile sidebar drawer and modal bottom/full-screen states.
+
+## Design tokens visible in the prototype
+
+### Colors
+- Ink / charcoal: `#272A27`
+- Muted text: `#777B75`
+- Border: `#E6E5DF`
+- Paper / warm background: `#F7F6F2`
+- White: `#FFFFFF`
+- Olive: `#737B65`
+- Dark olive: `#525B48`
+- Sand: `#E9E5DC`
+- Warm surface: `#F0EEE8`
+
+### Typography
+- UI/body: DM Sans.
+- Display/headings: Manrope.
+- Editorial italic emphasis: Georgia (serif fallback).
+
+### Layout principles
+- Architectural editorial aesthetic; restrained palette and generous whitespace.
+- Public website uses image-led sections and editorial grids.
+- Client workspace is a long single-page project document with anchored sections.
+- Admin is a distinct multi-page management application with persistent sidebar on desktop.
+- Tables should become mobile cards or controlled horizontal scrollers; avoid accidental page-wide horizontal overflow.
+
+## Interaction prototypes to preserve in Figma
+
+- Public nav changes page.
+- Client Portal opens a demo role chooser.
+- Client sees My Projects; selecting a card opens its Project Workspace.
+- Project Workspace navigation scrolls to the selected section.
+- Admin menu changes management pages.
+- Draft/Published toggles change client visibility.
+- Payment proof upload creates Pending Verification.
+- Admin approval updates paid/remaining totals; rejection keeps proof history and reason.
+- Invoice revision retains old invoice as Cancelled/Replaced and links a new revision.
+- H+7 recommendation requires Admin confirmation; Hold preserves prior portal access/payment upload.
+- Full verified payment changes project to Ready to Resume; Admin confirms Resume.
+- Shopping List publication is separate from Material Usage entries.
+
+## Content and design dependencies still needed from the studio
+
+- Official logo files and brand guidelines, if available.
+- Final approved project photography/renderings and usage permissions.
+- Official studio email and WhatsApp number.
+- Approved service descriptions, about copy, career copy, and contact details.
+- Real project naming, data, contract wording, invoice/receipt format, and legal document templates.
+</file>
+
+<file path="index.html">
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f5f1" />
+    <meta name="description" content="NA Associates — Architecture, interiors, and project collaboration." />
+    <title>NA Associates — Architecture & Design</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+</file>
+
+<file path="package.json">
+{
+  "name": "na-associates-prototype",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lucide-react": "^0.468.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.0"
+  }
+}
+</file>
+
+<file path="PROJECT_SPEC.md">
+# NA Associates — Final Project Scope & Requirements
+
+**Status:** Working project brief for prototype, Figma, and later production development  
+**Date:** 2 November 2026  
+**Brand:** NA Associates — Architecture & Design
+
+This document consolidates the project requirements discussed so far. It distinguishes requirements from the original project brief (`data.docx` / meeting notes), later agreed product decisions, recommendations, and items still awaiting confirmation. It is intended to travel with the prototype source.
+
+---
+
+## 1. Project objective
+
+Build a professional public website and a project-management portal for NA Associates. The product has three connected experiences:
+
+1. **Public Website** — introduce the studio, services, and portfolio, and collect inquiries and career applications.
+2. **Client Portal** — let invited clients follow their own project information, published design outputs, progress, legal documents, material requirements, invoices, payments, and monthly recaps.
+3. **Admin Dashboard** — let the NA Associates internal team manage projects, clients, reports, documents, procurement, billing, notifications, website content, and activity history.
+
+The current deliverable is an interactive UI/workflow prototype. It is not a production website and must not be used to store real client or financial information.
+
+## 2. Source basis and decision labels
+
+### 2.1 Requirements originating in `data.docx` / the initial client discussion
+
+- Public website pages: Projects, Services, WebTitle/Home, About, Career, Contact/ContactUs.
+- Portfolio/project information: location, land area, building area, description, images, project category, year, ongoing/completed status, and project management.
+- Project categories include common/other, commercial, and residential.
+- Client portal access through the main public website, with email/Google login as the intended direction.
+- Per-client access to their own project information and files.
+- Design outputs such as renderings, drawings, working sheets, images, and PDFs.
+- Project progress, milestones/timeline, weekly reports, daily updates, site photographs, work details, notes, and attendance/equipment records.
+- Legal documents, including initial/current contracts and addenda.
+- Billing schedules, monthly invoices/installments, payment proofs, payment verification, receipts, reminders, and monthly recapitulations.
+- Shopping List in an Excel-like format, entered internally and visible to clients.
+- Internal and client account contexts, with internal account creation and assignment of projects.
+- Reminder channels discussed: email, web notification/popup, and WhatsApp.
+- An H+7 unpaid-payment consequence/hold concept and the ability for internal staff to adjust schedules when project progress is delayed.
+
+### 2.2 Decisions made during follow-up discussion
+
+- The Client Portal uses a **single long Project Workspace** with anchor navigation, not tabs that replace the entire page.
+- The Admin Dashboard uses a **multi-page layout** with a sidebar.
+- One Client account may have multiple assigned projects.
+- The Admin chooses each project's cover image/rendering. No complex personal theme builder is required.
+- All internal team members use the same operational role, called **Admin**.
+- The first-created account is **Primary Admin / Owner**. Only this account may create or promote other Admin accounts.
+- Each internal team member uses an individual account; accounts must not be shared.
+- Attendance and internal work notes are internal-only. Admin chooses which progress reports become visible to clients.
+- Shopping List and Material Usage are separate records and adjacent concepts, not one combined dataset.
+- Shopping List has Draft/Published visibility. Recommendation: Admin reviews entries before they become visible to the Client.
+- The Shopping & Materials module is procurement/material tracking, not a full accounting system.
+- Hold should pause new operational work updates, not lock all portal access or remove historical records.
+
+### 2.3 Recommendations, not yet confirmed as client policy
+
+- Use one Admin module for Shopping & Materials with separate Shopping List/Procurement and Material Usage views.
+- Keep supplier, purchase prices, purchase documents, and internal notes Admin-only.
+- Keep clients able to access historical reports, documents, contracts, invoices, and payment upload during Hold.
+- Allow Admin to upload completed design outputs during Hold when they are already finished and ready to share; do not treat this as a new operational progress update.
+- Permit internal-only documentation during Hold if needed, but do not publish it as active progress.
+
+## 3. Roles and access boundaries
+
+### Guest
+
+Can access public Home, Projects, Project Detail, Services, About, Career, and Contact. Cannot access client workspaces, legal records, private documents, invoices, payment proofs, attendance, or internal activity.
+
+### Client
+
+- Is invited by Admin using name, Google email, phone, and one or more assigned projects.
+- Uses the invited Google email for the intended production login.
+- Can access only assigned projects and the data/files published to that client.
+- Can upload payment proof and see verification status and receipts.
+- Cannot see internal attendance, internal notes, procurement prices, suppliers, or unpublished files/reports.
+- One client account may have several projects.
+
+Date of birth must not be used as a password or security factor.
+
+### Admin
+
+All Admins have the same operational rights to manage projects, clients, progress, documents, materials, invoices, notifications, and content. Only Primary Admin can add/promote Admin accounts. Production authorization must be enforced on the server/database, not by hiding frontend controls.
+
+## 4. Public Website scope
+
+### Home
+
+- Header with NA Associates identity and primary navigation.
+- Hero with strong studio statement and architecture imagery.
+- Subtle title animation.
+- Featured projects, studio introduction, service preview, and contact CTA.
+- Footer.
+
+### Projects and Project Detail
+
+Project cards should show cover, name, location, category, year, and status. Provide search and filters for category/status/year. Project details include location, land area, building area, description, category, year, status, and image gallery.
+
+### Services, About, Career, Contact
+
+- Services: service descriptions and supporting visuals.
+- About: studio profile, approach, and philosophy.
+- Career: application form with name, email, phone, position, introduction, and CV/portfolio attachments.
+- Contact: name, email, phone, project type, and message; email and WhatsApp are intended contact routes.
+
+Contact/Career submissions in the prototype only show demo confirmation. Production delivery requires a server-side email integration. WhatsApp must use the official studio number and a `wa.me` link; the user must press Send themselves.
+
+## 5. Client Portal scope
+
+### Login and My Projects
+
+Intended production login is Google OAuth limited to invited email addresses. After login, show My Projects cards with cover, name, location, status, progress, next milestone, and next payment (when applicable). Provide an empty state when no projects are assigned.
+
+### Project Workspace — one long page
+
+Desktop: sticky left anchor sidebar and main content. Tablet: top/horizontal navigation. Mobile: compact dropdown/horizontal navigation and single-column content; tables become cards and dialogs become full-screen/bottom sheets.
+
+Sections, in order:
+
+1. **Overview** — cover, project identity, location, status, progress, next milestone, next payment, recent activity, land/building area.
+2. **A. Output & Design** — published renderings, presentations, working drawings, PDFs, previews, and downloads.
+3. **B. Progress & Field Operations** — timeline/milestones, published daily progress, weekly recap, site photos, work details, and client-visible notes. Attendance is never client-visible.
+4. **C. Legal Documents** — client-visible contracts, current contract, addenda, version/date metadata, preview/download.
+5. **D. Billing & Payments** — active invoices, due dates, verified amount, balance, uploaded proof, verification state, payment history, receipts.
+6. **E. Shopping List** — published material requirements, need date, specification, quantity, unit, notes, and procurement status. No internal supplier/purchase cost data.
+7. **F. Monthly Recapitulation** — invoice, total billed, verified payments, proof records, receipts, and outstanding balance grouped by month.
+
+A project's cover is selected by Admin and used on My Projects and the workspace header.
+
+## 6. Admin Dashboard scope
+
+Use a multi-page sidebar layout with topbar, breadcrumb, content area, and responsive drawer behavior.
+
+Menu:
+1. Dashboard
+2. Projects
+3. Clients & Accounts
+4. Field Operations
+5. Documents & Legal
+6. Shopping & Materials
+7. Billing & Payments
+8. Notifications
+9. Activity Log
+10. Website Content
+11. Settings
+
+### Projects
+
+Create/edit/archive projects. Fields: project name/code, location, land area, building area, category, description, start date, target completion, status, progress, cover, assigned client, team, timeline/milestones.
+
+### Clients & Accounts
+
+Invite Client with name, Google email, phone, and one or more projects. Production invitation must be emailed and linked to Google OAuth.
+
+### Field Operations
+
+Admin creates Daily Project Logs with:
+
+- Daily Progress: date, work category, description, progress, notes, photos.
+- Work Details: work type, description, area, status, photos.
+- Attendance & Equipment: employee, attendance, job description, tools/equipment (Admin-only).
+- Material Usage: material, quantity, unit, date, work area, notes.
+- Notes & Documentation: internal notes and attachments.
+
+Admin chooses Draft or Published. Weekly reports should be summarized from daily records where practical rather than requiring duplicate entry.
+
+### Documents & Legal
+
+Upload documents, set category, version/date, description, and visibility (Internal Only / Client Visible). Preserve old versions and history.
+
+### Shopping & Materials
+
+Keep separate datasets:
+
+- Shopping List / Procurement: need date, material, spec, quantity, unit, status, supplier, internal unit cost/total, purchase date, purchase document, notes, client visibility.
+- Material Usage: actual date, material, quantity, unit, work area, notes.
+
+Clients see only published Shopping List fields approved for client visibility. Procurement costs/supplier and internal receipts remain internal.
+
+### Billing & Payments
+
+Subsections: Invoice List, Payment Verification, Receipts, Monthly Recapitulation, Invoice History.
+
+Invoice fields: number, revision, project, client, issue date, due date, amount, status, PDF/reference, related addendum, replacement/revision reference.
+
+Payment fields: payment date, claimed amount, approved amount, proof, status, verification date, verifier, reason, receipt.
+
+## 7. Financial rules
+
+### Partial payment
+
+1. Client enters claimed amount and uploads proof.
+2. Invoice shows Pending Verification while proof awaits review.
+3. Admin enters approved amount. If it differs from claimed amount, reason is mandatory.
+4. Only approved amounts count as money received.
+5. Invoice shows Partially Paid until the verified total reaches invoice amount.
+6. Each accepted payment has its own receipt.
+7. Original due date does not change automatically after a partial payment.
+8. If a revised installment schedule is agreed, Admin records the new date and reason; if contractual scope/schedule changes, create an addendum as appropriate.
+
+### Pending and rejected proof
+
+- Pending proof does not count as paid.
+- Display verified total and pending claim separately.
+- H+7 overdue clock pauses while proof is awaiting verification.
+- Rejected proof remains in history with mandatory rejection reason; Client can submit a new proof.
+
+### Overpayment
+
+Record the excess amount and require Admin to decide whether it is credited to a future invoice or refunded. Record the decision and reason. Do not silently discard the difference.
+
+### Invoice revision
+
+- An issued invoice is never silently edited or deleted.
+- Admin enters a mandatory reason.
+- Old invoice becomes Cancelled/Replaced but remains archived.
+- New invoice gets a revision number and reference to the replaced invoice.
+- Due date remains unchanged by default; changes require a reason.
+- Already verified payments are carried forward/linked once only; avoid double counting old and replacement invoices in totals.
+- If revision changes price/scope, reference the appropriate addendum.
+- Paid invoices are locked; post-payment correction uses additional invoice or credit/refund process.
+
+### Hold / Resume
+
+- H+7 after due date with outstanding verified balance and no pending proof creates a recommendation, not an automatic lock.
+- Admin confirms Hold.
+- Client retains access to existing records, legal documents, design outputs, invoices, payment history, and payment upload.
+- New operational progress updates are paused.
+- When all remaining payments are verified, project becomes Ready to Resume; Admin confirms Resume.
+
+## 8. Notifications and Activity Log
+
+Notification events: invoice issued, payment proof received/rejected, receipt available, new progress report/document, project status, Hold/Resume, and reminders at H-7, due date, and H+7.
+
+Planned channels: email, in-app/web notification, WhatsApp. They are not active until a provider/backend is connected.
+
+Activity Log should record actor, timestamp, action, affected project/object, previous/new values where relevant, and reason. Critical production financial/legal logs must be append-only and protected by backend policies.
+
+## 9. Visual and responsive direction
+
+Architectural editorial aesthetic: minimal, refined, neutral palette (warm white, off-white, charcoal, stone grey, restrained earthy accents), ample white space, clear grid, considered typography, high-quality architecture imagery. Avoid generic gradients or overly dense dashboards.
+
+Responsive targets: 375px, 768px, 1024px, and 1440px. Use desktop sticky client anchor sidebar, tablet horizontal/top navigation, mobile navigation control. Admin sidebar collapses into a drawer. Data tables must become readable mobile cards or controlled horizontal scrollers.
+
+## 10. Planned technical stack
+
+- Vercel: hosting/deployment.
+- Cloudflare: domain/DNS.
+- Supabase: Auth, PostgreSQL, Storage, Row Level Security.
+
+The prototype uses React + Vite, structured mock data, and browser localStorage. Production must implement real authentication, server/database authorization, RLS, secure private file access, email provider, and notification integrations. Never rely on frontend visibility alone as a security boundary.
+
+## 11. Data concepts
+
+Core entities to consider for production: profiles, projects, project_members, project_clients, project_milestones, project_progress_logs, project_work_details, employee_attendance, material_usage, shopping_items, project_files, legal_documents, invoices, invoice_revisions, payments, payment_receipts, monthly_recap, notifications, activity_logs, website_content.
+
+Key relationships:
+- One Client can have many projects.
+- One project can have many milestones, reports, files, legal docs, materials, invoices, and activity records.
+- One invoice can have multiple payment records.
+- An approved payment gets its own receipt.
+- An invoice revision links to its predecessor.
+
+## 12. Open decisions requiring studio confirmation
+
+1. Official NA Associates email and WhatsApp number.
+2. Whether Shopping List changes always require Publish (prototype recommendation: yes).
+3. Whether Admin may upload already-completed outputs during Hold (recommendation: yes, when they are completed deliverables, not new operational progress).
+4. Whether Admin may add internal-only records during Hold (recommendation: yes if needed for documentation, but not publish active progress).
+5. Expected service level for payment-proof verification (how long a proof may remain pending).
+6. Document/file retention policy.
+7. Detailed method for recalculating overall progress and changing project timelines after delay.
+8. Final fields and legal/financial wording for invoices, receipts, and addenda.
+
+## 13. Prototype limitations
+
+The prototype is for reviewing design, navigation, role flows, and demo business rules. It does not provide real Google OAuth, secure authorization, Supabase database/storage, real file upload, emails, WhatsApp messages, payment processing, or fiscal receipts. All demo records live in localStorage in the browser and can be reset. Do not enter real confidential client, legal, or payment data.
+</file>
+
+<file path="vite.config.js">
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+});
+</file>
+
+<file path="README.md">
+# NA Associates — Interactive Website Prototype
+
+A responsive React + Vite prototype for the NA Associates public website, Client Portal, and Admin Dashboard.
+
+## Requirements
+- Node.js 20+ (Node 22 recommended)
+- npm
+
+## Run locally
+
+1. Extract this ZIP.
+2. Open the extracted `na-associates-prototype` folder in VS Code.
+3. Open Terminal in that folder.
+4. Run:
+
+```bash
+npm install
+npm run dev
+```
+
+5. Open the local URL printed by Vite (usually `http://localhost:5173`).
+
+## Build for preview
+
+```bash
+npm run build
+npm run preview
+```
+
+## Demo access
+- Public website: `/`
+- Projects: `/projects`
+- Project detail: `/projects/rumah-teduh`
+- Client Portal: `/portal/client`
+- Client project workspace: `/portal/client/projects/project-01`
+- Admin Dashboard: `/admin/dashboard`
+
+For the easiest entry, click **Client Portal** in the public header and choose a demo role.
+
+## What can be tested
+
+### Public website
+- Home, Projects, Project Detail, Services, About, Career, and Contact screens.
+- Project category/status filtering and search.
+- Contact and Career form feedback states.
+
+### Client Portal
+- Demo login and My Projects.
+- One client with two assigned projects.
+- Project Workspace with sticky desktop anchor navigation and mobile section navigation.
+- Published design files, legal documents, progress reports, and shopping requirements.
+- Invoice details, payment history, upload of payment proof, and monthly recap.
+
+### Admin Dashboard
+- Dashboard and project overview.
+- Create project and invite Client.
+- Invite Admin from the seeded Primary Admin demo context.
+- Daily project log with internal attendance/equipment fields and Draft/Published visibility.
+- Document and legal document management.
+- Shopping List and separate Material Usage records.
+- Invoice creation, payment verification/rejection, partial payment, overpayment handling, invoice revision, and receipt references.
+- H+7 Hold recommendation, manual Hold confirmation, Ready to Resume, and Resume confirmation.
+- Notifications, Activity Log, Website Content overview, and Settings.
+
+## Demo data and persistence
+- Data is stored in browser `localStorage` under `na-associates-demo-v1`.
+- Changes remain after refresh in the same browser.
+- Use **Reset demo data** in Client or Admin to restore the original sample records.
+- Sample account: Aditya Pratama (`aditya@example.com`).
+- The demo has no real passwords. Choose Client/Admin from the Client Portal role chooser.
+
+## Project structure
+
+```text
+src/
+  components/
+    ModalHost.jsx       Forms and confirmation/detail dialogs
+    ui.jsx              Shared UI components
+  data/
+    seed.js             Initial demo database
+  lib/
+    utils.js            Formatting, IDs, and localStorage helper
+  pages/
+    PublicSite.jsx      Public website screens
+    ClientPortal.jsx    Client project list and workspace
+    AdminDashboard.jsx  Admin dashboard and management modules
+  App.jsx               Role state, demo data state, and URL navigation
+  main.jsx              React entry point
+  styles.css            Responsive design system and page styling
+```
+
+## Important limitations
+
+This is a **UI/UX and workflow prototype**, not a production system.
+
+- Google Authentication is simulated. Role selection is not access control.
+- Supabase Auth, PostgreSQL, Storage, and Row Level Security are not connected.
+- File inputs only capture demo metadata; files are not uploaded to a server.
+- Email, WhatsApp, reminders, and notifications are not actually sent.
+- Payment verification and receipt references are simulated; no real money or fiscal receipt is involved.
+- `localStorage` is not a secure database. Do not enter real client, legal, or payment information.
+- Studio email and WhatsApp number are intentionally marked as awaiting confirmation because official contact details have not been supplied.
+
+For production, implement server-side authorization and Supabase RLS; never rely on hidden frontend components to protect private project data.
+
+## Project documentation
+- `PROJECT_SPEC.md` — consolidated project scope, role rules, workflow decisions, financial rules, production plan, and open decisions.
+- `DEMO_GUIDE.md` — click-through demo script for reviewing the main workflows.
+
+## Verification note
+The JS/JSX source files were syntax-parsed and local named imports/exports were checked. A full Vite build and in-browser interaction test could not be completed in this environment because `npm install` did not finish downloading dependencies. Run `npm install` and `npm run build` locally to complete that verification.
+"# na-associates-prototype"
+</file>
+
+</files>
