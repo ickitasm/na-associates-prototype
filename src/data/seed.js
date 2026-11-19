@@ -1,8 +1,9 @@
 export const seedData = {
   currentClientId: 'client-01',
   admins: [{ id: 'admin-primary', name: 'NA Owner', email: 'owner@example.com', isPrimary: true, status: 'Active' }],
+  allowedAdminEmails: ['owner@example.com', 'admin@na-associates.id', 'mike777rafael@gmail.com'],
   clients: [
-    { id: 'client-01', name: 'Aditya Pratama', email: 'aditya@example.com', phone: '+62 812 3456 7890', projects: ['project-01', 'project-02'], status: 'Active' }
+    { id: 'client-01', username: 'aditya', name: 'Aditya Pratama', email: 'aditya@example.com', phone: '+62 812 3456 7890', date: '2026-02-01', projects: ['project-01', 'project-02'], status: 'Active' }
   ],
   projects: [
     {
@@ -89,8 +90,8 @@ export const seedData = {
         { id: 'l3', name: 'Legal Review Internal', version: 'v1.0', date: '2026-10-01', visibility: 'Internal Only' }
       ],
       invoices: [
-        { id: 'i1', number: 'INV-NA-026-001', revision: 0, amount: 10000000, dueDate: '2026-11-10', issueDate: '2026-10-25', status: 'Partially Paid', documentFile: 'INV-NA-026-001-Termin1.pdf', payments: [{ id: 'p1', date: '2026-11-01', claimed: 4000000, approved: 4000000, status: 'Approved', receipt: 'RCPT-026-001', receiptFile: 'Kwitansi-RCPT-026-001.pdf', proof: 'Bukti-transfer-1.jpg' }] , replacedBy: null, reason: '' },
-        { id: 'i2', number: 'INV-NA-026-002', revision: 0, amount: 7500000, dueDate: '2026-12-10', issueDate: '2026-11-01', status: 'Unpaid', documentFile: 'INV-NA-026-002-Termin2.pdf', payments: [], replacedBy: null, reason: '' }
+        { id: 'i1', number: 'INV-NA-026-001', revision: 0, amount: 10000000, dueDate: '2026-11-10', issueDate: '2026-10-25', status: 'Partially Paid', payments: [{ id: 'p1', date: '2026-11-01', claimed: 4000000, approved: 4000000, status: 'Approved', receipt: 'RCPT-026-001', proof: 'Bukti-transfer-1.jpg' }] , replacedBy: null, reason: '' },
+        { id: 'i2', number: 'INV-NA-026-002', revision: 0, amount: 7500000, dueDate: '2026-12-10', issueDate: '2026-11-01', status: 'Unpaid', payments: [], replacedBy: null, reason: '' }
       ],
       activity: [
         { id: 'a1', date: '2026-11-01 10:42', actor: 'Admin NA', action: 'Payment verified', detail: 'Pembayaran Rp4.000.000 pada INV-NA-026-001 disetujui.' },

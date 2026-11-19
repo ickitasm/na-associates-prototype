@@ -1,0 +1,16 @@
+{
+  "name": "NA Associates — Architecture & Design",
+  "short_name": "NA Associates",
+  "description": "NA Associates — Architecture, interiors, and project collaboration.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f6f2",
+  "theme_color": "#272a27",
+  "icons": [
+    {
+      "src": "/assets/aistudio/image_11a77303.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
