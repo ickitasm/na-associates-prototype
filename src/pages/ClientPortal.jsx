@@ -5,7 +5,7 @@ import {
   Download, ExternalLink, FileCheck2, FileImage, FileText, FolderOpen, HardHat,
   Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, Package, Plus,
   RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Upload, User, UserPlus,
-  Users, Wallet, X, Eye, Activity, AlertCircle, Sun, Moon
+  Users, Wallet, X, Eye, Activity, AlertCircle, Sun, Moon, Camera
 } from 'lucide-react';
 import { Brand, ProgressBar, SectionHeading, FileTile, InvoiceClientCard, MonthlyRecap, StatusTag, EmptyState } from '../components/ui';
 import { money, dateFmt } from '../lib/utils';
@@ -80,7 +80,82 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
         <section className="workspace-hero" id="section-overview"><div className="workspace-hero-img"><img src={project.cover}/><div className="workspace-hero-overlay"/></div><div className="workspace-hero-content"><div className="eyebrow light">{project.code} / PROJECT OVERVIEW</div><h1>{project.name}<span>.</span></h1><p><MapPin size={14}/>{project.location}</p><div className="hero-progress"><span>PROJECT PROGRESS</span><strong>{project.progress}%</strong></div><ProgressBar value={project.progress}/></div></section>
         {(project.status==='On Hold'||project.status==='Ready to Resume')&&<div className={`project-status-notice ${project.status==='Ready to Resume'?'ready':''}`}><AlertCircle size={17}/><div><strong>{project.status==='On Hold'?'Project operations are on hold':'Project is ready to resume'}</strong><p>{project.status==='On Hold'?'You can still access existing reports, documents, invoices, and upload payment proof. New operational updates are paused.':'The studio is reviewing the next steps to resume project operations.'}</p></div></div>}<div className="workspace-stats"><div><small>LAND AREA</small><strong>{project.landArea || '—'}</strong></div><div><small>BUILDING AREA</small><strong>{project.buildingArea || '—'}</strong></div><div><small>NEXT MILESTONE</small><strong>{project.nextMilestone || '—'}</strong><span>{dateFmt(project.nextMilestoneDate)}</span></div><div><small>OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div></div>
         <section className="workspace-section" id="section-design"><SectionHeading number="A" title="Output & Design" description="Design development and project deliverables shared by the studio." action="Browse files" onAction={()=>setModal({type:'file-list',project})}/><div className="file-grid">{publishedFiles.map(f=><FileTile key={f.id} file={f} onOpen={()=>setModal({type:'file-preview',file:f})}/>)}{!publishedFiles.length && <EmptyState title="No files published yet" detail="New design outputs will appear here once shared by the studio."/>}</div></section>
-        <section className="workspace-section" id="section-progress"><SectionHeading number="B" title="Progress & Field Operations" description="A transparent view of milestones and published site updates."/><div className="progress-two-col"><div className="panel"><div className="panel-heading"><h3>Project timeline</h3><span className="subtle-tag">{project.milestones?.length||0} milestones</span></div><div className="timeline">{(project.milestones||[]).map((m,i)=><div className={`timeline-item ${m.status==='Completed'?'done':''} ${m.status==='In Progress'?'current':''}`} key={m.id}><div className="timeline-marker">{m.status==='Completed'?<Check size={12}/>:i+1}</div><div className="timeline-body"><div><strong>{m.title}</strong><span>{dateFmt(m.date)}</span></div><small>{m.status}</small>{m.status==='In Progress' && <ProgressBar value={m.progress}/>}</div></div>)}</div>{!project.milestones?.length && <EmptyState title="Timeline not available" detail="Milestones will appear here."/>}</div><div className="panel updates-panel"><div className="panel-heading"><h3>Latest updates</h3><span className="subtle-tag">Published</span></div>{publishedReports.slice(0,4).map(r=><article className="update-item clickable-update-item" key={r.id} onClick={()=>setModal({type:'report-detail',report:r,project,isClient:true})} title="Click to view full field update"><div className="update-date">{dateFmt(r.date)}</div><div><strong>{r.title}</strong><p>{r.description}</p><div className="update-meta-row"><span className="update-meta">{r.category} · {r.photos||1} site photos</span><span className="update-view-btn">View details <ArrowUpRight size={12}/></span></div></div></article>)}{!publishedReports.length && <EmptyState title="No updates yet" detail="Published field reports will appear here."/>}</div></div></section>
+        <section className="workspace-section" id="section-progress">
+          <SectionHeading number="B" title="Progress & Field Operations" description="A transparent view of milestones and published site updates."/>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="panel">
+              <div className="panel-heading">
+                <h3>Project timeline milestones</h3>
+                <span className="subtle-tag">{project.milestones?.length||0} milestones</span>
+              </div>
+              <div className="timeline">
+                {(project.milestones||[]).map((m,i)=>(
+                  <div className={`timeline-item ${m.status==='Completed'?'done':''} ${m.status==='In Progress'?'current':''}`} key={m.id}>
+                    <div className="timeline-marker">{m.status==='Completed'?<Check size={12}/>:i+1}</div>
+                    <div className="timeline-body">
+                      <div><strong>{m.title}</strong><span>{dateFmt(m.date)}</span></div>
+                      <small>{m.status} · Progress {m.progress}%</small>
+                      {m.status==='In Progress' && <ProgressBar value={m.progress}/>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {!project.milestones?.length && <EmptyState title="Timeline not available" detail="Milestones will appear here."/>}
+            </div>
+
+            <div className="panel">
+              <div className="panel-heading">
+                <h3>Published daily progress updates</h3>
+                <span className="subtle-tag">{publishedReports.length} reports</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {publishedReports.map(r => {
+                  const workers = r.workers || [];
+                  const hadirCount = workers.filter(w => w.attendance === 'Hadir').length;
+                  const photoNames = r.photoNames || ['Foto-lapangan-1.jpg', 'Foto-lapangan-2.jpg'];
+                  return (
+                    <article key={r.id} style={{ border: '1px solid #e4e5de', background: '#fbfaf7', padding: '18px', borderRadius: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '9px', color: '#889083', letterSpacing: '1px' }}>{dateFmt(r.date)} · {r.category}</span>
+                        <span style={{ fontSize: '9px', fontWeight: 600, color: '#5b6752' }}>Progress {r.progress}%</span>
+                      </div>
+                      <h4 style={{ font: '600 16px "Manrope", sans-serif', margin: '0 0 6px' }}>{r.title}</h4>
+                      <p style={{ fontSize: '10px', color: '#71786f', lineHeight: '1.6', margin: '0 0 14px' }}>{r.description}</p>
+                      
+                      <div style={{ background: '#f0f1eb', padding: '12px', borderRadius: '4px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '9px', color: '#555e50' }}>
+                        <div><strong>Personil Lapangan Bertugas:</strong> {hadirCount > 0 ? `${hadirCount} Personil Aktif` : `${workers.length} Pekerja`}</div>
+                        <div><strong>Cakupan Kerja:</strong> {workers.map(w => w.task).filter(Boolean).slice(0, 3).join(' · ') || 'Pekerjaan konstruksi & struktur'}</div>
+                        {r.tools && <div><strong>Peralatan Operasional:</strong> {r.tools}</div>}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                        {photoNames.map((pName, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setModal({ type: 'photo-lightbox', url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85', caption: `${r.title} — ${pName}` })}
+                            style={{ border: '1px solid #dcdfd5', background: '#eceee8', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px', color: '#596351' }}
+                            title="Klik untuk memperbesar foto"
+                          >
+                            <Camera size={13}/>
+                            <span>{pName}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button className="btn btn-small btn-outline" onClick={() => setModal({ type: 'report-detail', report: r, project, isClient: true })}>
+                          View full log details <ArrowUpRight size={13}/>
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+                {!publishedReports.length && <EmptyState title="No updates yet" detail="Published field reports will appear here."/>}
+              </div>
+            </div>
+          </div>
+        </section>
         <section className="workspace-section" id="section-legal"><SectionHeading number="C" title="Legal Documents" description="Contracts, addenda, and approved supporting documents."/><div className="document-list">{publishedLegal.map(l=><div className="document-row" key={l.id}><span className="document-icon"><FileText size={19}/></span><div><strong>{l.name}</strong><small>{l.version} · {dateFmt(l.date)}</small></div><button className="icon-btn" onClick={()=>setModal({type:'file-preview',file:{name:l.name,type:'PDF',description:`${l.version} · ${dateFmt(l.date)}`}})}><Eye size={17}/></button><button className="icon-btn" onClick={()=>setModal({type:'info',title:'Legal document',body:'Dokumen proyek tersimpan dalam format resmi studio.'})}><Download size={17}/></button></div>)}{!publishedLegal.length && <EmptyState title="No legal documents" detail="Approved documents will be shared here."/>}</div></section>
         <section className="workspace-section" id="section-billing"><SectionHeading number="D" title="Billing & Payments" description="Invoices, payment records, and official receipts." action="Upload payment proof" onAction={()=>setModal({type:'payment-upload',project})}/><div className="billing-summary"><div><small>TOTAL OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div><div><small>INVOICES</small><strong>{invoices.filter(i=>i.status!=='Cancelled').length}</strong></div><div><small>PAYMENTS UNDER REVIEW</small><strong>{invoices.filter(i=>i.status!=='Cancelled').reduce((s,i)=>s+i.payments.filter(p=>p.status==='Pending').length,0)}</strong></div></div><div className="invoice-list">{invoices.filter(i=>i.status!=='Cancelled').map(inv=><InvoiceClientCard key={inv.id} invoice={inv} setModal={setModal}/>)}{!invoices.length && <EmptyState title="No invoices yet" detail="Invoices issued by the studio will appear here."/>}</div></section>
         <section className="workspace-section" id="section-shopping"><SectionHeading number="E" title="Shopping List" description="Materials planned for your project and their procurement status."/><div className="shopping-list">{publishedShopping.map(s=><div className="shopping-row" key={s.id}><div className="shopping-date">{dateFmt(s.date)}</div><div className="shopping-name"><strong>{s.material}</strong><small>{s.specification}</small></div><div className="shopping-qty">{s.quantity} {s.unit}</div><StatusTag value={s.status}/></div>)}{!publishedShopping.length && <EmptyState title="No materials published" detail="Material requirements will appear here."/>}</div></section>

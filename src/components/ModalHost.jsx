@@ -661,8 +661,42 @@ function ModalHost({ modal, close, db, setDb, selectedProject, updateProject, ad
     'file-preview': 'File preview',
     'file-list': 'Project files',
     'client-notifications': 'Notifications',
+    'rollback-reason': 'Roll Back Month (Mundur Bulan)',
+    'new-milestone': 'Add Milestone',
+    'edit-milestone': 'Edit Milestone',
     info: modal.title || 'Information'
   };
+
+  if (modal.type === 'rollback-reason') {
+    if (!project) return null;
+    body = <form onSubmit={submit(() => {
+    const reason = form.reason?.trim() || 'Evaluasi mutu lapangan';
+    updateProject(project.id, x => {
+      const currentProg = x.progress || 0;
+      const prevProg = Math.max(0, currentProg - 15);
+      const history = x.rollbackHistory || [];
+      const newHistory = [...history, { date: new Date().toISOString(), reason, progressFrom: currentProg, progressTo: prevProg }];
+      const totalM = (project.milestones || []).length || 1;
+      const step = 100 / totalM;
+      const milestones = (project.milestones || []).map((m, idx) => {
+        const threshold = (idx + 1) * step;
+        if (prevProg >= threshold) return { ...m, status: 'Completed', progress: 100 };
+        if (prevProg >= idx * step && prevProg < threshold) return { ...m, status: 'In Progress', progress: Math.round((prevProg - idx * step) / step * 100) };
+        return { ...m, status: 'Upcoming', progress: 0 };
+      });
+      return {
+        ...x,
+        progress: prevProg,
+        status: 'On Hold',
+        nextMilestone: 'Evaluasi ulang & perbaikan mutu lapangan',
+        rollbackHistory: newHistory,
+        milestones
+      };
+    });
+    addActivity(project.id, 'Project month rolled back (Mundur Bulan)', `Admin melakukan roll back bulan aktif. Alasan: ${reason}`);
+    finish('Project berhasil di-rollback (Mundur Bulan).');
+  })}>{textarea('Alasan Roll Back / Mundur Bulan *', 'reason', 'Mis. Progres lapangan belum memenuhi standar kualitas...')}{footer('Konfirmasi Roll Back')}</form>;
+  }
 
   const title = modal.title || titleMap[modal.type] || 'Details';
   const footer = (label = 'Save changes', disabled = false) => (
@@ -767,6 +801,47 @@ function ModalHost({ modal, close, db, setDb, selectedProject, updateProject, ad
   if (modal.type === 'new-material') body = <form onSubmit={submit(() => { const s = { id: uid('material'), date: form.date || '2026-11-02', material: form.material, specification: form.specification || '', quantity: Number(form.quantity || 0), unit: form.unit || 'unit', status: 'Belum Dibeli', visibility: 'Draft', supplier: form.supplier || '', unitCost: Number(form.unitCost || 0) }; updateProject(project.id, p => ({ ...p, shopping: [s, ...p.shopping] })); addActivity(project.id, 'Shopping item added', `${s.material} ditambahkan sebagai Draft.`); finish('Material requirement berhasil ditambahkan.'); })}>{input('Material name', 'material', 'e.g. Besi beton Ø10', 'text', true)}{input('Specification', 'specification', 'Grade, size, brand, etc.')}<div className="form-grid">{input('Date needed', 'date', '', 'date')}{input('Quantity', 'quantity', 'e.g. 120', 'number')}{input('Unit', 'unit', 'e.g. batang')}{input('Internal unit cost (Rp)', 'unitCost', 'Optional', 'number')}</div>{input('Supplier (internal)', 'supplier', 'Supplier name')}<div className="modal-footnote">New shopping items are saved as Draft. Publish them from Shopping & Materials to show them to the Client.</div>{footer('Add material')}</form>;
   if (modal.type === 'new-usage') body = <form onSubmit={submit(() => { const u = { id: uid('usage'), date: form.date || '2026-11-02', material: form.material, quantity: Number(form.quantity || 0), unit: form.unit || 'unit', area: form.area || '' }; updateProject(project.id, p => ({ ...p, usage: [u, ...p.usage] })); addActivity(project.id, 'Material usage recorded', `${u.material}: ${u.quantity} ${u.unit}.`); finish('Material usage berhasil dicatat.'); })}>{input('Material', 'material', 'Material name', 'text', true)}<div className="form-grid">{input('Date', 'date', '', 'date')}{input('Quantity', 'quantity', 'Amount', 'number')}{input('Unit', 'unit', 'e.g. batang')}{input('Work area', 'area', 'e.g. Lantai 2')}</div>{footer('Record usage')}</form>;
   if (modal.type === 'invoice-detail' || modal.type === 'invoice-detail-admin') { const inv = modal.invoice; const paid = inv.payments.filter(p => p.status === 'Approved').reduce((s, p) => s + p.approved, 0); body = <div><div className="invoice-detail-summary"><small>{inv.number}</small><h2>{money(inv.amount)}</h2><StatusTag value={inv.status} /><p>Issue date {dateFmt(inv.issueDate)} · Due {dateFmt(inv.dueDate)}</p><ProgressBar value={inv.amount ? paid / inv.amount * 100 : 0} /><div className="detail-amounts"><span>Verified paid <strong>{money(paid)}</strong></span><span>Remaining <strong>{money(Math.max(0, inv.amount - paid))}</strong></span></div></div><h4 className="modal-subtitle">Payment history</h4>{inv.payments.map(p => <div className="payment-history-row" key={p.id}><div><strong>{money(p.approved || p.claimed)}</strong><small>{dateFmt(p.date)} · claimed {money(p.claimed)}</small>{p.reason && <small>Reason: {p.reason}</small>}{p.overpaymentAmount > 0 && <small>Overpayment {money(p.overpaymentAmount)} · {p.overpaymentDecision}</small>}</div><div><StatusTag value={p.status} />{p.receipt && <small className="receipt-ref">{p.receipt}</small>}</div></div>)}{!inv.payments.length && <EmptyState title="No payments yet" detail="Payment records will appear here." />}{modal.type === 'invoice-detail-admin' && inv.status !== 'Paid' && inv.status !== 'Cancelled' && <button className="btn btn-outline modal-wide-btn" onClick={() => setTimeout(() => { }, 1)}>Download invoice statement</button>}<div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>; }
+  if (modal.type === 'new-milestone') body = <form onSubmit={submit(() => {
+    const title = form.title?.trim();
+    if (!title) throw new Error('Judul milestone wajib diisi.');
+    const m = {
+      id: uid('milestone'),
+      title,
+      date: form.date || '2026-11-20',
+      status: form.status || 'Upcoming',
+      progress: Number(form.progress || 0)
+    };
+    updateProject(project.id, p => ({ ...p, milestones: [...(p.milestones || []), m] }));
+    addActivity(project.id, 'Milestone added', `Milestone baru "${m.title}" ditambahkan.`);
+    finish('Milestone berhasil ditambahkan.');
+  })}>{input('Milestone Title', 'title', 'e.g. Struktur lantai 2', 'text', true)}<label className="field"><span>Target Date</span><input type="date" value={form.date ?? '2026-11-20'} onChange={e => set('date', e.target.value)} /></label><label className="field"><span>Status</span><select value={form.status ?? 'Upcoming'} onChange={e => set('status', e.target.value)}><option value="Upcoming">Upcoming</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option></select></label>{input('Progress (%)', 'progress', '0-100', 'number')}{footer('Add milestone')}</form>;
+
+  if (modal.type === 'edit-milestone') {
+    const mId = modal.milestoneId;
+    const existing = (project.milestones || []).find(m => m.id === mId) || {};
+    body = <form onSubmit={submit(() => {
+      const title = form.title?.trim() || existing.title;
+      updateProject(project.id, p => ({
+        ...p,
+        milestones: (p.milestones || []).map(m => m.id === mId ? { ...m, title, date: form.date || m.date, status: form.status || m.status, progress: Number(form.progress ?? m.progress) } : m)
+      }));
+      addActivity(project.id, 'Milestone updated', `Milestone "${title}" diperbarui.`);
+      finish('Milestone berhasil diperbarui.');
+    })}>{input('Milestone Title', 'title', existing.title || '', 'text', true)}<label className="field"><span>Target Date</span><input type="date" value={form.date ?? existing.date ?? ''} onChange={e => set('date', e.target.value)} /></label><label className="field"><span>Status</span><select value={form.status ?? existing.status ?? 'Upcoming'} onChange={e => set('status', e.target.value)}><option value="Upcoming">Upcoming</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option></select></label>{input('Progress (%)', 'progress', String(existing.progress ?? 0), 'number')}{footer('Save milestone')}</form>;
+  }
+
+  if (modal.type === 'photo-lightbox') {
+    body = (
+      <div style={{ textAlign: 'center', padding: '10px' }}>
+        <div style={{ background: '#111', borderRadius: '4px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', maxHeight: '500px', marginBottom: '14px' }}>
+          <img src={modal.url || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1400&q=85'} alt={modal.caption || 'Field photo'} style={{ maxWidth: '100%', maxHeight: '480px', objectFit: 'contain' }} />
+        </div>
+        <p style={{ fontSize: '11px', color: '#666', marginBottom: '16px' }}>{modal.caption || 'Dokumentasi lapangan proyek'}</p>
+        <button className="btn btn-dark" onClick={close}>Tutup Lightbox</button>
+      </div>
+    );
+  }
+
   if (modal.type === 'file-preview') {
     const f = modal.file;
     const isImage = f?.type === 'JPG' || f?.type === 'PNG' || f?.type === 'WEBP' || f?.category === 'Rendering';
