@@ -452,6 +452,106 @@ function NewReportModalView({ project, close, updateProject, addActivity, finish
   );
 }
 
+function EditReportModalView({ report, project, close, updateProject, addActivity, finish }) {
+  const [date, setDate] = useState(report.date || '2026-11-02');
+  const [category, setCategory] = useState(report.category || 'Struktur');
+  const [title, setTitle] = useState(report.title || '');
+  const [progress, setProgress] = useState(String(report.progress || 0));
+  const [description, setDescription] = useState(report.description || '');
+  const [tools, setTools] = useState(report.tools || '');
+  const [internalNotes, setInternalNotes] = useState(report.internalNotes || '');
+  const [workers, setWorkers] = useState(report.workers || []);
+  const [error, setError] = useState('');
+
+  const addWorker = () => {
+    setWorkers(prev => [...prev, { id: uid('worker'), name: `Pekerja #${prev.length + 1}`, attendance: 'Hadir', task: 'Pekerjaan struktur' }]);
+  };
+  const updateWorker = (id, field, val) => {
+    setWorkers(prev => prev.map(w => w.id === id ? { ...w, [field]: val } : w));
+  };
+  const removeWorker = (id) => {
+    setWorkers(prev => prev.filter(w => w.id !== id));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setError('Judul pembaruan wajib diisi.');
+      return;
+    }
+    const prog = Math.min(100, Math.max(0, Number(progress) || report.progress));
+    updateProject(project.id, p => ({
+      ...p,
+      reports: (p.reports || []).map(r => r.id === report.id ? {
+        ...r,
+        date,
+        category,
+        title: title.trim(),
+        description: description.trim(),
+        progress: prog,
+        tools: tools.trim(),
+        internalNotes: internalNotes.trim(),
+        workers
+      } : r)
+    }));
+    addActivity(project.id, 'Daily log edited', `Draft daily log "${title.trim()}" diperbarui.`);
+    finish('Daily log draft berhasil diperbarui.');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="new-report-form">
+      <div className="report-form-section">
+        <div className="form-grid">
+          <label className="field"><span>Tanggal Laporan *</span><input type="date" value={date} onChange={e => setDate(e.target.value)} required /></label>
+          <label className="field"><span>Kategori</span><select value={category} onChange={e => setCategory(e.target.value)}><option value="Struktur">Struktur</option><option value="Masonry">Masonry</option><option value="Finishing">Finishing</option><option value="MEP">MEP</option><option value="Pondasi">Pondasi</option><option value="General">General</option></select></label>
+          <label className="field"><span>Judul Pembaruan *</span><input type="text" value={title} onChange={e => setTitle(e.target.value)} required /></label>
+          <label className="field"><span>Progres (%)</span><input type="number" min="0" max="100" value={progress} onChange={e => setProgress(e.target.value)} /></label>
+        </div>
+        <label className="field"><span>Deskripsi Pekerjaan *</span><textarea rows="3" value={description} onChange={e => setDescription(e.target.value)} required /></label>
+      </div>
+      <div className="report-form-section">
+        <h4>Tenaga Kerja Lapangan</h4>
+        <div className="excel-table-container">
+          <div className="excel-table-header">
+            <div className="excel-col-num">#</div>
+            <div className="excel-col-name">Nama Pekerja</div>
+            <div className="excel-col-status">Kehadiran</div>
+            <div className="excel-col-task">Tugas</div>
+            <div className="excel-col-action">Aksi</div>
+          </div>
+          <div className="excel-table-body">
+            {workers.map((w, idx) => (
+              <div className="excel-table-row" key={w.id || idx}>
+                <div className="excel-cell excel-cell-num">{idx + 1}</div>
+                <div className="excel-cell excel-cell-name"><input type="text" className="excel-input" value={w.name} onChange={e => updateWorker(w.id, 'name', e.target.value)} required /></div>
+                <div className="excel-cell excel-cell-status">
+                  <select className={`excel-select ${w.attendance === 'Hadir' ? 'status-hadir' : 'status-izin'}`} value={w.attendance} onChange={e => updateWorker(w.id, 'attendance', e.target.value)}>
+                    <option value="Hadir">Hadir</option><option value="Izin">Izin</option><option value="Sakit">Sakit</option><option value="Alpa">Alpa</option>
+                  </select>
+                </div>
+                <div className="excel-cell excel-cell-task"><input type="text" className="excel-input" value={w.task} onChange={e => updateWorker(w.id, 'task', e.target.value)} /></div>
+                <div className="excel-cell excel-cell-action"><button type="button" className="excel-btn-delete" onClick={() => removeWorker(w.id)}><Trash2 size={14}/></button></div>
+              </div>
+            ))}
+          </div>
+          <div className="excel-table-footer">
+            <button type="button" className="btn btn-small btn-outline" onClick={addWorker}><Plus size={14}/> Tambah Pekerja</button>
+          </div>
+        </div>
+      </div>
+      <div className="report-form-section">
+        <label className="field"><span>Alat / Perlengkapan</span><input type="text" value={tools} onChange={e => setTools(e.target.value)} /></label>
+        <label className="field"><span>Catatan Internal</span><textarea rows="2" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} /></label>
+      </div>
+      {error && <div className="form-error"><AlertCircle size={15}/>{error}</div>}
+      <div className="modal-actions">
+        <button type="button" className="btn btn-outline" onClick={close}>Cancel</button>
+        <button className="btn btn-dark" type="submit">Simpan Perubahan <ArrowRight size={15}/></button>
+      </div>
+    </form>
+  );
+}
+
 function ReportDetailModalView({ report, project, isClient, close, updateProject, addActivity, notify }) {
   const workers = report.workers || [];
   const hadirCount = workers.filter(w => w.attendance === 'Hadir').length;
@@ -651,6 +751,7 @@ function ModalHost({ modal, close, db, setDb, selectedProject, updateProject, ad
     'revise-invoice': 'Revise invoice',
     'new-invoice': 'Create invoice',
     'new-report': 'New daily project log',
+    'edit-report': 'Edit Draft daily log',
     'report-detail': modal.report?.title || 'Daily project log detail',
     'new-document': 'Upload project file',
     'new-legal': 'Add legal document',
@@ -668,17 +769,18 @@ function ModalHost({ modal, close, db, setDb, selectedProject, updateProject, ad
   };
 
   if (modal.type === 'rollback-reason') {
-    if (!project) return null;
+    const targetProject = modal.project || (db?.projects || []).find(p => p.id === modal.projectId) || selectedProject;
+    if (!targetProject) return null;
     body = <form onSubmit={submit(() => {
     const reason = form.reason?.trim() || 'Evaluasi mutu lapangan';
-    updateProject(project.id, x => {
+    updateProject(targetProject.id, x => {
       const currentProg = x.progress || 0;
       const prevProg = Math.max(0, currentProg - 15);
       const history = x.rollbackHistory || [];
       const newHistory = [...history, { date: new Date().toISOString(), reason, progressFrom: currentProg, progressTo: prevProg }];
-      const totalM = (project.milestones || []).length || 1;
+      const totalM = (targetProject.milestones || []).length || 1;
       const step = 100 / totalM;
-      const milestones = (project.milestones || []).map((m, idx) => {
+      const milestones = (targetProject.milestones || []).map((m, idx) => {
         const threshold = (idx + 1) * step;
         if (prevProg >= threshold) return { ...m, status: 'Completed', progress: 100 };
         if (prevProg >= idx * step && prevProg < threshold) return { ...m, status: 'In Progress', progress: Math.round((prevProg - idx * step) / step * 100) };
@@ -693,7 +795,7 @@ function ModalHost({ modal, close, db, setDb, selectedProject, updateProject, ad
         milestones
       };
     });
-    addActivity(project.id, 'Project month rolled back (Mundur Bulan)', `Admin melakukan roll back bulan aktif. Alasan: ${reason}`);
+    addActivity(targetProject.id, 'Project month rolled back (Mundur Bulan)', `Admin melakukan roll back bulan aktif. Alasan: ${reason}`);
     finish('Project berhasil di-rollback (Mundur Bulan).');
   })}>{textarea('Alasan Roll Back / Mundur Bulan *', 'reason', 'Mis. Progres lapangan belum memenuhi standar kualitas...')}{footer('Konfirmasi Roll Back')}</form>;
   }
@@ -750,6 +852,19 @@ function ModalHost({ modal, close, db, setDb, selectedProject, updateProject, ad
   if (modal.type === 'new-report') {
     body = (
       <NewReportModalView
+        project={project}
+        close={close}
+        updateProject={updateProject}
+        addActivity={addActivity}
+        finish={finish}
+      />
+    );
+  }
+
+  if (modal.type === 'edit-report') {
+    body = (
+      <EditReportModalView
+        report={modal.report}
         project={project}
         close={close}
         updateProject={updateProject}

@@ -2289,3 +2289,12 @@ input[type="radio"],
   }
 }
 
+.excel-cell-status .status-pill, .excel-table-row .status-pill {
+  position: static !important;
+  display: inline-flex !important;
+  left: auto !important;
+  top: auto !important;
+  margin: 0 !important;
+}
+
+

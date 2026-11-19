@@ -1,6 +1,6 @@
 import { seedData } from '../data/seed';
 
-export const STORE_KEY = 'na-associates-demo-v3';
+export const STORE_KEY = 'na_associates_clean_v1';
 export const THEME_KEY = 'na-theme-mode';
 export const money = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(n || 0));
 export const dateFmt = (d) => d ? new Date(`${d}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -8,30 +8,15 @@ export const nowLabel = () => new Date().toLocaleString('id-ID', { dateStyle: 'm
 export const uid = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 export const loadDB = () => {
   try {
-    const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem('na-associates-demo-v2') || localStorage.getItem('na-associates-demo-v1');
+    const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem('na-associates-demo-v3') || localStorage.getItem('na-associates-demo-v2') || localStorage.getItem('na-associates-demo-v1');
     if (!raw) return structuredClone(seedData);
     const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.projects)) {
-      parsed.projects = parsed.projects.map(p => {
-        if (p.id === 'project-01' && (p.name === 'Rumah Teduh' || !p.name)) {
-          return { ...p, name: 'FR HOUSE' };
-        }
-        if (p.id === 'project-02' && (p.name === 'Villa Aruna' || !p.name)) {
-          return { ...p, name: 'MS HOUSE' };
-        }
-        if (p.clientId === 'client-02') {
-          return { ...p, clientId: null };
-        }
-        return p;
-      });
-    }
-    if (parsed && Array.isArray(parsed.clients)) {
-      parsed.clients = parsed.clients.filter(c => c.id !== 'client-02' && !c.name?.toLowerCase().includes('nadia'));
-      if (!parsed.clients.length) {
-        parsed.clients = structuredClone(seedData.clients);
-      }
-    }
-    parsed.currentClientId = 'client-01';
+    if (!parsed || typeof parsed !== 'object') return structuredClone(seedData);
+    if (!Array.isArray(parsed.admins)) parsed.admins = structuredClone(seedData.admins);
+    if (!Array.isArray(parsed.allowedAdminEmails)) parsed.allowedAdminEmails = structuredClone(seedData.allowedAdminEmails);
+    if (!Array.isArray(parsed.clients)) parsed.clients = [];
+    if (!Array.isArray(parsed.projects)) parsed.projects = [];
+    if (!Array.isArray(parsed.notifications)) parsed.notifications = [];
     return parsed;
   }
   catch { return structuredClone(seedData); }
