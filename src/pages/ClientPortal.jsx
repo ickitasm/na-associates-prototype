@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Check,
   CheckCircle2, ChevronDown, ChevronRight, ClipboardList, Clock3, CreditCard,
@@ -28,21 +28,138 @@ function ClientTopbar({ client, onBack, onLogout, onReset, setModal, onNotify, t
     }
   };
 
-  return <header className="portal-topbar"><div className="portal-top-left"><Brand/><span className="portal-label">CLIENT PORTAL</span></div><div className="portal-top-right"><button className="btn btn-small btn-outline" onClick={enablePush} style={{fontSize:'9px'}}>Enable Push</button><button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title={theme==='dark'?'Switch to light mode':'Switch to night mode'} aria-label="Toggle theme">{theme==='dark'?<Sun size={17}/>:<Moon size={17}/>}</button><button className="icon-btn" onClick={() => setModal({type:'client-notifications'})}><Bell size={18}/><i className="notification-dot"/></button><div className="user-chip"><span className="avatar">{client?.name?.split(' ').map(x=>x[0]).slice(0,2).join('')}</span><span><strong>{client?.name || 'Client'}</strong><small>Client account</small></span></div><button className="text-link" onClick={onLogout}>Sign out</button><button className="icon-btn mobile-menu" onClick={onReset} title="Reset data"><RotateCcw size={16}/></button></div></header>;
+  return <header className="portal-topbar"><div className="portal-top-left"><Brand/><span className="portal-label">CLIENT PORTAL</span></div><div className="portal-top-right"><button className="btn btn-small btn-outline client-push-btn" onClick={enablePush}>Enable Push</button><button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title={theme==='dark'?'Switch to light mode':'Switch to night mode'} aria-label="Toggle theme">{theme==='dark'?<Sun size={18}/>:<Moon size={18}/>}</button><button className="icon-btn" onClick={() => setModal({type:'client-notifications'})} aria-label="Notifications"><Bell size={18}/><i className="notification-dot"/></button><div className="user-chip"><span className="avatar">{client?.name?.split(' ').map(x=>x[0]).slice(0,2).join('')}</span><span><strong>{client?.name || 'Client'}</strong><small>Client account</small></span></div><button className="text-link" onClick={onLogout}>Sign out</button><button className="icon-btn mobile-menu" onClick={onReset} title="Reset data" aria-label="Reset data"><RotateCcw size={16}/></button></div></header>;
 }
 function ClientProjectsView({ client, projects, onOpen, onLogout, onReset, setModal, theme, toggleTheme }) { return <div className="client-app"><ClientTopbar client={client} onLogout={onLogout} onReset={onReset} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/><main className="client-list-page"><div className="client-welcome"><div><div className="eyebrow">CLIENT SPACE / YOUR PROJECTS</div><h1>Good morning,<br/><em>{client?.name?.split(' ')[0] || 'there'}.</em></h1><p>Here is an overview of your projects with NA Associates.</p></div><div className="welcome-stamp">NA<br/><span>CLIENT SPACE</span></div></div><div className="list-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h2>My projects <small>{projects.length.toString().padStart(2,'0')}</small></h2></div><span className="muted">Select a project to view its details and updates.</span></div><div className="client-project-grid">{projects.map(p => <button className="client-project-card" key={p.id} onClick={() => onOpen(p.id)}><div className="client-project-image"><img src={p.cover}/><span className={`status-pill ${p.status === 'Completed' ? 'complete' : ''}`}>{p.status}</span></div><div className="client-project-info"><div className="project-card-top"><span>{p.code}</span><ArrowUpRight size={17}/></div><h3>{p.name}</h3><p><MapPin size={13}/>{p.location}</p><div className="progress-row"><span>PROJECT PROGRESS</span><strong>{p.progress}%</strong></div><ProgressBar value={p.progress}/><div className="client-project-bottom"><span>Next milestone</span><strong>{p.nextMilestone || '—'}</strong></div></div></button>)}</div>{!projects.length && <EmptyState title="Belum ada proyek" detail="Tim NA Associates akan menambahkan proyek ke akun Anda."/>}</main></div>; }
 
 const workspaceNav = [
   ['overview','Overview',Home],['design','A. Output & Design',Image],['progress','B. Progress & Field Ops',Activity],['legal','C. Legal Documents',FileText],['billing','D. Billing & Payments',Wallet],['shopping','E. Shopping List',ShoppingBag],['recap','F. Monthly Recap',CalendarDays]
 ];
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setModal, updateProject, addActivity, onNotify, workspaceSection, setWorkspaceSection, mobileNav, setMobileNav, theme, toggleTheme }) {
   const [openSection, setOpenSection] = useState('overview');
-  useEffect(() => { setOpenSection('overview'); }, [project?.id]);
-  useEffect(() => {
-    const handler = () => { const ids = workspaceNav.map(x=>x[0]); let current='overview'; ids.forEach(id => { const el=document.getElementById(`section-${id}`); if(el && el.getBoundingClientRect().top < 170) current=id; }); setOpenSection(current); };
-    window.addEventListener('scroll', handler); return () => window.removeEventListener('scroll', handler);
+  const scrollAnimRef = useRef(null);
+  const scrollSpyLockRef = useRef(false);
+  const prevScrollBehaviorRef = useRef(null);
+  const interruptCleanupRef = useRef(null);
+
+  const cancelSoftScroll = useCallback(() => {
+    if (scrollAnimRef.current !== null) {
+      cancelAnimationFrame(scrollAnimRef.current);
+      scrollAnimRef.current = null;
+    }
+    if (interruptCleanupRef.current) {
+      interruptCleanupRef.current();
+      interruptCleanupRef.current = null;
+    }
+    if (prevScrollBehaviorRef.current !== null) {
+      document.documentElement.style.scrollBehavior = prevScrollBehaviorRef.current;
+      prevScrollBehaviorRef.current = null;
+    }
+    scrollSpyLockRef.current = false;
   }, []);
-  const jump = (id) => { setWorkspaceSection(id); setOpenSection(id); document.getElementById(`section-${id}`)?.scrollIntoView({behavior:'smooth',block:'start'}); setMobileNav(false); };
+
+  useEffect(() => {
+    cancelSoftScroll();
+    setOpenSection('overview');
+  }, [project?.id, cancelSoftScroll]);
+
+  useEffect(() => {
+    return () => cancelSoftScroll();
+  }, [cancelSoftScroll]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (scrollSpyLockRef.current) return;
+      const topbar = document.querySelector('.portal-topbar');
+      const triggerLine = (topbar ? topbar.getBoundingClientRect().height : 72) + 98;
+      const ids = workspaceNav.map(x => x[0]);
+      let current = 'overview';
+      ids.forEach(id => {
+        const el = document.getElementById(`section-${id}`);
+        if (el && el.getBoundingClientRect().top <= triggerLine) current = id;
+      });
+      if ((window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 24)) {
+        current = ids[ids.length - 1];
+      }
+      setOpenSection(current);
+    };
+    window.addEventListener('scroll', handler, { passive: true });
+    return () => window.removeEventListener('scroll', handler);
+  }, []);
+
+  const jump = useCallback((id) => {
+    cancelSoftScroll();
+    setWorkspaceSection(id);
+    setOpenSection(id);
+    setMobileNav(false);
+
+    const el = document.getElementById(`section-${id}`);
+    if (!el) return;
+
+    const topbar = document.querySelector('.portal-topbar');
+    const topbarHeight = topbar ? topbar.getBoundingClientRect().height : 72;
+    const clearance = topbarHeight + 20;
+    const rawTarget = id === 'overview'
+      ? 0
+      : Math.max(0, el.getBoundingClientRect().top + window.scrollY - clearance);
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const targetY = Math.min(rawTarget, maxScroll);
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+
+    if (Math.abs(distance) < 2) return;
+
+    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (prefersReduced) {
+      window.scrollTo(0, targetY);
+      return;
+    }
+
+    scrollSpyLockRef.current = true;
+    prevScrollBehaviorRef.current = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = 'auto';
+
+    const onUserInterrupt = (e) => {
+      if (e.type === 'keydown') {
+        const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '];
+        if (!scrollKeys.includes(e.key)) return;
+      }
+      cancelSoftScroll();
+    };
+
+    window.addEventListener('wheel', onUserInterrupt, { passive: true, once: true });
+    window.addEventListener('touchstart', onUserInterrupt, { passive: true, once: true });
+    window.addEventListener('keydown', onUserInterrupt);
+    interruptCleanupRef.current = () => {
+      window.removeEventListener('wheel', onUserInterrupt);
+      window.removeEventListener('touchstart', onUserInterrupt);
+      window.removeEventListener('keydown', onUserInterrupt);
+    };
+
+    const duration = 400;
+    const startTime = performance.now();
+
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const eased = easeInOutCubic(progress);
+      window.scrollTo(0, startY + distance * eased);
+
+      if (progress < 1) {
+        scrollAnimRef.current = requestAnimationFrame(step);
+      } else {
+        window.scrollTo(0, targetY);
+        cancelSoftScroll();
+        setOpenSection(id);
+      }
+    };
+
+    scrollAnimRef.current = requestAnimationFrame(step);
+  }, [cancelSoftScroll, setMobileNav, setWorkspaceSection]);
   const publishedReports = (project.reports||[]).filter(r=>r.visibility==='Published');
   const publishedFiles = (project.files||[]).filter(f=>f.visibility==='Published');
   const publishedLegal = (project.legal||[]).filter(f=>f.visibility==='Published');
@@ -57,28 +174,54 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
   return <div className="client-app">
     <ClientTopbar client={client} onBack={onBack} onLogout={onLogout} onReset={onReset} setModal={setModal} onNotify={onNotify} theme={theme} toggleTheme={toggleTheme}/>
     <div className="workspace-shell">
+      {mobileNav && <div className="mobile-nav-backdrop" onClick={() => setMobileNav(false)} aria-hidden="true" />}
       <aside className={`workspace-sidebar ${mobileNav?'sidebar-open':''}`}>
         <button className="back-projects" onClick={onBack}><ArrowLeft size={15}/> All projects</button>
-        <div className="sidebar-project"><img src={project.cover}/><small>{project.code}</small><strong>{project.name}</strong><span><MapPin size={12}/>{project.location}</span></div>
+        <div className="sidebar-project"><img src={project.cover} alt={project.name}/><small>{project.code}</small><strong>{project.name}</strong><span><MapPin size={12}/>{project.location}</span></div>
         <div className="workspace-nav-label">PROJECT WORKSPACE</div>
-        <nav className="workspace-nav">{workspaceNav.map(([id,label,Icon])=><button key={id} className={openSection===id?'active':''} onClick={()=>jump(id)}><Icon size={16}/><span>{label}</span>{id==='billing' && <i className="nav-count"/>}</button>)}</nav>
+        <nav className="workspace-nav">{workspaceNav.map(([id,label,Icon])=><button key={id} type="button" className={openSection===id?'active':''} aria-current={openSection===id?'location':undefined} onClick={()=>jump(id)}><Icon size={16}/><span>{label}</span>{id==='billing' && <i className="nav-count"/>}</button>)}</nav>
         <div className="sidebar-progress"><div><small>OVERALL PROGRESS</small><strong>{project.progress}%</strong></div><ProgressBar value={project.progress}/><span>Target completion · {dateFmt(project.targetDate)}</span></div>
       </aside>
       <main className="workspace-main">
         <div className="workspace-topline"><div className="breadcrumb">My Projects <ChevronRight size={13}/> {project.name}</div><span className={`status-pill ${project.status==='Completed'?'complete':''}`}>{project.status}</span></div>
-        
-        {hasUnpaid && (
-          <div className="project-status-notice" style={{marginTop:'10px', marginBottom:'15px', background:'#f4eee4', borderColor:'#e7ddca', color:'#8d7449'}}>
-            <AlertCircle size={17}/>
-            <div>
-              <strong>Pengingat Tagihan & Termin (H-7 / Jatuh Tempo)</strong>
-              <p>Terdapat termin pembayaran aktif sejumlah <strong>{money(totalRemaining)}</strong> ({unpaidInvoices.map(i=>i.number).join(', ')}). Silakan lakukan pembayaran dan unggah bukti transfer melalui modul Billing.</p>
+
+        <div className="workspace-banners">
+          {(project.status==='On Hold'||project.status==='Ready to Resume') && (
+            <div className={`project-status-notice ${project.status==='On Hold'?'project-on-hold-banner':'ready'}`}>
+              <AlertCircle size={18}/>
+              <div>
+                <strong>
+                  {project.status==='On Hold'
+                    ? 'Pemberitahuan: Proyek Sedang Ditahan (On Hold)'
+                    : 'Proyek Siap Dilanjutkan (Ready to Resume)'}
+                </strong>
+                {project.status==='On Hold' && (
+                  <p className="hold-reason-text">
+                    <strong>Alasan Penahanan:</strong> {project.holdReason || project.invoices?.find(i=>i.reason)?.reason || 'Penahanan sementara oleh tim studio (terkait penagihan atau tinjauan teknis).'}
+                  </p>
+                )}
+                <p>
+                  {project.status==='On Hold'
+                    ? 'Pembaruan milestone dan daily log baru dijeda sementara. Anda tetap dapat mengakses laporan terdahulu, dokumen, melihat invoice, dan mengunggah bukti pembayaran.'
+                    : 'Kondisi penahanan telah diselesaikan. Tim studio sedang menjadwalkan aktivasi kembali operasional proyek.'}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {hasUnpaid && (
+            <div className="project-status-notice project-billing-banner">
+              <AlertCircle size={18}/>
+              <div>
+                <strong>Pengingat Tagihan & Termin (H-7 / Jatuh Tempo)</strong>
+                <p>Terdapat termin pembayaran aktif sejumlah <strong>{money(totalRemaining)}</strong> ({unpaidInvoices.map(i=>i.number).join(', ')}). Silakan lakukan pembayaran dan unggah bukti transfer melalui modul Billing.</p>
+              </div>
+            </div>
+          )}
+        </div>
 
         <section className="workspace-hero" id="section-overview"><div className="workspace-hero-img"><img src={project.cover}/><div className="workspace-hero-overlay"/></div><div className="workspace-hero-content"><div className="eyebrow light">{project.code} / PROJECT OVERVIEW</div><h1>{project.name}<span>.</span></h1><p><MapPin size={14}/>{project.location}</p><div className="hero-progress"><span>PROJECT PROGRESS</span><strong>{project.progress}%</strong></div><ProgressBar value={project.progress}/></div></section>
-        {(project.status==='On Hold'||project.status==='Ready to Resume')&&<div className={`project-status-notice ${project.status==='Ready to Resume'?'ready':''}`}><AlertCircle size={17}/><div><strong>{project.status==='On Hold'?'Project operations are on hold':'Project is ready to resume'}</strong><p>{project.status==='On Hold'?'You can still access existing reports, documents, invoices, and upload payment proof. New operational updates are paused.':'The studio is reviewing the next steps to resume project operations.'}</p></div></div>}<div className="workspace-stats"><div><small>LAND AREA</small><strong>{project.landArea || '—'}</strong></div><div><small>BUILDING AREA</small><strong>{project.buildingArea || '—'}</strong></div><div><small>NEXT MILESTONE</small><strong>{project.nextMilestone || '—'}</strong><span>{dateFmt(project.nextMilestoneDate)}</span></div><div><small>OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div></div>
+        <div className="workspace-stats"><div><small>LAND AREA</small><strong>{project.landArea || '—'}</strong></div><div><small>BUILDING AREA</small><strong>{project.buildingArea || '—'}</strong></div><div><small>NEXT MILESTONE</small><strong>{project.nextMilestone || '—'}</strong><span>{dateFmt(project.nextMilestoneDate)}</span></div><div><small>OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div></div>
         <section className="workspace-section" id="section-design"><SectionHeading number="A" title="Output & Design" description="Design development and project deliverables shared by the studio." action="Browse files" onAction={()=>setModal({type:'file-list',project})}/><div className="file-grid">{publishedFiles.map(f=><FileTile key={f.id} file={f} onOpen={()=>setModal({type:'file-preview',file:f})}/>)}{!publishedFiles.length && <EmptyState title="No files published yet" detail="New design outputs will appear here once shared by the studio."/>}</div></section>
         <section className="workspace-section" id="section-progress">
           <SectionHeading number="B" title="Progress & Field Operations" description="A transparent view of milestones and published site updates."/>
@@ -114,38 +257,38 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
                   const hadirCount = workers.filter(w => w.attendance === 'Hadir').length;
                   const photoNames = r.photoNames || ['Foto-lapangan-1.jpg', 'Foto-lapangan-2.jpg'];
                   return (
-                    <article key={r.id} style={{ border: '1px solid #e4e5de', background: '#fbfaf7', padding: '18px', borderRadius: '4px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '9px', color: '#889083', letterSpacing: '1px' }}>{dateFmt(r.date)} · {r.category}</span>
-                        <span style={{ fontSize: '9px', fontWeight: 600, color: '#5b6752' }}>Progress {r.progress}%</span>
+                    <article key={r.id} className="client-update-card">
+                      <div className="client-update-head">
+                        <span className="client-update-meta">{dateFmt(r.date)} · {r.category}</span>
+                        <span className="client-update-prog">{r.fieldNote || 'Log Operasional'}</span>
                       </div>
-                      <h4 style={{ font: '600 16px "Manrope", sans-serif', margin: '0 0 6px' }}>{r.title}</h4>
-                      <p style={{ fontSize: '10px', color: '#71786f', lineHeight: '1.6', margin: '0 0 14px' }}>{r.description}</p>
+                      <h4 className="client-update-title">{r.title}</h4>
+                      <p className="client-update-desc">{r.description}</p>
                       
-                      <div style={{ background: '#f0f1eb', padding: '12px', borderRadius: '4px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '9px', color: '#555e50' }}>
+                      <div className="client-update-workforce">
                         <div><strong>Personil Lapangan Bertugas:</strong> {hadirCount > 0 ? `${hadirCount} Personil Aktif` : `${workers.length} Pekerja`}</div>
                         <div><strong>Cakupan Kerja:</strong> {workers.map(w => w.task).filter(Boolean).slice(0, 3).join(' · ') || 'Pekerjaan konstruksi & struktur'}</div>
                         {r.tools && <div><strong>Peralatan Operasional:</strong> {r.tools}</div>}
                       </div>
 
-                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                      <div className="client-update-photos">
                         {photoNames.map((pName, idx) => (
                           <button
                             key={idx}
                             type="button"
+                            className="client-photo-chip"
                             onClick={() => setModal({ type: 'photo-lightbox', url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85', caption: `${r.title} — ${pName}` })}
-                            style={{ border: '1px solid #dcdfd5', background: '#eceee8', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px', color: '#596351' }}
                             title="Klik untuk memperbesar foto"
                           >
-                            <Camera size={13}/>
+                            <Camera size={14}/>
                             <span>{pName}</span>
                           </button>
                         ))}
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <div className="client-update-actions">
                         <button className="btn btn-small btn-outline" onClick={() => setModal({ type: 'report-detail', report: r, project, isClient: true })}>
-                          View full log details <ArrowUpRight size={13}/>
+                          View full log details <ArrowUpRight size={14}/>
                         </button>
                       </div>
                     </article>
@@ -163,7 +306,11 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
         <footer className="workspace-footer"><Brand/><span>Need assistance? Contact the NA Associates team.</span><button className="under-link" onClick={()=>setModal({type:'info',title:'Contact the studio',body:'For project questions, contact hello@naassociates.com or use the official studio WhatsApp channel.'})}>Contact studio <ArrowUpRight size={14}/></button></footer>
       </main>
     </div>
-    <button className="mobile-workspace-nav" onClick={()=>setMobileNav(v=>!v)}><Menu size={17}/> Project sections <ChevronDown size={16}/></button>
+    <button type="button" className={`mobile-workspace-nav ${mobileNav ? 'is-open' : ''}`} onClick={()=>setMobileNav(v=>!v)} aria-expanded={mobileNav}>
+      <Menu size={17}/>
+      <span>{workspaceNav.find(x => x[0] === openSection)?.[1] || 'Project sections'}</span>
+      <ChevronDown size={16} className="mobile-nav-chevron"/>
+    </button>
   </div>;
 }
 export { ClientShell };

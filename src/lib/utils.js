@@ -21,3 +21,72 @@ export const loadDB = () => {
   }
   catch { return structuredClone(seedData); }
 };
+
+export const syncProjectFromMilestones = (project) => {
+  if (!project) return project;
+  const rawMilestones = Array.isArray(project.milestones) ? project.milestones : [];
+
+  const milestones = rawMilestones.map((m) => {
+    const rawStatus = m?.status || 'Upcoming';
+    let status = rawStatus;
+    let progress = Number(m?.progress ?? 0);
+    if (!Number.isFinite(progress)) progress = 0;
+
+    if (rawStatus === 'Completed') {
+      status = 'Completed';
+      progress = 100;
+    } else if (rawStatus === 'Upcoming') {
+      status = 'Upcoming';
+      progress = 0;
+    } else {
+      const clamped = Math.round(Math.min(100, Math.max(0, progress)));
+      if (clamped <= 0) {
+        status = 'Upcoming';
+        progress = 0;
+      } else if (clamped >= 100) {
+        status = 'Completed';
+        progress = 100;
+      } else {
+        status = 'In Progress';
+        progress = clamped;
+      }
+    }
+
+    return { ...m, status, progress };
+  });
+
+  const overallProgress = milestones.length === 0
+    ? 0
+    : Math.round(milestones.reduce((sum, m) => sum + Number(m.progress || 0), 0) / milestones.length);
+
+  const allDone = milestones.length > 0 && milestones.every((m) => m.status === 'Completed');
+  const activeTarget = milestones.find((m) => m.status === 'In Progress')
+    || milestones.find((m) => m.status === 'Upcoming')
+    || null;
+
+  let nextMilestone = 'Belum ada milestone';
+  let nextMilestoneDate = project.nextMilestoneDate || null;
+
+  if (allDone) {
+    nextMilestone = 'Handover selesai';
+    nextMilestoneDate = milestones[milestones.length - 1]?.date || project.targetDate || nextMilestoneDate;
+  } else if (activeTarget) {
+    nextMilestone = activeTarget.title || 'Milestone aktif';
+    nextMilestoneDate = activeTarget.date || nextMilestoneDate;
+  }
+
+  const isHeld = project.status === 'On Hold' || project.status === 'Ready to Resume';
+  const status = isHeld
+    ? project.status
+    : (allDone && overallProgress === 100 ? 'Completed' : 'Active');
+
+  return {
+    ...project,
+    milestones,
+    progress: overallProgress,
+    nextMilestone,
+    nextMilestoneDate,
+    status
+  };
+};
+

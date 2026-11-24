@@ -46,10 +46,10 @@ export function SectionHeading({ number, title, description, action, onAction })
 export function FileTile({ file, onOpen }) {
   const isImage = file.type === 'JPG' || file.type === 'PNG' || file.type === 'WEBP' || file.category === 'Rendering';
   return (
-    <div className="file-tile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '8px', padding: '12px', background: 'var(--white)', border: '1px solid var(--line)' }} onClick={onOpen}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+    <div className="file-tile" onClick={onOpen} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}>
+      <div className="file-tile-inner">
         <div className={`file-thumb ${isImage?'image-thumb':''}`}>{isImage?<Image size={28}/>:<FileText size={28}/>}<span>{file.type}</span></div>
-        <div style={{ flex: 1, minWidth: 0 }}><strong>{file.name}</strong><small>{file.category} · {dateFmt(file.date)}</small></div>
+        <div className="file-tile-meta"><strong>{file.name}</strong><small>{file.category} · {dateFmt(file.date)}</small></div>
         <ArrowUpRight size={16}/>
       </div>
     </div>
@@ -60,5 +60,5 @@ export function MonthlyRecap({ invoices }) { const months = {}; invoices.filter(
 export function StatusTag({ value }) { const cls = String(value||'').toLowerCase().replaceAll(' ','-'); return <span className={`status-tag tag-${cls}`}>{value}</span>; }
 export function EmptyState({ title, detail }) { return <div className="empty-state"><span><FolderOpen size={22}/></span><strong>{title}</strong><p>{detail}</p></div>; }
 export function AdminPageHeader({ eyebrow, title, description, action, onAction }) { return <div className="admin-page-header"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div>{action && <button className="btn btn-dark" onClick={onAction}><Plus size={16}/>{action}</button>}</div>; }
-export function Metric({icon:Icon,label,value,note,accent}) { return <div className={`metric-card ${accent?'metric-alert':''}`}><span className="metric-icon"><Icon size={18}/></span><small>{label}</small><strong>{value}</strong><p>{note}</p></div>; }
+export function Metric({icon:Icon,label,value,note,accent}) { return <div className={`metric-card ${accent?'metric-alert':''}`}><span className="metric-icon"><Icon size={18}/></span><small>{label}</small><strong>{value}</strong>{note && <p>{note}</p>}</div>; }
 export function ActivityTable({projects,limit}) { const items=projects.flatMap(p=>(p.activity||[]).map(a=>({...a,project:p.name}))).slice(0,limit||100); return <div className="activity-table">{items.map(a=><div className="activity-row" key={a.id}><span className="activity-dot"><Activity size={14}/></span><div><strong>{a.action}</strong><p>{a.detail}</p><small>{a.actor} · {a.date} · {a.project}</small></div></div>)}{!items.length&&<EmptyState title="No activity recorded" detail="Changes to project records will appear here."/>}</div>; }
