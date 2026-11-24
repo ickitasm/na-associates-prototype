@@ -115,7 +115,7 @@ function ClientProjectsView({ client, projects, onOpen, onLogout, onReset, setMo
 }
 
 const workspaceNav = [
-  ['overview','Overview',Home],['design','A. Output & Design',Image],['progress','B. Progress & Field Ops',Activity],['legal','C. Legal Documents',FileText],['billing','D. Billing & Payments',Wallet],['shopping','E. Shopping List',ShoppingBag],['recap','F. Monthly Recap',CalendarDays]
+  ['overview','Overview',Home],['design','Output & Design',Image],['progress','Progress & Field Ops',Activity],['legal','Legal Documents',FileText],['billing','Billing & Payments',Wallet],['shopping','Shopping List',ShoppingBag],['recap','Monthly Recap',CalendarDays]
 ];
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -124,6 +124,7 @@ function easeInOutCubic(t) {
 function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setModal, updateProject, addActivity, onNotify, workspaceSection, setWorkspaceSection, mobileNav, setMobileNav, theme, toggleTheme }) {
   const [openSection, setOpenSection] = useState('overview');
   const [designQuery, setDesignQuery] = useState('');
+  const [legalQuery, setLegalQuery] = useState('');
   const scrollAnimRef = useRef(null);
   const scrollSpyLockRef = useRef(false);
   const prevScrollBehaviorRef = useRef(null);
@@ -131,6 +132,7 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
 
   useEffect(() => {
     setDesignQuery('');
+    setLegalQuery('');
   }, [project.id]);
 
   const cancelSoftScroll = useCallback(() => {
@@ -257,10 +259,19 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
   const filteredDesignFiles = normalizedDesignQuery
     ? publishedFiles.filter(f => [f.name, f.category, f.type].filter(Boolean).some(v => String(v).toLowerCase().includes(normalizedDesignQuery)))
     : publishedFiles;
-  const publishedLegal = (project.legal||[]).filter(f=>f.visibility==='Published');
-  const publishedShopping = (project.shopping||[]).filter(s=>s.visibility==='Published');
+  const publishedLegal = [...(project.legal||[])]
+    .filter(f=>f.visibility==='Published')
+    .sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  const normalizedLegalQuery = legalQuery.trim().toLowerCase();
+  const filteredLegalDocs = normalizedLegalQuery
+    ? publishedLegal.filter(l => [l.name, l.version].filter(Boolean).some(v => String(v).toLowerCase().includes(normalizedLegalQuery)))
+    : publishedLegal;
+  const publishedShopping = [...(project.shopping||[])]
+    .filter(s=>s.visibility==='Published')
+    .sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   const invoices = project.invoices||[];
-  const totalRemaining = invoices.filter(i=>i.status!=='Cancelled').reduce((sum,i)=>sum + Math.max(0,i.amount - i.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0)),0);
+  const activeInvoices = invoices.filter(i=>i.status!=='Cancelled');
+  const totalRemaining = activeInvoices.reduce((sum,i)=>sum + Math.max(0,i.amount - i.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0)),0);
   
   // Check pending / due bills for In-App website alert banner
   const unpaidInvoices = invoices.filter(i => i.status !== 'Cancelled' && i.status !== 'Paid');
@@ -407,11 +418,96 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
             </div>
           </div>
         </section>
-        <section className="workspace-section" id="section-legal"><SectionHeading number="C" title="Legal Documents"/><div className="document-list">{publishedLegal.map(l=><div className="document-row" key={l.id}><span className="document-icon"><FileText size={19}/></span><div><strong>{l.name}</strong><small>{l.version} · {dateFmt(l.date)}</small></div><button className="icon-btn" onClick={()=>setModal({type:'file-preview',file:{name:l.name,type:'PDF',description:`${l.version} · ${dateFmt(l.date)}`}})}><Eye size={17}/></button><button className="icon-btn" onClick={()=>setModal({type:'info',title:'Legal document',body:'Dokumen proyek tersimpan dalam format resmi studio.'})}><Download size={17}/></button></div>)}{!publishedLegal.length && <EmptyState title="No legal documents" detail="Approved documents will be shared here."/>}</div></section>
-        <section className="workspace-section" id="section-billing"><SectionHeading number="D" title="Billing & Payments" action="Upload payment proof" onAction={()=>setModal({type:'payment-upload',project})}/><div className="billing-summary"><div><small>TOTAL OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div><div><small>INVOICES</small><strong>{invoices.filter(i=>i.status!=='Cancelled').length}</strong></div><div><small>PAYMENTS UNDER REVIEW</small><strong>{invoices.filter(i=>i.status!=='Cancelled').reduce((s,i)=>s+i.payments.filter(p=>p.status==='Pending').length,0)}</strong></div></div><div className="invoice-list">{invoices.filter(i=>i.status!=='Cancelled').map(inv=><InvoiceClientCard key={inv.id} invoice={inv} setModal={setModal}/>)}{!invoices.length && <EmptyState title="No invoices yet" detail="Invoices issued by the studio will appear here."/>}</div></section>
-        <section className="workspace-section" id="section-shopping"><SectionHeading number="E" title="Shopping List"/><div className="shopping-list">{publishedShopping.map(s=><div className="shopping-row" key={s.id}><div className="shopping-date">{dateFmt(s.date)}</div><div className="shopping-name"><strong>{s.material}</strong><small>{s.specification}</small></div><div className="shopping-qty">{s.quantity} {s.unit}</div><StatusTag value={s.status}/></div>)}{!publishedShopping.length && <EmptyState title="No materials published" detail="Material requirements will appear here."/>}</div></section>
-        <section className="workspace-section" id="section-recap"><SectionHeading number="F" title="Monthly Recapitulation"/><MonthlyRecap invoices={invoices}/></section>
-        <footer className="workspace-footer"><Brand/><span>Need assistance? Contact the NA Associates team.</span><button className="under-link" onClick={()=>setModal({type:'info',title:'Contact the studio',body:'For project questions, contact hello@naassociates.com or use the official studio WhatsApp channel.'})}>Contact studio <ArrowUpRight size={14}/></button></footer>
+        <section className="workspace-section" id="section-legal">
+          <SectionHeading number="C" title="Legal Documents"/>
+          <div className="client-module-search">
+            <Search size={15}/>
+            <input
+              type="text"
+              placeholder="Search legal documents by title or version..."
+              value={legalQuery}
+              onChange={e=>setLegalQuery(e.target.value)}
+              aria-label="Search legal documents"
+            />
+            {legalQuery && (
+              <button
+                type="button"
+                className="client-search-clear"
+                aria-label="Clear search"
+                onClick={()=>setLegalQuery('')}
+              >
+                <X size={14}/>
+              </button>
+            )}
+          </div>
+          <div className="client-legal-scroll">
+            <div className="document-list">
+              {filteredLegalDocs.map(l=>(
+                <div className="document-row" key={l.id}>
+                  <span className="document-icon"><FileText size={19}/></span>
+                  <div><strong>{l.name}</strong><small>{l.version} · {dateFmt(l.date)}</small></div>
+                  <button className="icon-btn" onClick={()=>setModal({type:'file-preview',file:{name:l.name,type:'PDF',description:`${l.version} · ${dateFmt(l.date)}`}})}><Eye size={17}/></button>
+                  <button className="icon-btn" onClick={()=>setModal({type:'info',title:'Legal document',body:'Dokumen proyek tersimpan dalam format resmi studio.'})}><Download size={17}/></button>
+                </div>
+              ))}
+              {!filteredLegalDocs.length && (
+                <EmptyState
+                  title={publishedLegal.length ? 'No matching legal documents' : 'No legal documents'}
+                  detail={publishedLegal.length ? `No documents match "${legalQuery.trim()}". Try another title or version.` : 'Approved documents will be shared here.'}
+                />
+              )}
+            </div>
+          </div>
+        </section>
+        <section className="workspace-section" id="section-billing">
+          <SectionHeading
+            number="D"
+            title="Billing & Payments"
+            action="Upload payment proof"
+            actionClassName="btn-billing-upload"
+            actionIcon={<Upload size={15}/>}
+            onAction={()=>setModal({type:'payment-upload',project})}
+          />
+          <div className="billing-summary">
+            <div><small>TOTAL OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div>
+            <div><small>INVOICES</small><strong>{activeInvoices.length}</strong></div>
+            <div><small>PAYMENTS UNDER REVIEW</small><strong>{activeInvoices.reduce((s,i)=>s+i.payments.filter(p=>p.status==='Pending').length,0)}</strong></div>
+          </div>
+          {activeInvoices.length ? (
+            <div className="invoice-list">
+              {activeInvoices.map(inv=><InvoiceClientCard key={inv.id} invoice={inv} setModal={setModal}/>)}
+            </div>
+          ) : (
+            <EmptyState title="No invoices yet" detail="Invoices issued by the studio will appear here."/>
+          )}
+        </section>
+        <section className="workspace-section" id="section-shopping">
+          <SectionHeading number="E" title="Shopping List"/>
+          <div className="client-shopping-scroll">
+            <div className="shopping-list">
+              {publishedShopping.map(s=><div className="shopping-row" key={s.id}><div className="shopping-date">{dateFmt(s.date)}</div><div className="shopping-name"><strong>{s.material}</strong><small>{s.specification}</small></div><div className="shopping-qty">{s.quantity} {s.unit}</div><StatusTag value={s.status}/></div>)}
+              {!publishedShopping.length && <EmptyState title="No materials published" detail="Material requirements will appear here."/>}
+            </div>
+          </div>
+        </section>
+        <section className="workspace-section" id="section-recap">
+          <SectionHeading number="F" title="Monthly Recapitulation"/>
+          <div className="client-recap-scroll">
+            <MonthlyRecap invoices={invoices}/>
+          </div>
+        </section>
+        <footer className="workspace-footer">
+          <Brand/>
+          <span>Need assistance? Contact the NA Associates team.</span>
+          <a
+            href={`https://wa.me/62895337060007?text=${encodeURIComponent(`Halo tim NA Associates, saya ${client?.name || 'Klien'} ingin berkonsultasi mengenai proyek ${project.name} (${project.code}).`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="under-link"
+          >
+            Contact studio <ArrowUpRight size={14}/>
+          </a>
+        </footer>
       </main>
     </div>
     <button type="button" className={`mobile-workspace-nav ${mobileNav ? 'is-open' : ''}`} onClick={()=>setMobileNav(v=>!v)} aria-expanded={mobileNav}>

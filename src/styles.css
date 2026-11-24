@@ -5600,3 +5600,204 @@ body {
   }
 }
 
+/* ==========================================================================
+   Client Project Workspace — Modules C, D, E, F & Studio Contact Polish
+   ========================================================================== */
+
+.contact-wa-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+  transition: opacity 0.15s ease;
+}
+
+.contact-wa-link:hover {
+  opacity: 0.75;
+}
+
+.workspace-footer a.under-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+/* Elevated Upload Payment Proof CTA */
+.client-app .btn.btn-billing-upload {
+  background: #343d32;
+  color: #f4f1ea;
+  border: 1px solid #343d32;
+  box-shadow: 0 6px 18px rgba(33, 36, 31, 0.14);
+  font-weight: 600;
+  gap: 8px;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.client-app .btn.btn-billing-upload:hover {
+  background: #242b22;
+  border-color: #242b22;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(33, 36, 31, 0.18);
+}
+
+.dark-mode .client-app .btn.btn-billing-upload {
+  background: #4e6648;
+  color: #f6f8f4;
+  border-color: #66825f;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.34);
+}
+
+.dark-mode .client-app .btn.btn-billing-upload:hover {
+  background: #5b7654;
+  border-color: #7c9b74;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.42);
+}
+
+/* Bounded Vertical Scroll Boxes (Modules C, E, F) */
+.client-legal-scroll {
+  max-height: 270px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+.client-shopping-scroll {
+  max-height: 290px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+.client-recap-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+.client-legal-scroll,
+.client-shopping-scroll,
+.client-recap-scroll,
+.client-app .invoice-list {
+  scrollbar-width: thin;
+  scrollbar-color: #b8b1a1 transparent;
+}
+
+.client-legal-scroll::-webkit-scrollbar,
+.client-shopping-scroll::-webkit-scrollbar,
+.client-recap-scroll::-webkit-scrollbar,
+.client-app .invoice-list::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.client-legal-scroll::-webkit-scrollbar-track,
+.client-shopping-scroll::-webkit-scrollbar-track,
+.client-recap-scroll::-webkit-scrollbar-track,
+.client-app .invoice-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.client-legal-scroll::-webkit-scrollbar-thumb,
+.client-shopping-scroll::-webkit-scrollbar-thumb,
+.client-recap-scroll::-webkit-scrollbar-thumb,
+.client-app .invoice-list::-webkit-scrollbar-thumb {
+  background: #b8b1a1;
+  border-radius: 999px;
+}
+
+.client-legal-scroll::-webkit-scrollbar-thumb:hover,
+.client-shopping-scroll::-webkit-scrollbar-thumb:hover,
+.client-recap-scroll::-webkit-scrollbar-thumb:hover,
+.client-app .invoice-list::-webkit-scrollbar-thumb:hover {
+  background: #968f80;
+}
+
+.dark-mode .client-legal-scroll,
+.dark-mode .client-shopping-scroll,
+.dark-mode .client-recap-scroll,
+.dark-mode .client-app .invoice-list {
+  scrollbar-color: #3d483b transparent;
+}
+
+.dark-mode .client-legal-scroll::-webkit-scrollbar-thumb,
+.dark-mode .client-shopping-scroll::-webkit-scrollbar-thumb,
+.dark-mode .client-recap-scroll::-webkit-scrollbar-thumb,
+.dark-mode .client-app .invoice-list::-webkit-scrollbar-thumb {
+  background: #3d483b;
+}
+
+.dark-mode .client-legal-scroll::-webkit-scrollbar-thumb:hover,
+.dark-mode .client-shopping-scroll::-webkit-scrollbar-thumb:hover,
+.dark-mode .client-recap-scroll::-webkit-scrollbar-thumb:hover,
+.dark-mode .client-app .invoice-list::-webkit-scrollbar-thumb:hover {
+  background: #536350;
+}
+
+.client-app .invoice-card {
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+@media (min-width: 641px) {
+  .client-app .billing-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .client-app .billing-summary > div:first-child {
+    grid-column: auto;
+  }
+
+  .client-app .invoice-list {
+    display: grid;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: calc(50% - 6px);
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .client-app .billing-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .client-app .billing-summary > div {
+    padding: 10px 8px;
+    min-width: 0;
+  }
+
+  .client-app .billing-summary > div:first-child {
+    grid-column: auto;
+  }
+
+  .client-app .billing-summary small {
+    font-size: 9px !important;
+    line-height: 1.25;
+    display: block;
+  }
+
+  .client-app .billing-summary strong {
+    font-size: 13px !important;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+
+  .client-app .invoice-list {
+    display: grid;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(265px, 88%);
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 10px;
+  }
+}
+

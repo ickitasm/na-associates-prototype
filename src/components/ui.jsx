@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, CalendarDays, Clock3, FileText, FolderOpen, Image, Plus, Activity, ExternalLink } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Clock3, FileText, FolderOpen, Image, Plus, Activity, ExternalLink, Upload } from 'lucide-react';
 import { money, dateFmt } from '../lib/utils';
 import vectorLogo from '../public/Vector.svg';
 
@@ -42,7 +42,23 @@ export function PageIntro({ eyebrow, title, italic, desc }) { return <section cl
 export function Field({ label, required, placeholder, type='text', textarea=false }) { return <label className="field"><span>{label}{required && <b> *</b>}</span>{textarea ? <textarea placeholder={placeholder} required={required} rows="4"/> : <input type={type} placeholder={placeholder} required={required}/>}</label>; }
 export function PublicFooter({ go }) { return <footer className="public-footer"><div className="wrap footer-top"><div><Brand inverse/><p>Arsitektur yang dibentuk oleh konteks,<br/>kejelasan, dan kehidupan sehari-hari.</p></div><div className="footer-links"><div><small>JELAJAHI</small><button onClick={() => go('projects')}>Projects</button><button onClick={() => go('services')}>Services</button><button onClick={() => go('about')}>About</button></div><div><small>TERHUBUNG</small><button onClick={() => go('career')}>Career</button><button onClick={() => go('contact')}>Contact</button><button onClick={() => go('home')}>Back to top ↑</button></div></div></div><div className="wrap footer-bottom"><span>© 2026 NA Associates</span><span>ARSITEKTUR & DESAIN · JAKARTA, INDONESIA</span></div></footer>; }
 export function ProgressBar({ value=0 }) { return <div className="progress-bar"><span style={{width:`${Math.max(0,Math.min(100,value))}%`}}/></div>; }
-export function SectionHeading({ number, title, description, action, onAction }) { return <div className="workspace-section-head"><div><div className="eyebrow">{number} / PROJECT MODULE</div><h2>{title}</h2>{description && <p>{description}</p>}</div>{action && <button className="btn btn-outline" onClick={onAction}>{action} <ArrowUpRight size={14}/></button>}</div>; }
+export function SectionHeading({ number, title, description, action, onAction, actionClassName = '', actionIcon = null }) {
+  return (
+    <div className="workspace-section-head">
+      <div>
+        <h2>{title}</h2>
+        {description && <p>{description}</p>}
+      </div>
+      {action && (
+        <button type="button" className={`btn ${actionClassName || 'btn-outline'}`} onClick={onAction}>
+          {actionIcon}
+          {action}
+          {!actionIcon && <ArrowUpRight size={14}/>}
+        </button>
+      )}
+    </div>
+  );
+}
 export function FileTile({ file, onOpen }) {
   const isImage = file.type === 'JPG' || file.type === 'PNG' || file.type === 'WEBP' || file.category === 'Rendering';
   return (
@@ -55,7 +71,29 @@ export function FileTile({ file, onOpen }) {
     </div>
   );
 }
-export function InvoiceClientCard({ invoice, setModal }) { const paid=invoice.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0); const remaining=Math.max(0,invoice.amount-paid); const pending=invoice.payments.filter(p=>p.status==='Pending').reduce((s,p)=>s+p.claimed,0); return <article className="invoice-card"><div className="invoice-card-top"><div><small>{invoice.number}</small><strong>{money(invoice.amount)}</strong></div><StatusTag value={invoice.status}/></div><div className="invoice-meter"><div><span>Paid {money(paid)}</span><span>Remaining {money(remaining)}</span></div><ProgressBar value={invoice.amount ? paid/invoice.amount*100 : 0}/></div>{pending>0 && <div className="pending-inline"><Clock3 size={14}/> {money(pending)} menunggu verifikasi</div>}<div className="invoice-card-bottom"><span>Due date · {dateFmt(invoice.dueDate)}</span><button className="under-link" onClick={()=>setModal({type:'invoice-detail',invoice})}>View details <ArrowUpRight size={14}/></button></div></article>; }
+export function InvoiceClientCard({ invoice, setModal }) {
+  const paid = invoice.payments.filter(p => p.status === 'Approved').reduce((s, p) => s + p.approved, 0);
+  const remaining = Math.max(0, invoice.amount - paid);
+  const pending = invoice.payments.filter(p => p.status === 'Pending').reduce((s, p) => s + p.claimed, 0);
+  const paidPct = invoice.amount ? Math.min(100, Math.round((paid / invoice.amount) * 100)) : 0;
+  return (
+    <article className="invoice-card">
+      <div className="invoice-card-top">
+        <div><small>{invoice.number}</small><strong>{money(invoice.amount)}</strong></div>
+        <StatusTag value={invoice.status}/>
+      </div>
+      <div className="invoice-meter">
+        <div><span>Paid {paidPct}% ({money(paid)})</span><span>Remaining {money(remaining)}</span></div>
+        <ProgressBar value={paidPct}/>
+      </div>
+      {pending > 0 && <div className="pending-inline"><Clock3 size={14}/> {money(pending)} menunggu verifikasi</div>}
+      <div className="invoice-card-bottom">
+        <span>Due date · {dateFmt(invoice.dueDate)}</span>
+        <button className="under-link" onClick={() => setModal({ type: 'invoice-detail', invoice })}>View details <ArrowUpRight size={14}/></button>
+      </div>
+    </article>
+  );
+}
 export function MonthlyRecap({ invoices }) { const months = {}; invoices.filter(i=>i.status!=='Cancelled').forEach(i=>{const key=(i.issueDate||'').slice(0,7)||'Other'; if(!months[key]) months[key]={amount:0,paid:0,count:0}; months[key].amount+=i.amount; months[key].paid+=i.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0); months[key].count++;}); return <div className="recap-list">{Object.entries(months).sort((a,b)=>b[0].localeCompare(a[0])).map(([month,v])=><div className="recap-row" key={month}><div className="recap-month"><CalendarDays size={17}/><strong>{new Date(`${month}-01T00:00:00`).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</strong></div><div><small>INVOICES</small><strong>{v.count}</strong></div><div><small>INVOICED</small><strong>{money(v.amount)}</strong></div><div><small>VERIFIED PAID</small><strong>{money(v.paid)}</strong></div></div>)}{!Object.keys(months).length && <EmptyState title="No monthly records" detail="Monthly financial recap will appear here."/>}</div>; }
 export function StatusTag({ value }) { const cls = String(value||'').toLowerCase().replaceAll(' ','-'); return <span className={`status-tag tag-${cls}`}>{value}</span>; }
 export function EmptyState({ title, detail }) { return <div className="empty-state"><span><FolderOpen size={22}/></span><strong>{title}</strong><p>{detail}</p></div>; }
