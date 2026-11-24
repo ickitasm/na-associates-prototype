@@ -99,7 +99,7 @@ function App() {
   const enterAdmin = () => { setRole('admin'); setAdminTab('dashboard'); setMobileNav(false); };
   const enterStaff = () => { setRole('staff'); setStaffTab('dashboard'); if (staffProjects[0]) setSelectedProjectId(staffProjects[0].id); setMobileNav(false); };
   const openWorkspace = (id) => { setSelectedProjectId(id); setRole('client'); setPage('workspace'); setWorkspaceSection('overview'); setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 20); };
-  const addActivity = (projectId, action, detail, actor = role === 'admin' ? 'Admin NA Associates' : role === 'staff' ? 'Staff NA Associates' : client?.name || 'Guest', meta = {}) => {
+  const addActivity = (projectId, action, detail, actor = role === 'admin' ? 'Admin NA Associates' : role === 'staff' ? `${staffMember?.name || 'Staff NA Associates'} (Staff)` : client?.name || 'Guest', meta = {}) => {
     const isoStamp = meta.date || new Date().toISOString().slice(0, 16).replace('T', ' ');
     setDb(old => ({
       ...old,
@@ -116,6 +116,8 @@ function App() {
                   detail,
                   ...(meta.category ? { category: meta.category } : {}),
                   ...(meta.visibility ? { visibility: meta.visibility } : {}),
+                  ...(meta.crudType ? { crudType: meta.crudType } : {}),
+                  ...(meta.module ? { module: meta.module } : {}),
                   ...(meta.internal ? { internal: true } : {})
                 },
                 ...(p.activity || [])

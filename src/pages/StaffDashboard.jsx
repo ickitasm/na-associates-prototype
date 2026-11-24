@@ -3,9 +3,9 @@ import {
   Activity, AlertCircle, ArrowLeft, ArrowUpRight, Bell, Building2, Check,
   ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Edit3, Eye, FileText, HardHat,
   LayoutDashboard, MapPin, Moon, Menu, MoreHorizontal, Package, Plus,
-  ShieldCheck, Sun, Upload, X
+  Sun, Trash2, Upload, X
 } from 'lucide-react';
-import { Brand, ProgressBar, StatusTag, EmptyState, AdminPageHeader, Metric, ActivityTable } from '../components/ui';
+import { Brand, ProgressBar, StatusTag, EmptyState, Metric, ActivityTable, InfoHint, getActivityCrudType } from '../components/ui';
 import { dateFmt, getTimeGreeting } from '../lib/utils';
 
 const staffNav = [
@@ -20,6 +20,23 @@ const staffNav = [
 const isBillingNotification = (n) => /inv-|pembayaran|transfer|tagihan/i.test(`${n?.title || ''} ${n?.body || ''}`);
 
 const isBillingActivity = (a) => /invoice|inv-|pembayaran|payment|whatsapp|billing|tagihan|kwitansi|receipt/i.test(`${a?.action || ''} ${a?.detail || ''}`);
+
+function StaffPageHeader({ title, infoHint, action, onAction }) {
+  return (
+    <div className="admin-page-header staff-page-header">
+      <div className="staff-heading-inline">
+        <h1>{title}</h1>
+        {infoHint && <InfoHint text={infoHint} />}
+      </div>
+      {action && (
+        <button className="btn btn-dark" onClick={onAction}>
+          <Plus size={16} />
+          {action}
+        </button>
+      )}
+    </div>
+  );
+}
 
 function StaffShell({
   db,
@@ -214,10 +231,9 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
 
   return (
     <>
-      <AdminPageHeader
-        eyebrow={`${today.toLocaleDateString('en-US', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()} / FIELD INSIGHTS`}
+      <StaffPageHeader
         title={`${greeting}, ${firstName}.`}
-        description="Monitor assigned sites, submit daily field drafts, and track material needs."
+        infoHint="Monitor assigned sites, submit daily field drafts, and track material needs. Staff submissions save as Draft for Admin review."
       />
 
       <div className="staff-metrics">
@@ -230,9 +246,9 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
       <div className="admin-dashboard-grid">
         <section className="admin-panel">
           <div className="admin-panel-head">
-            <div>
+            <div className="staff-panel-title-inline">
               <h3>Assigned project overview</h3>
-              <p>Progress across your active studio assignments</p>
+              <InfoHint text="Progress across your active studio assignments." />
             </div>
             <button className="under-link" onClick={() => setTab('operations')}>
               Field operations <ArrowUpRight size={14} />
@@ -281,12 +297,12 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
 
         <section className="admin-panel">
           <div className="admin-panel-head">
-            <div>
-              <h3>Field quick actions</h3>
-              <p>Staff submissions save as Draft for Admin review</p>
+            <div className="staff-panel-title-inline">
+              <h3>Field Quick Actions</h3>
+              <InfoHint text="Staff submissions save as Draft for Admin review." />
             </div>
           </div>
-          <div className="quick-actions">
+          <div className="quick-actions staff-quick-actions">
             <button
               disabled={!activeProject || activeProject.status === 'On Hold'}
               onClick={() => activeProject && setModal({ type: 'new-report', project: activeProject })}
@@ -294,8 +310,7 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
               <span>
                 <ClipboardList />
               </span>
-              <strong>New daily log</strong>
-              <small>Save draft site progress</small>
+              <strong>New Daily Log</strong>
               <ArrowUpRight size={15} />
             </button>
             <button
@@ -305,8 +320,7 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
               <span>
                 <Upload />
               </span>
-              <strong>Upload draft file</strong>
-              <small>Site sketches or outputs</small>
+              <strong>Upload Draft File</strong>
               <ArrowUpRight size={15} />
             </button>
             <button
@@ -316,8 +330,7 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
               <span>
                 <Package />
               </span>
-              <strong>Add material need</strong>
-              <small>Quantity & specs draft</small>
+              <strong>Add Material Needs</strong>
               <ArrowUpRight size={15} />
             </button>
             <button
@@ -327,8 +340,7 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
               <span>
                 <MapPin />
               </span>
-              <strong>Record site usage</strong>
-              <small>Log daily material used</small>
+              <strong>Record Site Usage</strong>
               <ArrowUpRight size={15} />
             </button>
           </div>
@@ -337,15 +349,17 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
 
       <section className="admin-panel recent-panel">
         <div className="admin-panel-head">
-          <div>
-            <h3>Recent field activity</h3>
-            <p>Latest non-financial updates on your assigned projects</p>
+          <div className="staff-panel-title-inline">
+            <h3>Recent Field Activity</h3>
+            <InfoHint text="Latest non-financial updates on your assigned projects." />
           </div>
           <button className="under-link" onClick={() => setTab('activity')}>
             View activity log <ArrowUpRight size={14} />
           </button>
         </div>
-        <ActivityTable projects={scopedActivityProjects} limit={5} />
+        <div className="staff-activity-scroll">
+          <ActivityTable projects={scopedActivityProjects} limit={8} />
+        </div>
       </section>
     </>
   );
@@ -361,10 +375,9 @@ function StaffOperations({ projects, selectedProjectId, setSelectedProjectId, se
 
   return (
     <>
-      <AdminPageHeader
-        eyebrow="FIELD / OPERATIONS"
+      <StaffPageHeader
         title="Field Operations"
-        description="Create draft daily site logs and review assigned project milestones."
+        infoHint="Create draft daily site logs and review assigned milestones. New logs save as Draft and can be edited or deleted by Staff before Admin publishes them to the Client Portal. Published logs are read-only."
         action={!p || isOnHold ? null : 'New daily log'}
         onAction={() => p && setModal({ type: 'new-report', project: p })}
       />
@@ -399,20 +412,20 @@ function StaffOperations({ projects, selectedProjectId, setSelectedProjectId, se
       </div>
 
       <div className="admin-panel project-control-panel">
-        <div>
+        <div className="staff-panel-title-inline">
           <strong>
             Project status · {p?.status || '—'} ({p?.progress ?? 0}%)
           </strong>
-          <p>Read-only operational status. Project status and milestone transitions are managed by Admin.</p>
+          <InfoHint text="Read-only operational status. Project status and milestone transitions are managed by Admin." />
         </div>
         <StatusTag value={p?.status || 'Active'} />
       </div>
 
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div>
-            <h3>{p?.name} / Project timeline milestones</h3>
-            <p>Read-only reference of scheduled project milestones.</p>
+          <div className="staff-panel-title-inline">
+            <h3>Milestones</h3>
+            <InfoHint text="Read-only reference of scheduled project milestones." />
           </div>
           <span className="subtle-tag">READ ONLY</span>
         </div>
@@ -437,9 +450,9 @@ function StaffOperations({ projects, selectedProjectId, setSelectedProjectId, se
 
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div>
-            <h3>{p?.name} / Daily project logs</h3>
-            <p>Staff submissions save as Draft for Admin review. Published logs are read-only.</p>
+          <div className="staff-panel-title-inline">
+            <h3>Daily Progress</h3>
+            <InfoHint text="Staff submissions save as Draft for Admin review. Draft logs can be edited or deleted; Published logs are read-only." />
           </div>
           <span className="subtle-tag">{p?.code}</span>
         </div>
@@ -466,27 +479,25 @@ function StaffOperations({ projects, selectedProjectId, setSelectedProjectId, se
                   <Eye size={13} /> View log
                 </button>
                 {r.visibility === 'Draft' && (
-                  <button
-                    className="btn btn-small btn-outline"
-                    onClick={() => setModal({ type: 'edit-report', report: r, project: p })}
-                  >
-                    <Edit3 size={13} /> Edit draft
-                  </button>
+                  <>
+                    <button
+                      className="btn btn-small btn-outline"
+                      onClick={() => setModal({ type: 'edit-report', report: r, project: p })}
+                    >
+                      <Edit3 size={13} /> Edit
+                    </button>
+                    <button
+                      className="btn btn-small btn-outline staff-delete-btn"
+                      onClick={() => setModal({ type: 'confirm-delete-draft', entity: 'report', item: r, project: p })}
+                    >
+                      <Trash2 size={13} /> Delete
+                    </button>
+                  </>
                 )}
               </div>
             </article>
           ))}
           {!visibleReports.length && <EmptyState title="No daily logs" detail="Create a new draft field report to begin." />}
-        </div>
-      </div>
-
-      <div className="admin-panel note-panel">
-        <ShieldCheck size={19} />
-        <div>
-          <strong>Staff draft workflow</strong>
-          <p>
-            Laporan harian baru otomatis berstatus Draft dan dapat diedit oleh Staff sebelum Admin mempublikasikannya ke Portal Klien. Laporan Published bersifat read-only.
-          </p>
         </div>
       </div>
     </>
@@ -499,10 +510,9 @@ function StaffDocuments({ projects, selectedProjectId, setSelectedProjectId, set
 
   return (
     <>
-      <AdminPageHeader
-        eyebrow="FIELD / OUTPUT & DESIGN"
+      <StaffPageHeader
         title="Output & Design"
-        description="Upload draft site drawings, renders, and field output files for Admin review."
+        infoHint="Upload draft site drawings, renders, and field output files for Admin review. All Staff uploads save as Draft and can be edited or deleted before Admin publishes them."
         action={p ? 'Upload output / design' : null}
         onAction={() => p && setModal({ type: 'new-document', project: p })}
       />
@@ -515,14 +525,14 @@ function StaffDocuments({ projects, selectedProjectId, setSelectedProjectId, set
             </option>
           ))}
         </select>
-        <span className="muted">All Staff uploads save as Draft</span>
+        <span className="subtle-tag">{docs.length} files</span>
       </div>
 
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div>
-            <h3>{p?.name} / Project Output & Design Files</h3>
-            <p>Uploaded drafts await Admin review before client publication.</p>
+          <div className="staff-panel-title-inline">
+            <h3>Output & Design Files</h3>
+            <InfoHint text="Upload draft site drawings, plans, and field output files for Admin review. Draft files can be edited or deleted; Published files are read-only." />
           </div>
           {p && (
             <button className="btn btn-outline btn-small" onClick={() => setModal({ type: 'new-document', project: p })}>
@@ -532,7 +542,7 @@ function StaffDocuments({ projects, selectedProjectId, setSelectedProjectId, set
         </div>
         <div className="document-list admin-doc-list">
           {docs.map((d) => (
-            <div className="document-row" key={d.id}>
+            <div className="document-row staff-doc-row" key={d.id}>
               <span className="document-icon">
                 <FileText size={19} />
               </span>
@@ -542,7 +552,27 @@ function StaffDocuments({ projects, selectedProjectId, setSelectedProjectId, set
                   {d.category} · {dateFmt(d.date)}
                 </small>
               </div>
-              <StatusTag value={d.visibility} />
+              <div className="staff-row-actions">
+                <StatusTag value={d.visibility} />
+                {d.visibility === 'Draft' && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-small btn-outline"
+                      onClick={() => setModal({ type: 'edit-document', file: d, project: p })}
+                    >
+                      <Edit3 size={13} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-small btn-outline staff-delete-btn"
+                      onClick={() => setModal({ type: 'confirm-delete-draft', entity: 'file', item: d, project: p })}
+                    >
+                      <Trash2 size={13} /> Delete
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
           {!docs.length && <EmptyState title="No output or design files" detail="Upload a draft file for Admin review." />}
@@ -557,10 +587,9 @@ function StaffMaterials({ projects, selectedProjectId, setSelectedProjectId, upd
 
   return (
     <>
-      <AdminPageHeader
-        eyebrow="FIELD / PROCUREMENT & USAGE"
+      <StaffPageHeader
         title="Shopping & Materials"
-        description="Submit draft material needs (quantities & specifications) and record actual site usage."
+        infoHint="Submit draft material needs (quantities & specifications) and record actual site usage. Staff submissions save as Draft and can be edited or deleted before Admin review."
         action={p ? 'Add material' : null}
         onAction={() => p && setModal({ type: 'new-material', project: p })}
       />
@@ -578,52 +607,83 @@ function StaffMaterials({ projects, selectedProjectId, setSelectedProjectId, upd
 
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div>
-            <h3>Material requests / Field procurement</h3>
-            <p>Internal cost estimates are restricted to Admin. New requests are saved as Draft.</p>
+          <div className="staff-panel-title-inline">
+            <h3>Material requests for field procurement</h3>
+            <InfoHint text="Internal cost estimates are restricted to Admin. New requests are saved as Draft and can be edited or deleted before Admin publishes them." />
           </div>
         </div>
         <div className="material-table">
-          {(p?.shopping || []).map((s) => (
-            <div className="material-row staff-material-row" key={s.id}>
-              <div className="material-main">
-                <strong>{s.material}</strong>
-                <small>
-                  {s.specification} · Need by {dateFmt(s.date)}
-                </small>
+          {(p?.shopping || []).map((s) => {
+            const isDraft = s.visibility === 'Draft';
+            return (
+              <div className="material-row staff-material-row" key={s.id}>
+                <div className="material-main">
+                  <strong>{s.material}</strong>
+                  <small>
+                    {s.specification} · Need by {dateFmt(s.date)}
+                  </small>
+                </div>
+                <div>
+                  {s.quantity} {s.unit}
+                </div>
+                {isDraft ? (
+                  <select
+                    value={s.status}
+                    onChange={(e) => {
+                      const nextStatus = e.target.value;
+                      updateProject(p.id, (x) => ({
+                        ...x,
+                        shopping: x.shopping.map((y) => (y.id === s.id ? { ...y, status: nextStatus } : y))
+                      }));
+                      addActivity(
+                        p.id,
+                        'Material status updated',
+                        `${s.material} status diubah menjadi ${nextStatus}.`,
+                        undefined,
+                        { crudType: 'UPDATE', module: 'Shopping & Materials', visibility: 'Draft', internal: true }
+                      );
+                    }}
+                  >
+                    <option>Belum Dibeli</option>
+                    <option>Dalam Proses</option>
+                    <option>Sudah Dibeli</option>
+                  </select>
+                ) : (
+                  <StatusTag value={s.status} />
+                )}
+                <div className="material-publish staff-row-actions">
+                  <StatusTag value={s.visibility} />
+                  {isDraft && (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-small btn-outline"
+                        onClick={() => setModal({ type: 'edit-material', material: s, project: p })}
+                      >
+                        <Edit3 size={13} /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-small btn-outline staff-delete-btn"
+                        onClick={() => setModal({ type: 'confirm-delete-draft', entity: 'material', item: s, project: p })}
+                      >
+                        <Trash2 size={13} /> Delete
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-              <div>
-                {s.quantity} {s.unit}
-              </div>
-              <select
-                value={s.status}
-                onChange={(e) => {
-                  const nextStatus = e.target.value;
-                  updateProject(p.id, (x) => ({
-                    ...x,
-                    shopping: x.shopping.map((y) => (y.id === s.id ? { ...y, status: nextStatus } : y))
-                  }));
-                  addActivity(p.id, 'Material status updated', `${s.material} status diubah menjadi ${nextStatus}.`);
-                }}
-              >
-                <option>Belum Dibeli</option>
-                <option>Dalam Proses</option>
-                <option>Sudah Dibeli</option>
-              </select>
-              <div className="material-publish">
-                <StatusTag value={s.visibility} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {!p?.shopping?.length && <EmptyState title="No materials yet" detail="Add field material requirements for this project." />}
         </div>
       </div>
 
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div>
+          <div className="staff-panel-title-inline">
             <h3>Material usage</h3>
-            <p>Materials recorded as actually used on site.</p>
+            <InfoHint text="Materials recorded as actually used on site. Draft usage entries can be edited or deleted before Admin approval." />
           </div>
           {p && (
             <button className="btn btn-outline btn-small" onClick={() => setModal({ type: 'new-usage', project: p })}>
@@ -631,22 +691,48 @@ function StaffMaterials({ projects, selectedProjectId, setSelectedProjectId, upd
             </button>
           )}
         </div>
-        {(p?.usage || []).map((u) => (
-          <div className="usage-row" key={u.id}>
-            <span>
-              <Package size={17} />
-            </span>
-            <div>
-              <strong>{u.material}</strong>
-              <small>
-                {dateFmt(u.date)} · {u.area}
-              </small>
+        {(p?.usage || []).map((u) => {
+          const usageVis = u.visibility || 'Approved';
+          const isDraftUsage = usageVis === 'Draft';
+          return (
+            <div className="usage-row staff-usage-row" key={u.id}>
+              <span>
+                <Package size={17} />
+              </span>
+              <div>
+                <strong>{u.material}</strong>
+                <small>
+                  {dateFmt(u.date)}
+                  {u.area ? ` · ${u.area}` : ''}
+                </small>
+              </div>
+              <strong>
+                {u.quantity} {u.unit}
+              </strong>
+              <div className="staff-row-actions">
+                <StatusTag value={usageVis} />
+                {isDraftUsage && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-small btn-outline"
+                      onClick={() => setModal({ type: 'edit-usage', usage: u, project: p })}
+                    >
+                      <Edit3 size={13} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-small btn-outline staff-delete-btn"
+                      onClick={() => setModal({ type: 'confirm-delete-draft', entity: 'usage', item: u, project: p })}
+                    >
+                      <Trash2 size={13} /> Delete
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-            <strong>
-              {u.quantity} {u.unit}
-            </strong>
-          </div>
-        ))}
+          );
+        })}
         {!p?.usage?.length && <EmptyState title="No usage records" detail="Record material usage from daily site activity." />}
       </div>
     </>
@@ -663,16 +749,15 @@ function StaffNotifications({ notifications, setDb }) {
 
   return (
     <>
-      <AdminPageHeader
-        eyebrow="FIELD / COMMUNICATION"
+      <StaffPageHeader
         title="Notifications"
-        description="Operational updates and field alerts for your assigned projects."
+        infoHint="Operational updates and field alerts for your assigned projects."
       />
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div>
+          <div className="staff-panel-title-inline">
             <h3>Field notifications</h3>
-            <p>Financial and invoice notifications are hidden in Staff view.</p>
+            <InfoHint text="Financial and invoice notifications are hidden in Staff view." />
           </div>
           <button className="under-link" onClick={markStaffRead}>
             Mark all read
@@ -698,20 +783,56 @@ function StaffNotifications({ notifications, setDb }) {
 }
 
 function StaffActivity({ projects }) {
+  const [crudFilter, setCrudFilter] = useState('ALL');
   const scopedProjects = projects.map((p) => ({
     ...p,
     activity: (p.activity || []).filter((a) => !isBillingActivity(a))
   }));
 
+  const allActivities = scopedProjects.flatMap((p) => (p.activity || []).map((a) => getActivityCrudType(a)));
+  const counts = {
+    ALL: allActivities.length,
+    CREATE: allActivities.filter((c) => c === 'CREATE').length,
+    UPDATE: allActivities.filter((c) => c === 'UPDATE').length,
+    DELETE: allActivities.filter((c) => c === 'DELETE').length
+  };
+
   return (
     <>
-      <AdminPageHeader
-        eyebrow="FIELD / AUDIT TRAIL"
+      <StaffPageHeader
         title="Activity Log"
-        description="Operational timeline across your assigned projects (billing events excluded)."
+        infoHint="Operational timeline across your assigned projects (billing events excluded). Every Draft create, edit, and delete action is permanently recorded."
       />
       <div className="admin-panel">
-        <ActivityTable projects={scopedProjects} />
+        <div className="admin-panel-head">
+          <div className="staff-panel-title-inline">
+            <h3>Operational Audit Trail</h3>
+            <InfoHint text="Immutable CRUD audit log of Staff and studio project actions. Deleted drafts remain permanently visible here." />
+          </div>
+        </div>
+        <div className="staff-activity-filters" role="tablist" aria-label="Filter operational activity by CRUD type">
+          {[
+            ['ALL', 'All'],
+            ['CREATE', 'Created'],
+            ['UPDATE', 'Updated'],
+            ['DELETE', 'Deleted']
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={crudFilter === key}
+              className={`staff-activity-filter-pill ${crudFilter === key ? 'is-active' : ''}`}
+              onClick={() => setCrudFilter(key)}
+            >
+              <span>{label}</span>
+              <span className="staff-activity-filter-count">{counts[key]}</span>
+            </button>
+          ))}
+        </div>
+        <div className="staff-activity-scroll">
+          <ActivityTable projects={scopedProjects} crudFilter={crudFilter} showCrudBadge />
+        </div>
       </div>
     </>
   );

@@ -236,7 +236,12 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
       'Daily log created',
       `${newReport.title} disimpan sebagai ${newReport.visibility}. Tercatat ${newReport.workers.length} pekerja lapangan.`,
       undefined,
-      { visibility: newReport.visibility, ...(isStaff || newReport.visibility !== 'Published' ? { internal: true } : {}) }
+      {
+        crudType: 'CREATE',
+        module: 'Field Operations',
+        visibility: newReport.visibility,
+        ...(isStaff || newReport.visibility !== 'Published' ? { internal: true } : {})
+      }
     );
 
     if (!isStaff && newReport.visibility === 'Published') {
@@ -528,7 +533,18 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
         workers
       } : r)
     }));
-    addActivity(project.id, 'Daily log edited', `Daily log "${title.trim()}" diperbarui.`);
+    addActivity(
+      project.id,
+      'Daily log edited',
+      `Daily log "${title.trim()}" diperbarui.`,
+      undefined,
+      {
+        crudType: 'UPDATE',
+        module: 'Field Operations',
+        visibility: isStaff ? 'Draft' : report.visibility,
+        ...(isStaff || report.visibility !== 'Published' ? { internal: true } : {})
+      }
+    );
     finish('Daily log berhasil diperbarui.');
   };
 
@@ -801,9 +817,13 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     'edit-report': 'Edit Draft daily log',
     'report-detail': modal.report?.title || 'Daily project log detail',
     'new-document': 'Upload project file',
+    'edit-document': 'Edit Draft project file',
     'new-legal': 'Add legal document',
     'new-material': 'Add material requirement',
+    'edit-material': 'Edit Draft material requirement',
     'new-usage': 'Record material usage',
+    'edit-usage': 'Edit Draft material usage',
+    'confirm-delete-draft': 'Delete Draft item',
     'invoice-detail': 'Invoice details',
     'invoice-detail-admin': 'Invoice details',
     'file-preview': 'File preview',
@@ -1139,7 +1159,18 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
       url: form.fileUrl || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85'
     };
     updateProject(project.id, p => ({ ...p, files: [d, ...p.files] }));
-    addActivity(project.id, 'Document uploaded', `${d.name} (${d.visibility}) uploaded to direct studio storage.`);
+    addActivity(
+      project.id,
+      'Document uploaded',
+      `${d.name} (${d.visibility}) uploaded to direct studio storage.`,
+      undefined,
+      {
+        crudType: 'CREATE',
+        module: 'Output & Design',
+        visibility: d.visibility,
+        ...(isStaff || d.visibility !== 'Published' ? { internal: true } : {})
+      }
+    );
     if (!isStaff && d.visibility === 'Published') {
       pushPublishedNotif(setDb, project.id, 'Output & Desain Dipublikasikan', `File "${d.name}" (${d.category}) untuk proyek ${project.name} telah dipublikasikan.`);
     }
@@ -1154,9 +1185,158 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
   {isStaff && <div className="modal-footnote">File yang diunggah Staff otomatis tersimpan sebagai <strong>Draft</strong> untuk ditinjau Admin sebelum dipublikasikan ke klien.</div>}
   {textarea('Description', 'description', 'Short description of this file output or design render.')}
   <label className="upload-box"><Upload size={18} /><span><strong>Upload Direct File (Supabase Storage Ready)</strong><small>PDF, high-res render (JPG, PNG, WebP), or drawing</small></span><input type="file" onChange={e => { const fileObj = e.target.files?.[0]; if (fileObj) { set('name', fileObj.name); set('fileUrl', URL.createObjectURL(fileObj)); } }} /></label>{footer('Upload document')}</form>;
+  if (modal.type === 'edit-document') {
+    const existing = modal.file || {};
+    body = <form onSubmit={submit(() => {
+      if (isStaff && existing.visibility !== 'Draft') throw new Error('Hanya dokumen berstatus Draft yang dapat diedit.');
+      const nextName = (form.name ?? existing.name ?? '').trim();
+      if (!nextName) throw new Error('Nama file wajib diisi.');
+      const nextDoc = {
+        ...existing,
+        name: nextName,
+        category: form.category ?? existing.category ?? 'Drawing',
+        type: form.type ?? existing.type ?? 'PDF',
+        date: form.date ?? existing.date ?? '2026-11-02',
+        description: form.description ?? existing.description ?? '',
+        url: form.fileUrl ?? existing.url,
+        visibility: isStaff ? 'Draft' : existing.visibility
+      };
+      updateProject(project.id, p => ({ ...p, files: (p.files || []).map(f => f.id === existing.id ? nextDoc : f) }));
+      addActivity(
+        project.id,
+        'Draft file updated',
+        `File "${nextDoc.name}" (${nextDoc.category}) diperbarui.`,
+        undefined,
+        { crudType: 'UPDATE', module: 'Output & Design', visibility: nextDoc.visibility, ...(isStaff || nextDoc.visibility !== 'Published' ? { internal: true } : {}) }
+      );
+      finish('Draft file berhasil diperbarui.');
+    })}>
+      <label className="field"><span>Document / file name <b>*</b></span><input type="text" value={form.name ?? existing.name ?? ''} onChange={e => set('name', e.target.value)} required /></label>
+      <div className="form-grid">
+        <label className="field"><span>Category</span><select value={form.category ?? existing.category ?? 'Drawing'} onChange={e => set('category', e.target.value)}><option value="Presentation">Presentation</option><option value="Rendering">Rendering</option><option value="Drawing">Drawing</option><option value="Report">Report</option><option value="Other">Other</option></select></label>
+        <label className="field"><span>File type</span><select value={form.type ?? existing.type ?? 'PDF'} onChange={e => set('type', e.target.value)}><option value="PDF">PDF</option><option value="JPG">JPG</option><option value="PNG">PNG</option><option value="WEBP">WebP</option><option value="XLSX">XLSX</option></select></label>
+        <label className="field"><span>Upload date</span><input type="date" value={form.date ?? existing.date ?? '2026-11-02'} onChange={e => set('date', e.target.value)} /></label>
+      </div>
+      <label className="field"><span>Description</span><textarea rows="3" value={form.description ?? existing.description ?? ''} onChange={e => set('description', e.target.value)} /></label>
+      <label className="upload-box"><Upload size={18} /><span><strong>Replace File (Optional)</strong><small>{form.name || existing.name || 'Choose a replacement file'}</small></span><input type="file" onChange={e => { const fileObj = e.target.files?.[0]; if (fileObj) { set('name', fileObj.name); set('fileUrl', URL.createObjectURL(fileObj)); } }} /></label>
+      {footer('Save draft changes')}
+    </form>;
+  }
   if (modal.type === 'new-legal') body = <form onSubmit={submit(() => { const d = { id: uid('legal'), name: form.name, version: form.version || 'v1.0', date: form.date || '2026-11-02', visibility: form.visibility || 'Internal Only' }; updateProject(project.id, p => ({ ...p, legal: [d, ...p.legal] })); addActivity(project.id, 'Legal document added', d.name); if (!isStaff && d.visibility === 'Published') { pushPublishedNotif(setDb, project.id, 'Dokumen Legal Dipublikasikan', `Dokumen "${d.name}" (${d.version}) untuk proyek ${project.name} telah dipublikasikan.`); } finish('Legal document berhasil ditambahkan.'); })}>{input('Document name', 'name', 'e.g. Addendum 02', 'text', true)}<div className="form-grid">{input('Version', 'version', 'v1.0')}{input('Document date', 'date', '', 'date')}{select('Visibility', 'visibility', [['Internal Only', 'Internal Only'], ['Published', 'Published to Client']])}</div>{footer('Add legal document')}</form>;
-  if (modal.type === 'new-material') body = <form onSubmit={submit(() => { const s = { id: uid('material'), date: form.date || '2026-11-02', material: form.material, specification: form.specification || '', quantity: Number(form.quantity || 0), unit: form.unit || 'unit', status: 'Belum Dibeli', visibility: 'Draft', supplier: isStaff ? '' : (form.supplier || ''), unitCost: isStaff ? 0 : Number(form.unitCost || 0) }; updateProject(project.id, p => ({ ...p, shopping: [s, ...p.shopping] })); addActivity(project.id, 'Shopping item added', `${s.material} ditambahkan sebagai Draft.`); finish('Material requirement berhasil ditambahkan.'); })}>{input('Material name', 'material', 'e.g. Besi beton Ø10', 'text', true)}{input('Specification', 'specification', 'Grade, size, brand, etc.')}<div className="form-grid">{input('Date needed', 'date', '', 'date')}{input('Quantity', 'quantity', 'e.g. 120', 'number')}{input('Unit', 'unit', 'e.g. batang')}{!isStaff && input('Internal unit cost (Rp)', 'unitCost', 'Optional', 'number')}</div>{!isStaff && input('Supplier (internal)', 'supplier', 'Supplier name')}<div className="modal-footnote">{isStaff ? 'New material requests are saved as Draft (quantities & specs only) for Admin procurement review.' : 'New shopping items are saved as Draft. Publish them from Shopping & Materials to show them to the Client.'}</div>{footer('Add material')}</form>;
-  if (modal.type === 'new-usage') body = <form onSubmit={submit(() => { const u = { id: uid('usage'), date: form.date || '2026-11-02', material: form.material, quantity: Number(form.quantity || 0), unit: form.unit || 'unit', area: form.area || '' }; updateProject(project.id, p => ({ ...p, usage: [u, ...p.usage] })); addActivity(project.id, 'Material usage recorded', `${u.material}: ${u.quantity} ${u.unit}.`); finish('Material usage berhasil dicatat.'); })}>{input('Material', 'material', 'Material name', 'text', true)}<div className="form-grid">{input('Date', 'date', '', 'date')}{input('Quantity', 'quantity', 'Amount', 'number')}{input('Unit', 'unit', 'e.g. batang')}{input('Work area', 'area', 'e.g. Lantai 2')}</div>{footer('Record usage')}</form>;
+  if (modal.type === 'new-material') body = <form onSubmit={submit(() => { const s = { id: uid('material'), date: form.date || '2026-11-02', material: form.material, specification: form.specification || '', quantity: Number(form.quantity || 0), unit: form.unit || 'unit', status: 'Belum Dibeli', visibility: 'Draft', supplier: isStaff ? '' : (form.supplier || ''), unitCost: isStaff ? 0 : Number(form.unitCost || 0) }; updateProject(project.id, p => ({ ...p, shopping: [s, ...p.shopping] })); addActivity(project.id, 'Shopping item added', `${s.material} (${s.quantity} ${s.unit}) ditambahkan sebagai Draft.`, undefined, { crudType: 'CREATE', module: 'Shopping & Materials', visibility: 'Draft', internal: true }); finish('Material requirement berhasil ditambahkan.'); })}>{input('Material name', 'material', 'e.g. Besi beton Ø10', 'text', true)}{input('Specification', 'specification', 'Grade, size, brand, etc.')}<div className="form-grid">{input('Date needed', 'date', '', 'date')}{input('Quantity', 'quantity', 'e.g. 120', 'number')}{input('Unit', 'unit', 'e.g. batang')}{!isStaff && input('Internal unit cost (Rp)', 'unitCost', 'Optional', 'number')}</div>{!isStaff && input('Supplier (internal)', 'supplier', 'Supplier name')}<div className="modal-footnote">{isStaff ? 'New material requests are saved as Draft (quantities & specs only) for Admin procurement review.' : 'New shopping items are saved as Draft. Publish them from Shopping & Materials to show them to the Client.'}</div>{footer('Add material')}</form>;
+  if (modal.type === 'edit-material') {
+    const existing = modal.material || {};
+    body = <form onSubmit={submit(() => {
+      if (isStaff && existing.visibility !== 'Draft') throw new Error('Hanya pengajuan material berstatus Draft yang dapat diedit.');
+      const nextMat = (form.material ?? existing.material ?? '').trim();
+      if (!nextMat) throw new Error('Nama material wajib diisi.');
+      const nextItem = {
+        ...existing,
+        material: nextMat,
+        specification: (form.specification ?? existing.specification ?? '').trim(),
+        date: form.date ?? existing.date ?? '2026-11-02',
+        quantity: Number(form.quantity ?? existing.quantity ?? 0),
+        unit: (form.unit ?? existing.unit ?? 'unit').trim() || 'unit',
+        status: form.status ?? existing.status ?? 'Belum Dibeli',
+        visibility: 'Draft'
+      };
+      updateProject(project.id, p => ({ ...p, shopping: (p.shopping || []).map(s => s.id === existing.id ? nextItem : s) }));
+      addActivity(
+        project.id,
+        'Draft material updated',
+        `${nextItem.material} (${nextItem.quantity} ${nextItem.unit} · ${nextItem.status}) diperbarui.`,
+        undefined,
+        { crudType: 'UPDATE', module: 'Shopping & Materials', visibility: 'Draft', internal: true }
+      );
+      finish('Draft material request berhasil diperbarui.');
+    })}>
+      <label className="field"><span>Material name <b>*</b></span><input type="text" value={form.material ?? existing.material ?? ''} onChange={e => set('material', e.target.value)} required /></label>
+      <label className="field"><span>Specification</span><input type="text" value={form.specification ?? existing.specification ?? ''} onChange={e => set('specification', e.target.value)} /></label>
+      <div className="form-grid">
+        <label className="field"><span>Date needed</span><input type="date" value={form.date ?? existing.date ?? '2026-11-02'} onChange={e => set('date', e.target.value)} /></label>
+        <label className="field"><span>Quantity</span><input type="number" value={form.quantity ?? existing.quantity ?? 0} onChange={e => set('quantity', e.target.value)} /></label>
+        <label className="field"><span>Unit</span><input type="text" value={form.unit ?? existing.unit ?? 'unit'} onChange={e => set('unit', e.target.value)} /></label>
+        <label className="field"><span>Procurement Status</span><select value={form.status ?? existing.status ?? 'Belum Dibeli'} onChange={e => set('status', e.target.value)}><option value="Belum Dibeli">Belum Dibeli</option><option value="Dalam Proses">Dalam Proses</option><option value="Sudah Dibeli">Sudah Dibeli</option></select></label>
+      </div>
+      {footer('Save draft changes')}
+    </form>;
+  }
+  if (modal.type === 'new-usage') body = <form onSubmit={submit(() => { const u = { id: uid('usage'), date: form.date || '2026-11-02', material: form.material, quantity: Number(form.quantity || 0), unit: form.unit || 'unit', area: form.area || '', visibility: isStaff ? 'Draft' : 'Approved' }; updateProject(project.id, p => ({ ...p, usage: [u, ...p.usage] })); addActivity(project.id, 'Material usage recorded', `${u.material}: ${u.quantity} ${u.unit}${u.area ? ` · ${u.area}` : ''}.`, undefined, { crudType: 'CREATE', module: 'Shopping & Materials', visibility: u.visibility, ...(isStaff ? { internal: true } : {}) }); finish('Material usage berhasil dicatat.'); })}>{input('Material', 'material', 'Material name', 'text', true)}<div className="form-grid">{input('Date', 'date', '', 'date')}{input('Quantity', 'quantity', 'Amount', 'number')}{input('Unit', 'unit', 'e.g. batang')}{input('Work area', 'area', 'e.g. Lantai 2')}</div>{footer('Record usage')}</form>;
+  if (modal.type === 'edit-usage') {
+    const existing = modal.usage || {};
+    body = <form onSubmit={submit(() => {
+      if (isStaff && (existing.visibility || 'Approved') !== 'Draft') throw new Error('Hanya catatan pemakaian berstatus Draft yang dapat diedit.');
+      const nextMat = (form.material ?? existing.material ?? '').trim();
+      if (!nextMat) throw new Error('Nama material wajib diisi.');
+      const nextUsage = {
+        ...existing,
+        material: nextMat,
+        date: form.date ?? existing.date ?? '2026-11-02',
+        quantity: Number(form.quantity ?? existing.quantity ?? 0),
+        unit: (form.unit ?? existing.unit ?? 'unit').trim() || 'unit',
+        area: (form.area ?? existing.area ?? '').trim(),
+        visibility: isStaff ? 'Draft' : (existing.visibility || 'Approved')
+      };
+      updateProject(project.id, p => ({ ...p, usage: (p.usage || []).map(u => u.id === existing.id ? nextUsage : u) }));
+      addActivity(
+        project.id,
+        'Draft usage updated',
+        `${nextUsage.material}: ${nextUsage.quantity} ${nextUsage.unit}${nextUsage.area ? ` · ${nextUsage.area}` : ''} diperbarui.`,
+        undefined,
+        { crudType: 'UPDATE', module: 'Shopping & Materials', visibility: nextUsage.visibility, ...(isStaff ? { internal: true } : {}) }
+      );
+      finish('Draft material usage berhasil diperbarui.');
+    })}>
+      <label className="field"><span>Material <b>*</b></span><input type="text" value={form.material ?? existing.material ?? ''} onChange={e => set('material', e.target.value)} required /></label>
+      <div className="form-grid">
+        <label className="field"><span>Date</span><input type="date" value={form.date ?? existing.date ?? '2026-11-02'} onChange={e => set('date', e.target.value)} /></label>
+        <label className="field"><span>Quantity</span><input type="number" value={form.quantity ?? existing.quantity ?? 0} onChange={e => set('quantity', e.target.value)} /></label>
+        <label className="field"><span>Unit</span><input type="text" value={form.unit ?? existing.unit ?? 'unit'} onChange={e => set('unit', e.target.value)} /></label>
+        <label className="field"><span>Work area</span><input type="text" value={form.area ?? existing.area ?? ''} onChange={e => set('area', e.target.value)} /></label>
+      </div>
+      {footer('Save draft changes')}
+    </form>;
+  }
+  if (modal.type === 'confirm-delete-draft') {
+    const entityMap = {
+      report: { field: 'reports', module: 'Field Operations', label: 'Draft daily log', name: modal.item?.title || 'Daily log' },
+      file: { field: 'files', module: 'Output & Design', label: 'Draft output file', name: modal.item?.name || 'Draft file' },
+      material: { field: 'shopping', module: 'Shopping & Materials', label: 'Draft material request', name: modal.item?.material || 'Material' },
+      usage: { field: 'usage', module: 'Shopping & Materials', label: 'Draft site usage', name: modal.item?.material || 'Material usage' }
+    };
+    const meta = entityMap[modal.entity];
+    body = (
+      <form onSubmit={submit(() => {
+        if (!meta || !modal.item) throw new Error('Item draft tidak ditemukan.');
+        const currentVis = modal.item.visibility || (modal.entity === 'usage' ? 'Approved' : '');
+        if (currentVis !== 'Draft') throw new Error('Item yang sudah dipublikasikan atau disetujui bersifat read-only dan tidak dapat dihapus.');
+        updateProject(project.id, p => ({
+          ...p,
+          [meta.field]: (p[meta.field] || []).filter(x => x.id !== modal.item.id)
+        }));
+        addActivity(
+          project.id,
+          `Deleted ${meta.label}`,
+          `${meta.label} "${meta.name}" dihapus permanen.`,
+          undefined,
+          { crudType: 'DELETE', module: meta.module, visibility: 'Draft', internal: true }
+        );
+        finish(`${meta.label} berhasil dihapus.`);
+      })}>
+        <div className="modal-highlight">
+          <AlertTriangle size={18} />
+          <div>
+            <strong>Hapus {meta?.label || 'Draft'}?</strong>
+            <small>{project.name} · {project.code}</small>
+          </div>
+        </div>
+        <p className="modal-lead">
+          Anda akan menghapus <strong>{meta?.name}</strong> secara permanen. Catatan penghapusan ini tetap tercatat secara permanen di Activity Log untuk keperluan audit.
+        </p>
+        {footer('Confirm delete')}
+      </form>
+    );
+  }
   if (modal.type === 'invoice-detail' || modal.type === 'invoice-detail-admin') { const inv = modal.invoice; const paid = inv.payments.filter(p => p.status === 'Approved').reduce((s, p) => s + p.approved, 0); body = <div><div className="invoice-detail-summary"><small>{inv.number}</small><h2>{money(inv.amount)}</h2><StatusTag value={inv.status} /><p>Issue date {dateFmt(inv.issueDate)} · Due {dateFmt(inv.dueDate)}</p><ProgressBar value={inv.amount ? paid / inv.amount * 100 : 0} /><div className="detail-amounts"><span>Verified paid <strong>{money(paid)}</strong></span><span>Remaining <strong>{money(Math.max(0, inv.amount - paid))}</strong></span></div></div><h4 className="modal-subtitle">Payment history</h4>{inv.payments.map(p => <div className="payment-history-row" key={p.id}><div><strong>{money(p.approved || p.claimed)}</strong><small>{dateFmt(p.date)} · claimed {money(p.claimed)}</small>{p.reason && <small>Reason: {p.reason}</small>}{p.overpaymentAmount > 0 && <small>Overpayment {money(p.overpaymentAmount)} · {p.overpaymentDecision}</small>}</div><div><StatusTag value={p.status} />{p.receipt && <small className="receipt-ref">{p.receipt}</small>}</div></div>)}{!inv.payments.length && <EmptyState title="No payments yet" detail="Payment records will appear here." />}{modal.type === 'invoice-detail-admin' && inv.status !== 'Paid' && inv.status !== 'Cancelled' && <button className="btn btn-outline modal-wide-btn" onClick={() => setTimeout(() => { }, 1)}>Download invoice statement</button>}<div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>; }
   if (modal.type === 'new-milestone') body = <form onSubmit={submit(() => {
     const title = form.title?.trim();

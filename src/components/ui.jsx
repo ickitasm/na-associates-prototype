@@ -1,5 +1,5 @@
-import React from 'react';
-import { ArrowUpRight, CalendarDays, Clock3, FileText, FolderOpen, Image, Plus, Activity, ExternalLink, Upload } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowUpRight, CalendarDays, Clock3, FileText, FolderOpen, Image, Info, Plus, Activity, ExternalLink, Upload } from 'lucide-react';
 import { money, dateFmt } from '../lib/utils';
 import vectorLogo from '../public/Vector.svg';
 
@@ -121,4 +121,112 @@ export function Metric({icon:Icon,label,value,note,accent,className=''}) {
   }
   return <div className={`metric-card ${accent?'metric-alert':''} ${className}`.trim()}><span className="metric-icon"><Icon size={18}/></span><small>{label}</small><strong>{value}</strong>{note && <p>{note}</p>}</div>;
 }
-export function ActivityTable({projects,limit}) { const items=projects.flatMap(p=>(p.activity||[]).map(a=>({...a,project:p.name}))).slice(0,limit||100); return <div className="activity-table">{items.map(a=><div className="activity-row" key={a.id}><span className="activity-dot"><Activity size={14}/></span><div><strong>{a.action}</strong><p>{a.detail}</p><small>{a.actor} · {a.date} · {a.project}</small></div></div>)}{!items.length&&<EmptyState title="No activity recorded" detail="Changes to project records will appear here."/>}</div>; }
+export function InfoHint({ text, label = 'Informasi' }) {
+  const [pinned, setPinned] = useState(false);
+  const [hoverOpen, setHoverOpen] = useState(false);
+  const [alignClass, setAlignClass] = useState('');
+  const wrapRef = useRef(null);
+  const isOpen = pinned || hoverOpen;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const updatePosition = () => {
+      const el = wrapRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const vw = window.innerWidth || 360;
+      if (rect.left + 270 > vw - 16) {
+        setAlignClass(rect.right - 270 < 16 ? 'is-center' : 'is-right');
+      } else {
+        setAlignClass('');
+      }
+    };
+    updatePosition();
+    const onOutside = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setPinned(false);
+        setHoverOpen(false);
+      }
+    };
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setPinned(false);
+        setHoverOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onOutside);
+    document.addEventListener('touchstart', onOutside, { passive: true });
+    document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      document.removeEventListener('mousedown', onOutside);
+      document.removeEventListener('touchstart', onOutside);
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen]);
+
+  return (
+    <span
+      className="info-hint-wrap"
+      ref={wrapRef}
+      onMouseEnter={() => setHoverOpen(true)}
+      onMouseLeave={() => setHoverOpen(false)}
+    >
+      <button
+        type="button"
+        className={`info-hint-btn ${isOpen ? 'is-active' : ''}`}
+        aria-label={label}
+        aria-expanded={isOpen}
+        onClick={(e) => {
+          e.stopPropagation();
+          setPinned((v) => !v);
+        }}
+      >
+        <Info size={14} />
+      </button>
+      {isOpen && (
+        <span className={`info-hint-popover ${alignClass}`.trim()} role="tooltip">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function getActivityCrudType(a) {
+  if (a?.crudType === 'CREATE' || a?.crudType === 'UPDATE' || a?.crudType === 'DELETE') return a.crudType;
+  const text = `${a?.action || ''} ${a?.detail || ''}`.toLowerCase();
+  if (/delet|hapus|removed|dihapus/.test(text)) return 'DELETE';
+  if (/edit|updat|revis|diperbarui|diubah|resum|hold|roll\s*back|changed|verif|approv|reject/.test(text)) return 'UPDATE';
+  return 'CREATE';
+}
+
+export function ActivityTable({ projects, limit, crudFilter = 'ALL', showCrudBadge = true }) {
+  const items = projects
+    .flatMap((p) => (p.activity || []).map((a) => ({ ...a, project: p.name, _crud: getActivityCrudType(a) })))
+    .filter((a) => crudFilter === 'ALL' || a._crud === crudFilter)
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+    .slice(0, limit || 100);
+  return (
+    <div className="activity-table">
+      {items.map((a) => (
+        <div className="activity-row" key={a.id}>
+          <span className="activity-dot"><Activity size={14} /></span>
+          <div className="activity-row-body">
+            {showCrudBadge && (
+              <div className="activity-row-head">
+                <span className={`crud-badge crud-${a._crud.toLowerCase()}`}>{a._crud}</span>
+                {a.module && <span className="activity-module-tag">{a.module}</span>}
+              </div>
+            )}
+            <strong>{a.action}</strong>
+            <p>{a.detail}</p>
+            <small>{a.actor} · {a.date} · {a.project}</small>
+          </div>
+        </div>
+      ))}
+      {!items.length && <EmptyState title="No activity recorded" detail="Changes to project records will appear here." />}
+    </div>
+  );
+}
