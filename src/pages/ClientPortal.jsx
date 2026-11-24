@@ -5,32 +5,114 @@ import {
   Download, ExternalLink, FileCheck2, FileImage, FileText, FolderOpen, HardHat,
   Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, Package, Plus,
   RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Upload, User, UserPlus,
-  Users, Wallet, X, Eye, Activity, AlertCircle, Sun, Moon, Camera
+  Users, Wallet, X, Eye, Activity, AlertCircle, Sun, Moon, Camera, LogOut
 } from 'lucide-react';
 import { Brand, ProgressBar, SectionHeading, FileTile, InvoiceClientCard, MonthlyRecap, StatusTag, EmptyState } from '../components/ui';
-import { money, dateFmt } from '../lib/utils';
+import { money, dateFmt, getTimeGreeting, getProjectNextUp } from '../lib/utils';
 
 function ClientShell({ db, client, projects, selectedProject, page, setPage, onOpen, onBack, onLogout, onReset, onNotify, setModal, updateProject, addActivity, workspaceSection, setWorkspaceSection, mobileNav, setMobileNav, theme, toggleTheme }) {
   if (page === 'my-projects') return <ClientProjectsView client={client} projects={projects} onOpen={onOpen} onLogout={onLogout} onReset={onReset} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/>;
   return <ClientWorkspace db={db} client={client} project={selectedProject} onBack={onBack} onLogout={onLogout} onReset={onReset} setModal={setModal} updateProject={updateProject} addActivity={addActivity} onNotify={onNotify} workspaceSection={workspaceSection} setWorkspaceSection={setWorkspaceSection} mobileNav={mobileNav} setMobileNav={setMobileNav} theme={theme} toggleTheme={toggleTheme}/>;
 }
-function ClientTopbar({ client, onBack, onLogout, onReset, setModal, onNotify, theme, toggleTheme }) {
-  const enablePush = async () => {
-    if ('Notification' in window) {
-      const res = await Notification.requestPermission();
-      if (res === 'granted') {
-        onNotify('Browser & Mobile Push Notifications (PWA) berhasil diaktifkan.');
-      } else {
-        onNotify('Izin notifikasi browser ditolak.');
-      }
-    } else {
-      onNotify('Browser tidak mendukung Web Push Notifications.');
-    }
-  };
+function ClientTopbar({ client, onBack, onLogout, onReset, setModal, theme, toggleTheme }) {
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
 
-  return <header className="portal-topbar"><div className="portal-top-left"><Brand/><span className="portal-label">CLIENT PORTAL</span></div><div className="portal-top-right"><button className="btn btn-small btn-outline client-push-btn" onClick={enablePush}>Enable Push</button><button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title={theme==='dark'?'Switch to light mode':'Switch to night mode'} aria-label="Toggle theme">{theme==='dark'?<Sun size={18}/>:<Moon size={18}/>}</button><button className="icon-btn" onClick={() => setModal({type:'client-notifications'})} aria-label="Notifications"><Bell size={18}/><i className="notification-dot"/></button><div className="user-chip"><span className="avatar">{client?.name?.split(' ').map(x=>x[0]).slice(0,2).join('')}</span><span><strong>{client?.name || 'Client'}</strong><small>Client account</small></span></div><button className="text-link" onClick={onLogout}>Sign out</button><button className="icon-btn mobile-menu" onClick={onReset} title="Reset data" aria-label="Reset data"><RotateCcw size={16}/></button></div></header>;
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const onMouseDown = (e) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setAccountMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [accountMenuOpen]);
+
+  const initials = client?.name?.split(' ').map(x => x[0]).slice(0, 2).join('') || 'CL';
+
+  return (
+    <header className="portal-topbar">
+      <div className="portal-top-left">
+        <Brand/>
+        <span className="portal-label">CLIENT PORTAL</span>
+      </div>
+      <div className="portal-top-right">
+        <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to night mode'} aria-label="Toggle theme">
+          {theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}
+        </button>
+        <button className="icon-btn" onClick={() => setModal({ type: 'client-notifications' })} aria-label="Notifications">
+          <Bell size={18}/>
+          <i className="notification-dot"/>
+        </button>
+        <div className="account-menu-wrap" ref={accountMenuRef}>
+          <button
+            type="button"
+            className={`user-chip user-chip-trigger ${accountMenuOpen ? 'is-open' : ''}`}
+            onClick={() => setAccountMenuOpen(v => !v)}
+            aria-expanded={accountMenuOpen}
+            aria-haspopup="menu"
+            aria-label="Client account menu"
+          >
+            <span className="avatar">{initials}</span>
+            <span className="user-chip-text">
+              <strong>{client?.name || 'Client'}</strong>
+              <small>Client account</small>
+            </span>
+          </button>
+          {accountMenuOpen && (
+            <div className="account-dropdown" role="menu">
+              <div className="account-dropdown-head">
+                <span className="avatar">{initials}</span>
+                <div>
+                  <strong>{client?.name || 'Client'}</strong>
+                  <small>{client?.username ? `@${client.username}` : (client?.email || 'Client account')}</small>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="account-signout-btn"
+                role="menuitem"
+                onClick={() => {
+                  setAccountMenuOpen(false);
+                  onLogout();
+                }}
+              >
+                <LogOut size={15}/>
+                <span>Sign out</span>
+              </button>
+            </div>
+          )}
+        </div>
+        <button className="icon-btn mobile-menu" onClick={onReset} title="Reset data" aria-label="Reset data">
+          <RotateCcw size={16}/>
+        </button>
+      </div>
+    </header>
+  );
 }
-function ClientProjectsView({ client, projects, onOpen, onLogout, onReset, setModal, theme, toggleTheme }) { return <div className="client-app"><ClientTopbar client={client} onLogout={onLogout} onReset={onReset} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/><main className="client-list-page"><div className="client-welcome"><div><div className="eyebrow">CLIENT SPACE / YOUR PROJECTS</div><h1>Good morning,<br/><em>{client?.name?.split(' ')[0] || 'there'}.</em></h1><p>Here is an overview of your projects with NA Associates.</p></div><div className="welcome-stamp">NA<br/><span>CLIENT SPACE</span></div></div><div className="list-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h2>My projects <small>{projects.length.toString().padStart(2,'0')}</small></h2></div><span className="muted">Select a project to view its details and updates.</span></div><div className="client-project-grid">{projects.map(p => <button className="client-project-card" key={p.id} onClick={() => onOpen(p.id)}><div className="client-project-image"><img src={p.cover}/><span className={`status-pill ${p.status === 'Completed' ? 'complete' : ''}`}>{p.status}</span></div><div className="client-project-info"><div className="project-card-top"><span>{p.code}</span><ArrowUpRight size={17}/></div><h3>{p.name}</h3><p><MapPin size={13}/>{p.location}</p><div className="progress-row"><span>PROJECT PROGRESS</span><strong>{p.progress}%</strong></div><ProgressBar value={p.progress}/><div className="client-project-bottom"><span>Next milestone</span><strong>{p.nextMilestone || '—'}</strong></div></div></button>)}</div>{!projects.length && <EmptyState title="Belum ada proyek" detail="Tim NA Associates akan menambahkan proyek ke akun Anda."/>}</main></div>; }
+
+function ClientProjectsView({ client, projects, onOpen, onLogout, onReset, setModal, theme, toggleTheme }) {
+  const [greeting, setGreeting] = useState(() => getTimeGreeting());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setGreeting(getTimeGreeting());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const firstName = client?.name?.trim()?.split(/\s+/)[0] || 'there';
+
+  return <div className="client-app"><ClientTopbar client={client} onLogout={onLogout} onReset={onReset} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/><main className="client-list-page"><div className="client-welcome"><div><div className="eyebrow">CLIENT SPACE / YOUR PROJECTS</div><h1>{greeting},<br/><em>{firstName}.</em></h1><p>Here is an overview of your projects with NA Associates.</p></div><div className="welcome-stamp">NA<br/><span>CLIENT SPACE</span></div></div><div className="list-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h2>My projects <small>{projects.length.toString().padStart(2,'0')}</small></h2></div><span className="muted">Select a project to view its details and updates.</span></div><div className="client-project-grid">{projects.map(p => { const nextUp = getProjectNextUp(p); return <button className="client-project-card" key={p.id} onClick={() => onOpen(p.id)}><div className="client-project-image"><img src={p.cover}/><span className={`status-pill ${p.status === 'Completed' ? 'complete' : ''}`}>{p.status}</span></div><div className="client-project-info"><div className="project-card-top"><span>{p.code}</span><ArrowUpRight size={17}/></div><h3>{p.name}</h3><p><MapPin size={13}/>{p.location}</p><div className="progress-row"><span>PROJECT PROGRESS</span><strong>{p.progress}%</strong></div><ProgressBar value={p.progress}/><div className="client-project-bottom"><span>NEXT UP</span><strong>{nextUp.label}</strong></div></div></button>; })}</div>{!projects.length && <EmptyState title="Belum ada proyek" detail="Tim NA Associates akan menambahkan proyek ke akun Anda."/>}</main></div>;
+}
 
 const workspaceNav = [
   ['overview','Overview',Home],['design','A. Output & Design',Image],['progress','B. Progress & Field Ops',Activity],['legal','C. Legal Documents',FileText],['billing','D. Billing & Payments',Wallet],['shopping','E. Shopping List',ShoppingBag],['recap','F. Monthly Recap',CalendarDays]
@@ -221,7 +303,7 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
         </div>
 
         <section className="workspace-hero" id="section-overview"><div className="workspace-hero-img"><img src={project.cover}/><div className="workspace-hero-overlay"/></div><div className="workspace-hero-content"><div className="eyebrow light">{project.code} / PROJECT OVERVIEW</div><h1>{project.name}<span>.</span></h1><p><MapPin size={14}/>{project.location}</p><div className="hero-progress"><span>PROJECT PROGRESS</span><strong>{project.progress}%</strong></div><ProgressBar value={project.progress}/></div></section>
-        <div className="workspace-stats"><div><small>LAND AREA</small><strong>{project.landArea || '—'}</strong></div><div><small>BUILDING AREA</small><strong>{project.buildingArea || '—'}</strong></div><div><small>NEXT MILESTONE</small><strong>{project.nextMilestone || '—'}</strong><span>{dateFmt(project.nextMilestoneDate)}</span></div><div><small>OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div></div>
+        {(() => { const nextUp = getProjectNextUp(project); return <div className="workspace-stats"><div><small>LAND AREA</small><strong>{project.landArea || '—'}</strong></div><div><small>BUILDING AREA</small><strong>{project.buildingArea || '—'}</strong></div><div><small>NEXT UP</small><strong>{nextUp.label}</strong>{nextUp.label !== '—' && nextUp.label !== 'DONE' && nextUp.date && <span>{dateFmt(nextUp.date)}</span>}</div><div><small>OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div></div>; })()}
         <section className="workspace-section" id="section-design"><SectionHeading number="A" title="Output & Design" description="Design development and project deliverables shared by the studio." action="Browse files" onAction={()=>setModal({type:'file-list',project})}/><div className="file-grid">{publishedFiles.map(f=><FileTile key={f.id} file={f} onOpen={()=>setModal({type:'file-preview',file:f})}/>)}{!publishedFiles.length && <EmptyState title="No files published yet" detail="New design outputs will appear here once shared by the studio."/>}</div></section>
         <section className="workspace-section" id="section-progress">
           <SectionHeading number="B" title="Progress & Field Operations" description="A transparent view of milestones and published site updates."/>

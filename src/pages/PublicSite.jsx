@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Check,
+  ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, Bell, Building2, CalendarDays, Check,
   CheckCircle2, ChevronDown, ChevronRight, ClipboardList, Clock3, CreditCard,
   Download, ExternalLink, FileCheck2, FileImage, FileText, FolderOpen, HardHat,
   Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, Package, Plus,
@@ -11,9 +11,14 @@ import { Brand, PageIntro, Field, PublicFooter, WhatsAppIcon, EmptyState } from 
 
 function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMobileNav, heroReady = true }) {
   const [scrolled, setScrolled] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   useEffect(() => { const fn = () => go('home'); window.addEventListener('na-home', fn); return () => window.removeEventListener('na-home', fn); }, []);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 10);
+      setShowBackToTop(y > 280);
+    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -39,6 +44,14 @@ function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMob
     </header>
     <main className="public-main">{page === 'home' && <HomePage go={go} onLogin={onLogin} heroReady={heroReady}/>} {page === 'projects' && <ProjectsPage go={go}/>} {page === 'project-detail' && <ProjectDetailPage go={go}/>} {page === 'services' && <ServicesPage go={go}/>} {page === 'about' && <AboutPage go={go}/>} {page === 'career' && <CareerPage/>} {page === 'contact' && <ContactPage/>}</main>
     <PublicFooter go={go}/>
+    <button
+      type="button"
+      className={`back-to-top-btn ${showBackToTop ? 'visible' : ''}`}
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      aria-label="Kembali ke atas"
+    >
+      <ArrowUp size={18}/>
+    </button>
   </>;
 }
 

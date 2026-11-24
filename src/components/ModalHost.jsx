@@ -13,7 +13,6 @@ import { money, dateFmt, nowLabel, uid, syncProjectFromMilestones } from '../lib
 function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, enterAdmin }) {
   const [mode, setMode] = useState('client');
   const [username, setUsername] = useState('aditya');
-  const [adminEmail, setAdminEmail] = useState('owner@example.com');
   const [error, setError] = useState('');
 
   const handleClientLogin = (e) => {
@@ -32,19 +31,18 @@ function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, ent
     notify(`Masuk sebagai Client: ${found.name} (${found.username || cleanUser})`);
   };
 
-  const handleAdminLogin = (e) => {
-    e.preventDefault();
+  const handleAdminLogin = () => {
     setError('');
-    const cleanEmail = adminEmail.trim().toLowerCase();
-    const whitelisted = (db.allowedAdminEmails || ['owner@example.com', 'admin@na-associates.id', 'mike777rafael@gmail.com']).map(e => e.toLowerCase());
-    if (!whitelisted.includes(cleanEmail)) {
-      setError('Email Google ini belum didaftarkan sebagai Admin. Hubungi Primary Admin untuk mendaftarkan email Anda di Settings.');
-      return;
-    }
+    const primaryAdmin = (db.admins && db.admins[0]) || { email: 'owner@example.com' };
     changeRole('admin');
     close();
     enterAdmin();
-    notify(`Masuk sebagai Admin: ${cleanEmail}`);
+    notify(`Masuk sebagai Admin: ${primaryAdmin.email}`);
+  };
+
+  const switchMode = (nextMode) => {
+    setMode(nextMode);
+    setError('');
   };
 
   return (
@@ -53,14 +51,14 @@ function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, ent
         <button
           type="button"
           className={`btn btn-small ${mode === 'client' ? 'btn-dark' : 'btn-outline'}`}
-          onClick={() => { setMode('client'); setError(''); }}
+          onClick={() => switchMode('client')}
         >
           Client
         </button>
         <button
           type="button"
           className={`btn btn-small ${mode === 'admin' ? 'btn-dark' : 'btn-outline'}`}
-          onClick={() => { setMode('admin'); setError(''); }}
+          onClick={() => switchMode('admin')}
         >
           Admin
         </button>
@@ -85,26 +83,23 @@ function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, ent
           </div>
         </form>
       ) : (
-        <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div className="field">
-            <span>Email Google Terdaftar <b>*</b></span>
-            <input
-              type="email"
-              placeholder="e.g. owner@example.com"
-              value={adminEmail}
-              onChange={e => setAdminEmail(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit" className="btn-google-login" style={{ marginTop: '4px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <button
+            type="button"
+            className="btn-google-login"
+            onClick={handleAdminLogin}
+          >
             <GoogleIcon size={19} />
-            <span>Login with Google (Verify Whitelist)</span>
+            <span>Login with Google</span>
           </button>
+          <div className="modal-footnote">
+            Akses Admin terbatas untuk akun admin studio yang terdaftar.
+          </div>
           {error && <div className="form-error"><AlertCircle size={15}/>{error}</div>}
           <div className="modal-actions" style={{ justifyContent: 'flex-end', paddingTop: '6px' }}>
             <button type="button" className="btn btn-outline" onClick={close}>Cancel</button>
           </div>
-        </form>
+        </div>
       )}
     </div>
   );
@@ -870,7 +865,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     );
   }
   if (modal.type === 'login') body = <LoginModalView db={db} setDb={setDb} close={close} notify={notify} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} />;
-  if (modal.type === 'create-project') body = <form onSubmit={submit(() => { const id = uid('project'); const p = { id, code: form.code || `NA-${String(db.projects.length + 32).padStart(3, '0')}`, name: form.name, location: form.location, category: form.category || 'Residential', landArea: form.landArea || '—', buildingArea: form.buildingArea || '—', year: '2026', status: 'Active', progress: 0, clientId: form.clientId || null, cover: form.cover || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=85', startDate: form.startDate || '2026-11-02', targetDate: form.targetDate || '2027-11-02', nextMilestone: 'Project briefing', nextMilestoneDate: form.targetDate || '2026-11-20', nextPayment: null, milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: [{ id: uid('act'), date: nowLabel(), actor: 'Admin NA Associates', action: 'Project created', detail: `${form.name} dibuat.` }] }; setDb(old => ({ ...old, projects: [p, ...old.projects], clients: old.clients.map(c => c.id === form.clientId ? { ...c, projects: [...c.projects, id] } : c) })); finish('Project berhasil dibuat.'); })}><div className="form-grid">{input('Project name', 'name', 'e.g. Rumah Sore', 'text', true)}{input('Project code', 'code', 'e.g. NA-032')}{input('Location', 'location', 'City / area', 'text', true)}{select('Category', 'category', [['Residential', 'Residential'], ['Commercial', 'Commercial'], ['Common / Other', 'Common / Other']])}{input('Land area', 'landArea', 'e.g. 240 m²')}{input('Building area', 'buildingArea', 'e.g. 185 m²')}{select('Assign client', 'clientId', [['', 'Unassigned'], ...db.clients.map(c => [c.id, c.name])])}{input('Target completion', 'targetDate', '', 'date')}</div><div className="field"><span>Cover Image (Local File Upload)</span><label className="upload-box" style={{marginTop:'4px'}}><Upload size={18}/><span><strong>{form.coverName ? `Cover terpilih: ${form.coverName}` : 'Pilih file gambar cover (PNG, JPG, WebP)'}</strong><small>Gambar dikonversi menjadi preview lokal</small></span><input type="file" accept="image/png, image/jpeg, image/webp" onChange={e => { const file = e.target.files?.[0]; if (file) { set('coverName', file.name); const reader = new FileReader(); reader.onload = (evt) => { set('cover', evt.target.result); }; reader.readAsDataURL(file); } }}/></label>{form.cover && <div style={{marginTop:'8px',height:'110px',width:'100%',borderRadius:'4px',overflow:'hidden',border:'1px solid #d5d8cf'}}><img src={form.cover} alt="Cover preview" style={{width:'100%',height:'100%',objectFit:'cover'}}/></div>}</div>{footer('Create project')}</form>;
+  if (modal.type === 'create-project') body = <form onSubmit={submit(() => { const id = uid('project'); const p = { id, code: form.code || `NA-${String(db.projects.length + 32).padStart(3, '0')}`, name: form.name, location: form.location, category: form.category || 'Residential', landArea: form.landArea || '—', buildingArea: form.buildingArea || '—', year: '2026', status: 'Active', progress: 0, clientId: form.clientId || null, cover: form.cover || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=85', startDate: form.startDate || '2026-11-02', targetDate: form.targetDate || '2027-11-02', nextMilestone: '—', nextMilestoneDate: null, nextPayment: null, milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: [{ id: uid('act'), date: nowLabel(), actor: 'Admin NA Associates', action: 'Project created', detail: `${form.name} dibuat.` }] }; setDb(old => ({ ...old, projects: [p, ...old.projects], clients: old.clients.map(c => c.id === form.clientId ? { ...c, projects: [...c.projects, id] } : c) })); finish('Project berhasil dibuat.'); })}><div className="form-grid">{input('Project name', 'name', 'e.g. Rumah Sore', 'text', true)}{input('Project code', 'code', 'e.g. NA-032')}{input('Location', 'location', 'City / area', 'text', true)}{select('Category', 'category', [['Residential', 'Residential'], ['Commercial', 'Commercial'], ['Common / Other', 'Common / Other']])}{input('Land area', 'landArea', 'e.g. 240 m²')}{input('Building area', 'buildingArea', 'e.g. 185 m²')}{select('Assign client', 'clientId', [['', 'Unassigned'], ...db.clients.map(c => [c.id, c.name])])}{input('Target completion', 'targetDate', '', 'date')}</div><div className="field"><span>Cover Image (Local File Upload)</span><label className="upload-box" style={{marginTop:'4px'}}><Upload size={18}/><span><strong>{form.coverName ? `Cover terpilih: ${form.coverName}` : 'Pilih file gambar cover (PNG, JPG, WebP)'}</strong><small>Gambar dikonversi menjadi preview lokal</small></span><input type="file" accept="image/png, image/jpeg, image/webp" onChange={e => { const file = e.target.files?.[0]; if (file) { set('coverName', file.name); const reader = new FileReader(); reader.onload = (evt) => { set('cover', evt.target.result); }; reader.readAsDataURL(file); } }}/></label>{form.cover && <div style={{marginTop:'8px',height:'110px',width:'100%',borderRadius:'4px',overflow:'hidden',border:'1px solid #d5d8cf'}}><img src={form.cover} alt="Cover preview" style={{width:'100%',height:'100%',objectFit:'cover'}}/></div>}</div>{footer('Create project')}</form>;
   if (modal.type === 'invite-admin') body = <form onSubmit={submit(() => { if (!form.name || !form.email) throw new Error('Name dan email wajib diisi.'); const admin = { id: uid('admin'), name: form.name, email: form.email, isPrimary: false, status: 'Invited' }; setDb(old => ({ ...old, admins: [...(old.admins || []), admin] })); finish('Undangan Admin berhasil dibuat.'); })}><div className="form-grid">{input('Admin name', 'name', 'Full name', 'text', true)}{input('Admin email', 'email', 'name@studio.com', 'email', true)}</div><div className="modal-footnote">Only the Primary Admin can create Admin invitations. All Admins share operational rights; only the Primary Admin can add other Admins.</div>{footer('Create Admin invitation')}</form>;
   if (modal.type === 'invite-client') body = <form onSubmit={submit(() => {
     if (!form.name || !form.username) throw new Error('Nama dan Username klien wajib diisi.');
@@ -1150,7 +1145,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     );
   }
   if (modal.type === 'file-list') body = <div className="document-list">{(project.files || []).filter(f => f.visibility === 'Published').map(f => <div className="document-row" key={f.id}><span className="document-icon"><FileText /></span><div><strong>{f.name}</strong><small>{f.category} · {dateFmt(f.date)}</small></div><StatusTag value={f.visibility} /></div>)}</div>;
-  if (modal.type === 'client-notifications') body = <div className="notification-modal-list">{db.notifications.map(n => <div className="notification-row" key={n.id}><span className="notification-icon"><Bell size={17} /></span><div><strong>{n.title}</strong><p>{n.body}</p><small>{dateFmt(n.date)}</small></div></div>)}</div>;
+  if (modal.type === 'client-notifications') body = <ClientNotificationsModalView notifications={db.notifications || []} notify={notify} />;
   if (modal.type === 'info') body = <div><p className="modal-lead preserve-lines">{modal.body}</p><div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>;
 
   const isWide = modal.type === 'new-report' || modal.type === 'report-detail';
@@ -1172,6 +1167,67 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
           {error && <div className="form-error"><AlertCircle size={15} />{error}</div>}
         </div>
       </section>
+    </div>
+  );
+}
+
+function ClientNotificationsModalView({ notifications, notify }) {
+  const [permission, setPermission] = useState(() => (
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
+  ));
+
+  const handleEnablePush = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      notify('Browser tidak mendukung Web Push Notifications.');
+      return;
+    }
+    const res = await Notification.requestPermission();
+    setPermission(res);
+    if (res === 'granted') {
+      notify('Browser & Mobile Push Notifications (PWA) berhasil diaktifkan.');
+    } else {
+      notify('Izin notifikasi browser ditolak.');
+    }
+  };
+
+  return (
+    <div className="notification-modal-wrap">
+      <div className="notification-push-bar">
+        <div className="notification-push-info">
+          <strong>Push Notifications</strong>
+          <small>
+            {permission === 'granted'
+              ? 'Notifikasi browser & perangkat aktif.'
+              : permission === 'denied'
+              ? 'Izin notifikasi diblokir di pengaturan browser.'
+              : permission === 'unsupported'
+              ? 'Browser ini belum mendukung Web Push.'
+              : 'Aktifkan notifikasi untuk pembaruan proyek & tagihan.'}
+          </small>
+        </div>
+        <button
+          type="button"
+          className={`btn btn-small ${permission === 'granted' ? 'btn-outline' : 'btn-dark'}`}
+          onClick={handleEnablePush}
+          disabled={permission === 'unsupported'}
+        >
+          <Bell size={14} />
+          <span>{permission === 'granted' ? 'Push Enabled' : 'Enable Push'}</span>
+        </button>
+      </div>
+      <div className="notification-modal-list">
+        {notifications.map(n => (
+          <div className="notification-row" key={n.id}>
+            <span className="notification-icon"><Bell size={17} /></span>
+            <div>
+              <strong>{n.title}</strong>
+              <p>{n.body}</p>
+              <small>{dateFmt(n.date)}</small>
+            </div>
+          </div>
+        ))}
+        {!notifications.length && <EmptyState title="Belum ada notifikasi" detail="Pembaruan proyek dan tagihan akan tampil di sini." />}
+      </div>
     </div>
   );
 }

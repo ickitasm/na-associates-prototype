@@ -5,6 +5,12 @@ export const THEME_KEY = 'na-theme-mode';
 export const money = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(n || 0));
 export const dateFmt = (d) => d ? new Date(`${d}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 export const nowLabel = () => new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+export const getTimeGreeting = (date = new Date()) => {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 18) return 'Good afternoon';
+  return 'Good evening';
+};
 export const uid = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 export const loadDB = () => {
   try {
@@ -60,19 +66,17 @@ export const syncProjectFromMilestones = (project) => {
     : Math.round(milestones.reduce((sum, m) => sum + Number(m.progress || 0), 0) / milestones.length);
 
   const allDone = milestones.length > 0 && milestones.every((m) => m.status === 'Completed');
-  const activeTarget = milestones.find((m) => m.status === 'In Progress')
-    || milestones.find((m) => m.status === 'Upcoming')
-    || null;
+  const latestMilestone = milestones.length > 0 ? milestones[milestones.length - 1] : null;
 
-  let nextMilestone = 'Belum ada milestone';
-  let nextMilestoneDate = project.nextMilestoneDate || null;
+  let nextMilestone = '—';
+  let nextMilestoneDate = null;
 
   if (allDone) {
-    nextMilestone = 'Handover selesai';
-    nextMilestoneDate = milestones[milestones.length - 1]?.date || project.targetDate || nextMilestoneDate;
-  } else if (activeTarget) {
-    nextMilestone = activeTarget.title || 'Milestone aktif';
-    nextMilestoneDate = activeTarget.date || nextMilestoneDate;
+    nextMilestone = 'DONE';
+    nextMilestoneDate = latestMilestone?.date || project.targetDate || project.nextMilestoneDate || null;
+  } else if (latestMilestone) {
+    nextMilestone = latestMilestone.title || '—';
+    nextMilestoneDate = latestMilestone.date || project.nextMilestoneDate || null;
   }
 
   const isHeld = project.status === 'On Hold' || project.status === 'Ready to Resume';
@@ -84,9 +88,29 @@ export const syncProjectFromMilestones = (project) => {
     ...project,
     milestones,
     progress: overallProgress,
-    nextMilestone,
+    nextMilestone: status === 'Completed' ? 'DONE' : nextMilestone,
     nextMilestoneDate,
     status
+  };
+};
+
+export const getProjectNextUp = (project) => {
+  if (!project) return { label: '—', date: null };
+  const milestones = Array.isArray(project.milestones) ? project.milestones : [];
+  const allDone = milestones.length > 0 && milestones.every((m) => m.status === 'Completed');
+  if (project.status === 'Completed' || (allDone && Number(project.progress) === 100)) {
+    return {
+      label: 'DONE',
+      date: milestones[milestones.length - 1]?.date || project.targetDate || null
+    };
+  }
+  if (milestones.length === 0) {
+    return { label: '—', date: null };
+  }
+  const latest = milestones[milestones.length - 1];
+  return {
+    label: latest?.title || '—',
+    date: latest?.date || null
   };
 };
 
