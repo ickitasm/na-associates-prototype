@@ -1,6 +1,6 @@
 import { seedData } from '../data/seed';
 
-export const STORE_KEY = 'na_associates_clean_v1';
+export const STORE_KEY = 'na_associates_clean_v2';
 export const THEME_KEY = 'na-theme-mode';
 export const money = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(n || 0));
 export const dateFmt = (d) => d ? new Date(`${d}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -14,7 +14,7 @@ export const getTimeGreeting = (date = new Date()) => {
 export const uid = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 export const loadDB = () => {
   try {
-    const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem('na-associates-demo-v3') || localStorage.getItem('na-associates-demo-v2') || localStorage.getItem('na-associates-demo-v1');
+    const raw = localStorage.getItem(STORE_KEY);
     if (!raw) return structuredClone(seedData);
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return structuredClone(seedData);

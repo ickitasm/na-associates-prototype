@@ -6099,11 +6099,23 @@ body {
    Staff Portal Declutter, InfoHint Popover, Draft CRUD & Activity Audit
    ========================================================================== */
 
-.staff-page-header {
-  align-items: center;
+@media (min-width: 781px) {
+  .staff-page-header {
+    align-items: center;
+  }
 }
 
-.staff-heading-inline,
+.staff-heading-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: nowrap;
+  text-align: left;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .staff-panel-title-inline {
   display: inline-flex;
   align-items: center;
@@ -6115,6 +6127,15 @@ body {
 .staff-heading-inline h1,
 .staff-panel-title-inline h3 {
   margin: 0;
+}
+
+.staff-heading-inline h1 {
+  min-width: 0;
+  text-align: left;
+}
+
+.staff-heading-inline .info-hint-wrap {
+  flex-shrink: 0;
 }
 
 .info-hint-wrap {
@@ -6428,6 +6449,35 @@ body {
 }
 
 @media (max-width: 780px) {
+  .admin-page-header,
+  .admin-page-header.staff-page-header,
+  .staff-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left;
+    width: 100%;
+  }
+
+  .staff-heading-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    flex-wrap: nowrap;
+    text-align: left;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .project-control-panel.staff-status-banner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
   .material-row.staff-material-row {
     grid-template-columns: 1fr;
     gap: 10px;
@@ -6445,6 +6495,27 @@ body {
 }
 
 @media (max-width: 640px) {
+  .admin-page-header,
+  .admin-page-header.staff-page-header,
+  .staff-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left;
+    width: 100%;
+  }
+
+  .staff-heading-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    flex-wrap: nowrap;
+    text-align: left;
+    max-width: 100%;
+    min-width: 0;
+  }
+
   .staff-activity-filters {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -6453,5 +6524,128 @@ body {
     padding-bottom: 6px;
   }
 }
+
+/* ==========================================================================
+   Staff Field Operations Status Banner Readability & Quick-Fill Login Chips
+   ========================================================================== */
+
+.project-control-panel.staff-status-banner {
+  margin-top: 6px;
+  margin-bottom: 18px;
+  padding: 16px 20px;
+}
+
+.project-control-panel.staff-status-banner strong {
+  font-size: 14.5px !important;
+  font-weight: 700 !important;
+  line-height: 1.4;
+  letter-spacing: -0.15px;
+  color: #222620 !important;
+}
+
+.project-control-panel.staff-status-banner .staff-status-pct {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  color: #465a3a;
+}
+
+.dark-mode .project-control-panel.staff-status-banner strong {
+  color: #f3f5ef !important;
+}
+
+.dark-mode .project-control-panel.staff-status-banner .staff-status-pct {
+  color: #b7cbab;
+}
+
+@media (max-width: 640px) {
+  .project-control-panel.staff-status-banner {
+    padding: 14px 16px;
+  }
+
+  .project-control-panel.staff-status-banner strong {
+    font-size: 13.5px !important;
+  }
+}
+
+.login-quick-fill {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-quick-label {
+  font-size: 11px;
+  color: #6b7265;
+  font-weight: 500;
+}
+
+.login-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.login-quick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #d5d8ce;
+  background: #f5f4ee;
+  color: #2a2f27;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.login-quick-chip:hover {
+  background: #eceee6;
+  border-color: #9ba592;
+}
+
+.login-quick-chip.is-selected {
+  background: #343a32;
+  border-color: #343a32;
+  color: #f7f6f2;
+}
+
+.login-quick-chip strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.login-quick-chip small {
+  font-size: 10px !important;
+  opacity: 0.8;
+}
+
+.login-quick-chip.is-selected small {
+  color: #d7ddd1 !important;
+  opacity: 1;
+}
+
+.dark-mode .login-quick-label {
+  color: #9ba396;
+}
+
+.dark-mode .login-quick-chip {
+  background: #232823;
+  border-color: #363e34;
+  color: #e4e8df;
+}
+
+.dark-mode .login-quick-chip:hover {
+  background: #2b322b;
+  border-color: #536350;
+}
+
+.dark-mode .login-quick-chip.is-selected {
+  background: #53674c;
+  border-color: #6b8463;
+  color: #ffffff;
+}
+
 
 

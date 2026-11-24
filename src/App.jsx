@@ -95,7 +95,7 @@ function App() {
   const clientPage = page === 'workspace' && !selectedProject ? 'my-projects' : page;
   const notify = (msg) => setToast(msg);
   const goPublic = (p) => { setRole('guest'); setPage(p); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const enterClient = () => { setRole('client'); setPage('my-projects'); setSelectedProjectId(clientProjects[0]?.id || 'project-01'); setMobileNav(false); };
+  const enterClient = (preferredProjectId) => { setRole('client'); setPage('my-projects'); setSelectedProjectId(preferredProjectId || clientProjects[0]?.id || 'project-01'); setMobileNav(false); };
   const enterAdmin = () => { setRole('admin'); setAdminTab('dashboard'); setMobileNav(false); };
   const enterStaff = () => { setRole('staff'); setStaffTab('dashboard'); if (staffProjects[0]) setSelectedProjectId(staffProjects[0].id); setMobileNav(false); };
   const openWorkspace = (id) => { setSelectedProjectId(id); setRole('client'); setPage('workspace'); setWorkspaceSection('overview'); setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 20); };

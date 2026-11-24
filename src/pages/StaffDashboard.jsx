@@ -233,7 +233,6 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
     <>
       <StaffPageHeader
         title={`${greeting}, ${firstName}.`}
-        infoHint="Monitor assigned sites, submit daily field drafts, and track material needs. Staff submissions save as Draft for Admin review."
       />
 
       <div className="staff-metrics">
@@ -246,10 +245,7 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
       <div className="admin-dashboard-grid">
         <section className="admin-panel">
           <div className="admin-panel-head">
-            <div className="staff-panel-title-inline">
-              <h3>Assigned project overview</h3>
-              <InfoHint text="Progress across your active studio assignments." />
-            </div>
+            <h3>Assigned project overview</h3>
             <button className="under-link" onClick={() => setTab('operations')}>
               Field operations <ArrowUpRight size={14} />
             </button>
@@ -299,7 +295,7 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
           <div className="admin-panel-head">
             <div className="staff-panel-title-inline">
               <h3>Field Quick Actions</h3>
-              <InfoHint text="Staff submissions save as Draft for Admin review." />
+              <InfoHint text="Staff submissions save as Draft for Admin review, and recent non-financial updates across your assigned projects appear below." />
             </div>
           </div>
           <div className="quick-actions staff-quick-actions">
@@ -349,10 +345,7 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
 
       <section className="admin-panel recent-panel">
         <div className="admin-panel-head">
-          <div className="staff-panel-title-inline">
-            <h3>Recent Field Activity</h3>
-            <InfoHint text="Latest non-financial updates on your assigned projects." />
-          </div>
+          <h3>Recent Field Activity</h3>
           <button className="under-link" onClick={() => setTab('activity')}>
             View activity log <ArrowUpRight size={14} />
           </button>
@@ -377,7 +370,7 @@ function StaffOperations({ projects, selectedProjectId, setSelectedProjectId, se
     <>
       <StaffPageHeader
         title="Field Operations"
-        infoHint="Create draft daily site logs and review assigned milestones. New logs save as Draft and can be edited or deleted by Staff before Admin publishes them to the Client Portal. Published logs are read-only."
+        infoHint="Create and edit draft daily progress logs before Admin review. Project milestones are read-only schedule references."
         action={!p || isOnHold ? null : 'New daily log'}
         onAction={() => p && setModal({ type: 'new-report', project: p })}
       />
@@ -411,22 +404,17 @@ function StaffOperations({ projects, selectedProjectId, setSelectedProjectId, se
         <span className="muted">{visibleReports.length} daily records</span>
       </div>
 
-      <div className="admin-panel project-control-panel">
-        <div className="staff-panel-title-inline">
-          <strong>
-            Project status · {p?.status || '—'} ({p?.progress ?? 0}%)
-          </strong>
-          <InfoHint text="Read-only operational status. Project status and milestone transitions are managed by Admin." />
-        </div>
+      <div className="admin-panel project-control-panel staff-status-banner">
+        <strong>
+          Project status · {p?.status || '—'}{' '}
+          <span className="staff-status-pct">({p?.progress ?? 0}%)</span>
+        </strong>
         <StatusTag value={p?.status || 'Active'} />
       </div>
 
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div className="staff-panel-title-inline">
-            <h3>Milestones</h3>
-            <InfoHint text="Read-only reference of scheduled project milestones." />
-          </div>
+          <h3>Milestones</h3>
           <span className="subtle-tag">READ ONLY</span>
         </div>
         <div className="milestone-admin-list">
@@ -450,10 +438,7 @@ function StaffOperations({ projects, selectedProjectId, setSelectedProjectId, se
 
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div className="staff-panel-title-inline">
-            <h3>Daily Progress</h3>
-            <InfoHint text="Staff submissions save as Draft for Admin review. Draft logs can be edited or deleted; Published logs are read-only." />
-          </div>
+          <h3>Daily Progress</h3>
           <span className="subtle-tag">{p?.code}</span>
         </div>
         <div className="log-list">
@@ -512,7 +497,7 @@ function StaffDocuments({ projects, selectedProjectId, setSelectedProjectId, set
     <>
       <StaffPageHeader
         title="Output & Design"
-        infoHint="Upload draft site drawings, renders, and field output files for Admin review. All Staff uploads save as Draft and can be edited or deleted before Admin publishes them."
+        infoHint="Upload and revise draft site drawings, plans, and output files for Admin review before client publication."
         action={p ? 'Upload output / design' : null}
         onAction={() => p && setModal({ type: 'new-document', project: p })}
       />
@@ -530,10 +515,7 @@ function StaffDocuments({ projects, selectedProjectId, setSelectedProjectId, set
 
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div className="staff-panel-title-inline">
-            <h3>Output & Design Files</h3>
-            <InfoHint text="Upload draft site drawings, plans, and field output files for Admin review. Draft files can be edited or deleted; Published files are read-only." />
-          </div>
+          <h3>Output & Design Files</h3>
           {p && (
             <button className="btn btn-outline btn-small" onClick={() => setModal({ type: 'new-document', project: p })}>
               <Plus size={14} /> Upload draft output
@@ -589,7 +571,7 @@ function StaffMaterials({ projects, selectedProjectId, setSelectedProjectId, upd
     <>
       <StaffPageHeader
         title="Shopping & Materials"
-        infoHint="Submit draft material needs (quantities & specifications) and record actual site usage. Staff submissions save as Draft and can be edited or deleted before Admin review."
+        infoHint="Submit draft material procurement requests and record actual site material usage. Cost estimates are restricted to Admin."
         action={p ? 'Add material' : null}
         onAction={() => p && setModal({ type: 'new-material', project: p })}
       />
@@ -607,10 +589,7 @@ function StaffMaterials({ projects, selectedProjectId, setSelectedProjectId, upd
 
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div className="staff-panel-title-inline">
-            <h3>Material requests for field procurement</h3>
-            <InfoHint text="Internal cost estimates are restricted to Admin. New requests are saved as Draft and can be edited or deleted before Admin publishes them." />
-          </div>
+          <h3>Material requests for field procurement</h3>
         </div>
         <div className="material-table">
           {(p?.shopping || []).map((s) => {
@@ -681,10 +660,7 @@ function StaffMaterials({ projects, selectedProjectId, setSelectedProjectId, upd
 
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div className="staff-panel-title-inline">
-            <h3>Material usage</h3>
-            <InfoHint text="Materials recorded as actually used on site. Draft usage entries can be edited or deleted before Admin approval." />
-          </div>
+          <h3>Material usage</h3>
           {p && (
             <button className="btn btn-outline btn-small" onClick={() => setModal({ type: 'new-usage', project: p })}>
               <Plus size={14} /> Record usage
@@ -751,14 +727,11 @@ function StaffNotifications({ notifications, setDb }) {
     <>
       <StaffPageHeader
         title="Notifications"
-        infoHint="Operational updates and field alerts for your assigned projects."
+        infoHint="View official studio announcements, published project updates, and Admin feedback on your submitted field drafts."
       />
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div className="staff-panel-title-inline">
-            <h3>Field notifications</h3>
-            <InfoHint text="Financial and invoice notifications are hidden in Staff view." />
-          </div>
+          <h3>Field notifications</h3>
           <button className="under-link" onClick={markStaffRead}>
             Mark all read
           </button>
@@ -801,14 +774,11 @@ function StaffActivity({ projects }) {
     <>
       <StaffPageHeader
         title="Activity Log"
-        infoHint="Operational timeline across your assigned projects (billing events excluded). Every Draft create, edit, and delete action is permanently recorded."
+        infoHint="Immutable audit trail recording all Staff CREATE, UPDATE, and DELETE draft actions across your assigned projects."
       />
       <div className="admin-panel">
         <div className="admin-panel-head">
-          <div className="staff-panel-title-inline">
-            <h3>Operational Audit Trail</h3>
-            <InfoHint text="Immutable CRUD audit log of Staff and studio project actions. Deleted drafts remain permanently visible here." />
-          </div>
+          <h3>Operational Audit Trail</h3>
         </div>
         <div className="staff-activity-filters" role="tablist" aria-label="Filter operational activity by CRUD type">
           {[

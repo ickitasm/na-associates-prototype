@@ -19,9 +19,14 @@ const pushPublishedNotif = (setDb, projectId, title, body) => {
 
 function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, enterAdmin, enterStaff }) {
   const [mode, setMode] = useState('client');
-  const [username, setUsername] = useState('aditya');
+  const [username, setUsername] = useState('fajar.ramadhan');
   const [showRoleChooser, setShowRoleChooser] = useState(false);
   const [error, setError] = useState('');
+
+  const quickAccounts = [
+    { username: 'fajar.ramadhan', meta: '2 proyek · Active' },
+    { username: 'nadia.kusuma', meta: '1 proyek · On Hold' }
+  ];
 
   const handleClientLogin = (e) => {
     e.preventDefault();
@@ -35,7 +40,7 @@ function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, ent
     setDb(old => ({ ...old, currentClientId: found.id }));
     changeRole('client');
     close();
-    enterClient();
+    enterClient(found.projects?.[0]);
     notify(`Masuk sebagai Client: ${found.name} (${found.username || cleanUser})`);
   };
 
@@ -88,11 +93,33 @@ function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, ent
             <span>Username <b>*</b></span>
             <input
               type="text"
-              placeholder="e.g. aditya"
+              placeholder="e.g. fajar.ramadhan"
               value={username}
               onChange={e => setUsername(e.target.value)}
               required
             />
+          </div>
+          <div className="login-quick-fill">
+            <span className="login-quick-label">Akun demo cepat (klik untuk isi):</span>
+            <div className="login-quick-chips">
+              {quickAccounts.map(acc => {
+                const isSelected = username.trim().toLowerCase() === acc.username;
+                return (
+                  <button
+                    key={acc.username}
+                    type="button"
+                    className={`login-quick-chip ${isSelected ? 'is-selected' : ''}`}
+                    onClick={() => {
+                      setUsername(acc.username);
+                      setError('');
+                    }}
+                  >
+                    <strong>{acc.username}</strong>
+                    <small>{acc.meta}</small>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           {error && <div className="form-error"><AlertCircle size={15}/>{error}</div>}
           <div className="modal-actions" style={{ justifyContent: 'space-between', paddingTop: '6px' }}>
