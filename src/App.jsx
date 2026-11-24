@@ -99,8 +99,31 @@ function App() {
   const enterAdmin = () => { setRole('admin'); setAdminTab('dashboard'); setMobileNav(false); };
   const enterStaff = () => { setRole('staff'); setStaffTab('dashboard'); if (staffProjects[0]) setSelectedProjectId(staffProjects[0].id); setMobileNav(false); };
   const openWorkspace = (id) => { setSelectedProjectId(id); setRole('client'); setPage('workspace'); setWorkspaceSection('overview'); setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 20); };
-  const addActivity = (projectId, action, detail, actor = role === 'admin' ? 'Admin NA Associates' : role === 'staff' ? 'Staff NA Associates' : client?.name || 'Guest') => {
-    setDb(old => ({ ...old, projects: old.projects.map(p => p.id === projectId ? { ...p, activity: [{ id: uid('act'), date: nowLabel(), actor, action, detail }, ...(p.activity || [])] } : p) }));
+  const addActivity = (projectId, action, detail, actor = role === 'admin' ? 'Admin NA Associates' : role === 'staff' ? 'Staff NA Associates' : client?.name || 'Guest', meta = {}) => {
+    const isoStamp = meta.date || new Date().toISOString().slice(0, 16).replace('T', ' ');
+    setDb(old => ({
+      ...old,
+      projects: old.projects.map(p =>
+        p.id === projectId
+          ? {
+              ...p,
+              activity: [
+                {
+                  id: uid('act'),
+                  date: isoStamp,
+                  actor,
+                  action,
+                  detail,
+                  ...(meta.category ? { category: meta.category } : {}),
+                  ...(meta.visibility ? { visibility: meta.visibility } : {}),
+                  ...(meta.internal ? { internal: true } : {})
+                },
+                ...(p.activity || [])
+              ]
+            }
+          : p
+      )
+    }));
   };
   const updateProject = (id, updater) => setDb(old => ({ ...old, projects: old.projects.map(p => p.id === id ? updater(p) : p) }));
   const resetDemo = () => { setDb(structuredClone(seedData)); setRole('guest'); setPage('home'); setAdminTab('dashboard'); setStaffTab('dashboard'); setModal(null); notify('Data workspace berhasil direset.'); };

@@ -116,3 +116,31 @@ export const getProjectNextUp = (project) => {
   };
 };
 
+export const createClientNotification = ({
+  projectId,
+  title,
+  body,
+  visibility = 'Published',
+  date = new Date().toISOString().slice(0, 10)
+}) => ({
+  id: uid('notif'),
+  projectId,
+  title,
+  body,
+  visibility,
+  date,
+  read: false
+});
+
+export const filterClientNotifications = (notifications = [], projects = []) => {
+  const projectIds = new Set((projects || []).map(p => p?.id).filter(Boolean));
+  return (notifications || []).filter(n => {
+    if (!n) return false;
+    if (n.internal === true) return false;
+    if (n.visibility === 'Draft' || n.visibility === 'Internal Only' || n.visibility === 'internal') return false;
+    if (!n.projectId) return true;
+    return projectIds.has(n.projectId);
+  });
+};
+
+

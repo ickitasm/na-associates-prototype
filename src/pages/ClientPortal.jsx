@@ -8,13 +8,14 @@ import {
   Users, Wallet, X, Eye, Activity, AlertCircle, Sun, Moon, Camera, LogOut
 } from 'lucide-react';
 import { Brand, ProgressBar, SectionHeading, FileTile, InvoiceClientCard, MonthlyRecap, StatusTag, EmptyState } from '../components/ui';
-import { money, dateFmt, getTimeGreeting, getProjectNextUp } from '../lib/utils';
+import { money, dateFmt, getTimeGreeting, getProjectNextUp, filterClientNotifications } from '../lib/utils';
 
 function ClientShell({ db, client, projects, selectedProject, page, setPage, onOpen, onBack, onLogout, onReset, onNotify, setModal, updateProject, addActivity, workspaceSection, setWorkspaceSection, mobileNav, setMobileNav, theme, toggleTheme }) {
-  if (page === 'my-projects') return <ClientProjectsView client={client} projects={projects} onOpen={onOpen} onLogout={onLogout} onReset={onReset} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/>;
-  return <ClientWorkspace db={db} client={client} project={selectedProject} onBack={onBack} onLogout={onLogout} onReset={onReset} setModal={setModal} updateProject={updateProject} addActivity={addActivity} onNotify={onNotify} workspaceSection={workspaceSection} setWorkspaceSection={setWorkspaceSection} mobileNav={mobileNav} setMobileNav={setMobileNav} theme={theme} toggleTheme={toggleTheme}/>;
+  const notifications = db?.notifications || [];
+  if (page === 'my-projects') return <ClientProjectsView client={client} projects={projects} notifications={notifications} onOpen={onOpen} onLogout={onLogout} onReset={onReset} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/>;
+  return <ClientWorkspace db={db} client={client} project={selectedProject} notifications={notifications} onBack={onBack} onLogout={onLogout} onReset={onReset} setModal={setModal} updateProject={updateProject} addActivity={addActivity} onNotify={onNotify} workspaceSection={workspaceSection} setWorkspaceSection={setWorkspaceSection} mobileNav={mobileNav} setMobileNav={setMobileNav} theme={theme} toggleTheme={toggleTheme}/>;
 }
-function ClientTopbar({ client, onBack, onLogout, onReset, setModal, theme, toggleTheme }) {
+function ClientTopbar({ client, projects = [], notifications = [], onBack, onLogout, onReset, setModal, theme, toggleTheme }) {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
 
@@ -37,6 +38,21 @@ function ClientTopbar({ client, onBack, onLogout, onReset, setModal, theme, togg
   }, [accountMenuOpen]);
 
   const initials = client?.name?.split(' ').map(x => x[0]).slice(0, 2).join('') || 'CL';
+  const visibleNotifications = filterClientNotifications(notifications, projects);
+  const hasVerification = projects.some(p =>
+    (p.activity || []).some(a =>
+      a &&
+      a.internal !== true &&
+      a.visibility !== 'Draft' &&
+      a.visibility !== 'Internal Only' &&
+      a.visibility !== 'internal' &&
+      (a.category === 'verification' || /approved client payment|rejected client payment|payment verified|payment rejected/i.test(a.action || ''))
+    )
+  );
+  const hasUnpaidAlerts = projects.some(p =>
+    (p.invoices || []).some(i => i.status !== 'Cancelled' && i.status !== 'Paid')
+  );
+  const hasActiveBell = visibleNotifications.some(n => !n.read) || hasVerification || hasUnpaidAlerts;
 
   return (
     <header className="portal-topbar">
@@ -48,9 +64,9 @@ function ClientTopbar({ client, onBack, onLogout, onReset, setModal, theme, togg
         <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to night mode'} aria-label="Toggle theme">
           {theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}
         </button>
-        <button className="icon-btn" onClick={() => setModal({ type: 'client-notifications' })} aria-label="Notifications">
+        <button className="icon-btn" onClick={() => setModal({ type: 'client-notifications', projects })} aria-label="Notifications">
           <Bell size={18}/>
-          <i className="notification-dot"/>
+          {hasActiveBell && <i className="notification-dot"/>}
         </button>
         <div className="account-menu-wrap" ref={accountMenuRef}>
           <button
@@ -99,7 +115,7 @@ function ClientTopbar({ client, onBack, onLogout, onReset, setModal, theme, togg
   );
 }
 
-function ClientProjectsView({ client, projects, onOpen, onLogout, onReset, setModal, theme, toggleTheme }) {
+function ClientProjectsView({ client, projects, notifications = [], onOpen, onLogout, onReset, setModal, theme, toggleTheme }) {
   const [greeting, setGreeting] = useState(() => getTimeGreeting());
 
   useEffect(() => {
@@ -111,28 +127,42 @@ function ClientProjectsView({ client, projects, onOpen, onLogout, onReset, setMo
 
   const firstName = client?.name?.trim()?.split(/\s+/)[0] || 'there';
 
-  return <div className="client-app"><ClientTopbar client={client} onLogout={onLogout} onReset={onReset} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/><main className="client-list-page"><div className="client-welcome"><div><div className="eyebrow">CLIENT SPACE / YOUR PROJECTS</div><h1>{greeting},<br/><em>{firstName}.</em></h1><p>Here is an overview of your projects with NA Associates.</p></div><div className="welcome-stamp">NA<br/><span>CLIENT SPACE</span></div></div><div className="list-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h2>My projects <small>{projects.length.toString().padStart(2,'0')}</small></h2></div><span className="muted">Select a project to view its details and updates.</span></div><div className="client-project-grid">{projects.map(p => { const nextUp = getProjectNextUp(p); return <button className="client-project-card" key={p.id} onClick={() => onOpen(p.id)}><div className="client-project-image"><img src={p.cover}/><span className={`status-pill ${p.status === 'Completed' ? 'complete' : ''}`}>{p.status}</span></div><div className="client-project-info"><div className="project-card-top"><span>{p.code}</span><ArrowUpRight size={17}/></div><h3>{p.name}</h3><p><MapPin size={13}/>{p.location}</p><div className="progress-row"><span>PROJECT PROGRESS</span><strong>{p.progress}%</strong></div><ProgressBar value={p.progress}/><div className="client-project-bottom"><span>NEXT UP</span><strong>{nextUp.label}</strong></div></div></button>; })}</div>{!projects.length && <EmptyState title="Belum ada proyek" detail="Tim NA Associates akan menambahkan proyek ke akun Anda."/>}</main></div>;
+  return <div className="client-app"><ClientTopbar client={client} projects={projects} notifications={notifications} onLogout={onLogout} onReset={onReset} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/><main className="client-list-page"><div className="client-welcome"><div><div className="eyebrow">CLIENT SPACE / YOUR PROJECTS</div><h1>{greeting},<br/><em>{firstName}.</em></h1><p>Here is an overview of your projects with NA Associates.</p></div><div className="welcome-stamp">NA<br/><span>CLIENT SPACE</span></div></div><div className="list-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h2>My projects <small>{projects.length.toString().padStart(2,'0')}</small></h2></div><span className="muted">Select a project to view its details and updates.</span></div><div className="client-project-grid">{projects.map(p => { const nextUp = getProjectNextUp(p); return <button className="client-project-card" key={p.id} onClick={() => onOpen(p.id)}><div className="client-project-image"><img src={p.cover}/><span className={`status-pill ${p.status === 'Completed' ? 'complete' : ''}`}>{p.status}</span></div><div className="client-project-info"><div className="project-card-top"><span>{p.code}</span><ArrowUpRight size={17}/></div><h3>{p.name}</h3><p><MapPin size={13}/>{p.location}</p><div className="progress-row"><span>PROJECT PROGRESS</span><strong>{p.progress}%</strong></div><ProgressBar value={p.progress}/><div className="client-project-bottom"><span>NEXT UP</span><strong>{nextUp.label}</strong></div></div></button>; })}</div>{!projects.length && <EmptyState title="Belum ada proyek" detail="Tim NA Associates akan menambahkan proyek ke akun Anda."/>}</main></div>;
 }
 
 const workspaceNav = [
-  ['overview','Overview',Home],['design','Output & Design',Image],['progress','Progress & Field Ops',Activity],['legal','Legal Documents',FileText],['billing','Billing & Payments',Wallet],['shopping','Shopping List',ShoppingBag],['recap','Monthly Recap',CalendarDays]
+  ['overview','Overview',Home],['design','Output & Design',Image],['progress','Progress & Field Ops',Activity],['legal','Legal Documents',FileText],['billing','Billing & Payments',Wallet],['shopping','Shopping List',ShoppingBag],['recap','Monthly Recap',CalendarDays],['section-activity','Activity Log',Activity]
 ];
+function formatActivityDate(d) {
+  if (!d) return '—';
+  const str = String(d).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return dateFmt(str);
+  const m = str.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+  if (m) return `${dateFmt(m[1])} · ${m[2]}`;
+  return str;
+}
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setModal, updateProject, addActivity, onNotify, workspaceSection, setWorkspaceSection, mobileNav, setMobileNav, theme, toggleTheme }) {
+function ClientWorkspace({ db, client, project, notifications = [], onBack, onLogout, onReset, setModal, updateProject, addActivity, onNotify, workspaceSection, setWorkspaceSection, mobileNav, setMobileNav, theme, toggleTheme }) {
   const [openSection, setOpenSection] = useState('overview');
   const [designQuery, setDesignQuery] = useState('');
   const [legalQuery, setLegalQuery] = useState('');
+  const [expandedActivityIds, setExpandedActivityIds] = useState({});
   const scrollAnimRef = useRef(null);
   const scrollSpyLockRef = useRef(false);
   const prevScrollBehaviorRef = useRef(null);
   const interruptCleanupRef = useRef(null);
 
+  const toggleActivityRow = (id) => {
+    setExpandedActivityIds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
   useEffect(() => {
     setDesignQuery('');
     setLegalQuery('');
+    setExpandedActivityIds({});
   }, [project.id]);
 
   const cancelSoftScroll = useCallback(() => {
@@ -168,7 +198,8 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
       const ids = workspaceNav.map(x => x[0]);
       let current = 'overview';
       ids.forEach(id => {
-        const el = document.getElementById(`section-${id}`);
+        const domId = id.startsWith('section-') ? id : `section-${id}`;
+        const el = document.getElementById(domId);
         if (el && el.getBoundingClientRect().top <= triggerLine) current = id;
       });
       if ((window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 24)) {
@@ -186,7 +217,8 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
     setOpenSection(id);
     setMobileNav(false);
 
-    const el = document.getElementById(`section-${id}`);
+    const domId = id.startsWith('section-') ? id : `section-${id}`;
+    const el = document.getElementById(domId);
     if (!el) return;
 
     const topbar = document.querySelector('.portal-topbar');
@@ -272,13 +304,28 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
   const invoices = project.invoices||[];
   const activeInvoices = invoices.filter(i=>i.status!=='Cancelled');
   const totalRemaining = activeInvoices.reduce((sum,i)=>sum + Math.max(0,i.amount - i.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0)),0);
+  const clientNameLower = String(client?.name || '').trim().toLowerCase();
+  const clientUploadLogs = [...(project.activity || [])]
+    .filter(a => {
+      if (!a) return false;
+      if (a.internal === true) return false;
+      if (a.visibility === 'Draft' || a.visibility === 'Internal Only' || a.visibility === 'internal') return false;
+      const actorLower = String(a.actor || '').trim().toLowerCase();
+      if (/\b(admin|staff)\b/i.test(actorLower)) return false;
+      if (a.category === 'upload') return true;
+      const isClientActor = actorLower === 'client' || (clientNameLower && actorLower === clientNameLower);
+      const actionText = `${a.action || ''} ${a.detail || ''}`.toLowerCase();
+      const isUploadAction = /upload|payment proof|bukti pembayaran|unggah/.test(actionText);
+      return isClientActor && isUploadAction;
+    })
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   
   // Check pending / due bills for In-App website alert banner
   const unpaidInvoices = invoices.filter(i => i.status !== 'Cancelled' && i.status !== 'Paid');
   const hasUnpaid = unpaidInvoices.length > 0;
 
   return <div className="client-app">
-    <ClientTopbar client={client} onBack={onBack} onLogout={onLogout} onReset={onReset} setModal={setModal} onNotify={onNotify} theme={theme} toggleTheme={toggleTheme}/>
+    <ClientTopbar client={client} projects={[project]} notifications={notifications} onBack={onBack} onLogout={onLogout} onReset={onReset} setModal={setModal} onNotify={onNotify} theme={theme} toggleTheme={toggleTheme}/>
     <div className="workspace-shell">
       {mobileNav && <div className="mobile-nav-backdrop" onClick={() => setMobileNav(false)} aria-hidden="true" />}
       <aside className={`workspace-sidebar ${mobileNav?'sidebar-open':''}`}>
@@ -494,6 +541,49 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
           <SectionHeading number="F" title="Monthly Recapitulation"/>
           <div className="client-recap-scroll">
             <MonthlyRecap invoices={invoices}/>
+          </div>
+        </section>
+        <section className="workspace-section" id="section-activity">
+          <SectionHeading
+            title="Activity Log"
+            badge={`${clientUploadLogs.length} ${clientUploadLogs.length === 1 ? 'upload' : 'uploads'}`}
+          />
+          <div className="client-activity-scroll">
+            <div className="client-activity-list">
+              {clientUploadLogs.map(a => {
+                const isExpanded = Boolean(expandedActivityIds[a.id]);
+                return (
+                  <article className={`client-activity-row ${isExpanded ? 'is-expanded' : ''}`} key={a.id}>
+                    <button
+                      type="button"
+                      className="client-activity-trigger"
+                      aria-expanded={isExpanded}
+                      onClick={() => toggleActivityRow(a.id)}
+                    >
+                      <strong className="client-activity-action">{a.action}</strong>
+                      <span className="client-activity-meta">
+                        <span className="client-activity-date">{formatActivityDate(a.date)}</span>
+                        <span className="client-activity-chevron-btn" aria-hidden="true">
+                          <ChevronDown size={15} className={`client-activity-chevron ${isExpanded ? 'is-open' : ''}`}/>
+                        </span>
+                      </span>
+                    </button>
+                    {isExpanded && (
+                      <div className="client-activity-expanded">
+                        <p className="client-activity-detail">{a.detail}</p>
+                        <small className="client-activity-actor">By {a.actor}</small>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+              {!clientUploadLogs.length && (
+                <EmptyState
+                  title="No client uploads yet"
+                  detail="Payment proofs you upload will be recorded here automatically."
+                />
+              )}
+            </div>
           </div>
         </section>
         <footer className="workspace-footer">

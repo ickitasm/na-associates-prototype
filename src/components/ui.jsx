@@ -42,11 +42,14 @@ export function PageIntro({ eyebrow, title, italic, desc }) { return <section cl
 export function Field({ label, required, placeholder, type='text', textarea=false }) { return <label className="field"><span>{label}{required && <b> *</b>}</span>{textarea ? <textarea placeholder={placeholder} required={required} rows="4"/> : <input type={type} placeholder={placeholder} required={required}/>}</label>; }
 export function PublicFooter({ go }) { return <footer className="public-footer"><div className="wrap footer-top"><div><Brand inverse/><p>Arsitektur yang dibentuk oleh konteks,<br/>kejelasan, dan kehidupan sehari-hari.</p></div><div className="footer-links"><div><small>JELAJAHI</small><button onClick={() => go('projects')}>Projects</button><button onClick={() => go('services')}>Services</button><button onClick={() => go('about')}>About</button></div><div><small>TERHUBUNG</small><button onClick={() => go('career')}>Career</button><button onClick={() => go('contact')}>Contact</button><button onClick={() => go('home')}>Back to top ↑</button></div></div></div><div className="wrap footer-bottom"><span>© 2026 NA Associates</span><span>ARSITEKTUR & DESAIN · JAKARTA, INDONESIA</span></div></footer>; }
 export function ProgressBar({ value=0 }) { return <div className="progress-bar"><span style={{width:`${Math.max(0,Math.min(100,value))}%`}}/></div>; }
-export function SectionHeading({ number, title, description, action, onAction, actionClassName = '', actionIcon = null }) {
+export function SectionHeading({ number, title, badge = null, description, action, onAction, actionClassName = '', actionIcon = null }) {
   return (
     <div className="workspace-section-head">
       <div>
-        <h2>{title}</h2>
+        <div className="workspace-section-title-row">
+          <h2>{title}</h2>
+          {badge !== null && badge !== undefined && <span className="subtle-tag">{badge}</span>}
+        </div>
         {description && <p>{description}</p>}
       </div>
       {action && (
@@ -79,8 +82,13 @@ export function InvoiceClientCard({ invoice, setModal }) {
   return (
     <article className="invoice-card">
       <div className="invoice-card-top">
-        <div><small>{invoice.number}</small><strong>{money(invoice.amount)}</strong></div>
-        <StatusTag value={invoice.status}/>
+        <div className="invoice-card-head-row">
+          <small>{invoice.number}</small>
+          <StatusTag value={invoice.status}/>
+        </div>
+        <div className="invoice-card-amount">
+          <strong>{money(invoice.amount)}</strong>
+        </div>
       </div>
       <div className="invoice-meter">
         <div><span>Paid {paidPct}% ({money(paid)})</span><span>Remaining {money(remaining)}</span></div>

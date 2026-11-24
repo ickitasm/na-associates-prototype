@@ -8,7 +8,14 @@ import {
   Users, Wallet, X, Eye, Activity, AlertCircle, AlertTriangle, Trash2, Camera, Wrench
 } from 'lucide-react';
 import { StatusTag, EmptyState, GoogleIcon, ProgressBar } from './ui';
-import { money, dateFmt, nowLabel, uid, syncProjectFromMilestones } from '../lib/utils';
+import { money, dateFmt, nowLabel, uid, syncProjectFromMilestones, createClientNotification, filterClientNotifications } from '../lib/utils';
+
+const pushPublishedNotif = (setDb, projectId, title, body) => {
+  setDb?.(old => ({
+    ...old,
+    notifications: [createClientNotification({ projectId, title, body, visibility: 'Published' }), ...(old.notifications || [])]
+  }));
+};
 
 function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, enterAdmin, enterStaff }) {
   const [mode, setMode] = useState('client');
@@ -141,7 +148,7 @@ function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, ent
   );
 }
 
-function NewReportModalView({ project, isStaff = false, close, updateProject, addActivity, finish }) {
+function NewReportModalView({ project, isStaff = false, setDb, close, updateProject, addActivity, finish }) {
   const [date, setDate] = useState('2026-11-02');
   const [category, setCategory] = useState('Struktur');
   const [title, setTitle] = useState('');
@@ -227,8 +234,19 @@ function NewReportModalView({ project, isStaff = false, close, updateProject, ad
     addActivity(
       project.id,
       'Daily log created',
-      `${newReport.title} disimpan sebagai ${newReport.visibility}. Tercatat ${newReport.workers.length} pekerja lapangan.`
+      `${newReport.title} disimpan sebagai ${newReport.visibility}. Tercatat ${newReport.workers.length} pekerja lapangan.`,
+      undefined,
+      { visibility: newReport.visibility, ...(isStaff || newReport.visibility !== 'Published' ? { internal: true } : {}) }
     );
+
+    if (!isStaff && newReport.visibility === 'Published') {
+      pushPublishedNotif(
+        setDb,
+        project.id,
+        'Laporan Lapangan Dipublikasikan',
+        `Daily Progress "${newReport.title}" untuk proyek ${project.name} telah dipublikasikan.`
+      );
+    }
 
     finish(`Daily project log berhasil disimpan (${newReport.visibility}).`);
   };
@@ -568,7 +586,7 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
   );
 }
 
-function ReportDetailModalView({ report, project, isClient, isStaff = false, close, updateProject, addActivity, notify }) {
+function ReportDetailModalView({ report, project, isClient, isStaff = false, setDb, close, updateProject, addActivity, notify }) {
   const workers = report.workers || [];
   const hadirCount = workers.filter(w => w.attendance === 'Hadir').length;
   const photoNames = report.photoNames || [];
@@ -580,6 +598,14 @@ function ReportDetailModalView({ report, project, isClient, isStaff = false, clo
       reports: (p.reports || []).map(r => r.id === report.id ? { ...r, visibility: nextVis } : r)
     }));
     addActivity(project.id, 'Report visibility changed', `${report.title} diubah menjadi ${nextVis}.`);
+    if (!isStaff && nextVis === 'Published') {
+      pushPublishedNotif(
+        setDb,
+        project.id,
+        'Laporan Lapangan Dipublikasikan',
+        `Daily Progress "${report.title}" untuk proyek ${project.name} telah dipublikasikan.`
+      );
+    }
     notify(`Visibilitas laporan diubah menjadi ${nextVis}.`);
     close();
   };
@@ -943,7 +969,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
   <div className="field"><span>Assign Project(s)</span><div className="check-list">{db.projects.map(p => <label key={p.id} className="check-item"><input type="checkbox" checked={(form.projects || []).includes(p.id)} onChange={e => set('projects', e.target.checked ? [...(form.projects || []), p.id] : (form.projects || []).filter(x => x !== p.id))} /><div className="check-label-content"><strong className="check-project-name">{p.name}</strong><span className="check-project-code">{p.code}</span></div></label>)}</div></div>
   <div className="modal-footnote">Klien masuk menggunakan Username unik yang Anda daftarkan di atas (tanpa Google/password).</div>
   {footer('Buat Akun Klien')}</form>;
-  if (modal.type === 'payment-upload') body = <form onSubmit={submit(() => { const amount = Number(form.amount); if (!amount || amount <= 0) throw new Error('Masukkan nominal pembayaran yang valid.'); const invoice = project.invoices.find(i => i.id === form.invoiceId); if (!invoice) throw new Error('Pilih invoice.'); const pay = { id: uid('payment'), date: form.date || '2026-11-02', claimed: amount, approved: 0, status: 'Pending', proof: form.proofName || 'payment-proof.jpg', receipt: null }; updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === invoice.id ? { ...i, status: 'Pending Verification', payments: [...i.payments, pay] } : i) })); addActivity(project.id, 'Payment proof uploaded', `Bukti pembayaran ${money(amount)} untuk ${invoice.number} menunggu verifikasi.`, db.clients.find(c => c.id === project.clientId)?.name || 'Client'); finish('Bukti pembayaran berhasil diunggah.'); })}><div className="modal-highlight"><Wallet size={18} /><div><strong>Upload payment proof</strong><small>{project.name} · {project.code}</small></div></div>{select('Invoice', 'invoiceId', project.invoices.filter(i => i.status !== 'Cancelled').map(i => [i.id, `${i.number} · ${money(i.amount)}`]))}{input('Payment date', 'date', '', 'date')}{input('Claimed payment amount (Rp)', 'amount', 'e.g. 4000000', 'number', true)}<label className="upload-box"><Upload size={18} /><span><strong>Choose payment proof</strong><small>JPG, PNG, or PDF format</small></span><input type="file" accept="image/*,.pdf" onChange={e => set('proofName', e.target.files?.[0]?.name || '')} /></label>{form.proofName && <small className="selected-file">Selected: {form.proofName}</small>}<div className="modal-footnote">Bukti pembayaran akan diverifikasi oleh tim administrasi studio.</div>{footer('Submit proof')}</form>;
+  if (modal.type === 'payment-upload') body = <form onSubmit={submit(() => { const amount = Number(form.amount); if (!amount || amount <= 0) throw new Error('Masukkan nominal pembayaran yang valid.'); const invoice = project.invoices.find(i => i.id === form.invoiceId); if (!invoice) throw new Error('Pilih invoice.'); const fileName = form.proofName || 'payment-proof.jpg'; const pay = { id: uid('payment'), date: form.date || new Date().toISOString().slice(0, 10), claimed: amount, approved: 0, status: 'Pending', proof: fileName, receipt: null }; updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === invoice.id ? { ...i, status: 'Pending Verification', payments: [...i.payments, pay] } : i) })); addActivity(project.id, 'Uploaded payment proof', `Invoice ${invoice.number} · Claimed ${money(amount)} · File: ${fileName}`, db.clients.find(c => c.id === project.clientId)?.name || 'Client', { category: 'upload', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }); finish('Bukti pembayaran berhasil diunggah.'); })}><div className="modal-highlight"><Wallet size={18} /><div><strong>Upload payment proof</strong><small>{project.name} · {project.code}</small></div></div>{select('Invoice', 'invoiceId', project.invoices.filter(i => i.status !== 'Cancelled').map(i => [i.id, `${i.number} · ${money(i.amount)}`]))}{input('Payment date', 'date', '', 'date')}{input('Claimed payment amount (Rp)', 'amount', 'e.g. 4000000', 'number', true)}<label className="upload-box"><Upload size={18} /><span><strong>Choose payment proof</strong><small>JPG, PNG, or PDF format</small></span><input type="file" accept="image/*,.pdf" onChange={e => set('proofName', e.target.files?.[0]?.name || '')} /></label>{form.proofName && <small className="selected-file">Selected: {form.proofName}</small>}<div className="modal-footnote">Bukti pembayaran akan diverifikasi oleh tim administrasi studio.</div>{footer('Submit proof')}</form>;
   if (modal.type === 'verify-payment') {
     const previousPaid = modal.invoice.payments.filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0);
     const remainingBefore = Math.max(0, modal.invoice.amount - previousPaid);
@@ -976,7 +1002,19 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
           const stillDue = invoices.some(i => i.status !== 'Cancelled' && i.amount > i.payments.filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0));
           return { ...p, invoices, status: p.status === 'On Hold' && !stillDue ? 'Ready to Resume' : p.status };
         });
-        addActivity(project.id, 'Payment verified', `${modal.invoice.number}: ${money(approved)} disetujui.${reason ? ' ' + reason : ''}${excess > 0 ? ` Overpayment ${money(excess)}: ${form.overpaymentDecision}.` : ''}`);
+        addActivity(
+          project.id,
+          'Approved client payment proof',
+          `Invoice ${modal.invoice.number} · Verified ${money(approved)}${reason ? ` · ${reason}` : ''}${excess > 0 ? ` · Overpayment ${money(excess)}: ${form.overpaymentDecision}` : ''}`,
+          'Admin Studio',
+          { category: 'verification', visibility: 'Published', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }
+        );
+        pushPublishedNotif(
+          setDb,
+          project.id,
+          'Pembayaran Disetujui',
+          `Pembayaran ${money(approved)} untuk ${modal.invoice.number} (${project.name}) telah disetujui dan kwitansi diterbitkan.`
+        );
         finish('Pembayaran disetujui dan kwitansi diterbitkan.');
       })}>
         <div className="payment-verify-summary">
@@ -1039,7 +1077,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
       </form>
     );
   }
-  if (modal.type === 'reject-payment') body = <form onSubmit={submit(() => { if (!form.reason?.trim()) throw new Error('Alasan penolakan wajib diisi.'); updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === modal.invoice.id ? { ...i, payments: i.payments.map(x => x.id === modal.payment.id ? { ...x, status: 'Rejected', reason: form.reason } : x), status: i.payments.some(x => x.id !== modal.payment.id && x.status === 'Pending') ? 'Pending Verification' : i.payments.some(x => x.status === 'Approved') ? 'Partially Paid' : 'Unpaid' } : i) })); addActivity(project.id, 'Payment rejected', `${modal.invoice.number}: ${form.reason}`); finish('Bukti pembayaran ditolak. Bukti lama tetap tersimpan.'); })}><div className="payment-verify-summary"><small>{modal.invoice.number}</small><strong>{money(modal.payment.claimed)}</strong><span>{modal.payment.proof || 'Payment proof'}</span></div>{textarea('Rejection reason', 'reason', 'Describe why the proof cannot be accepted.')}{footer('Reject proof')}</form>;
+  if (modal.type === 'reject-payment') body = <form onSubmit={submit(() => { if (!form.reason?.trim()) throw new Error('Alasan penolakan wajib diisi.'); updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === modal.invoice.id ? { ...i, payments: i.payments.map(x => x.id === modal.payment.id ? { ...x, status: 'Rejected', reason: form.reason } : x), status: i.payments.some(x => x.id !== modal.payment.id && x.status === 'Pending') ? 'Pending Verification' : i.payments.some(x => x.status === 'Approved') ? 'Partially Paid' : 'Unpaid' } : i) })); addActivity(project.id, 'Rejected client payment proof', `Invoice ${modal.invoice.number} · Verified ${money(0)} · Reason: ${form.reason}`, 'Admin Studio', { category: 'verification', visibility: 'Published', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }); pushPublishedNotif(setDb, project.id, 'Bukti Pembayaran Ditolak', `Bukti pembayaran untuk ${modal.invoice.number} (${project.name}) ditolak. Alasan: ${form.reason}`); finish('Bukti pembayaran ditolak. Bukti lama tetap tersimpan.'); })}><div className="payment-verify-summary"><small>{modal.invoice.number}</small><strong>{money(modal.payment.claimed)}</strong><span>{modal.payment.proof || 'Payment proof'}</span></div>{textarea('Rejection reason', 'reason', 'Describe why the proof cannot be accepted.')}{footer('Reject proof')}</form>;
   if (modal.type === 'new-invoice') body = <form onSubmit={submit(() => { const amount = Number(form.amount); if (!amount || amount <= 0) throw new Error('Nominal invoice harus lebih dari nol.'); const num = `INV-${project.code}-${String(project.invoices.length + 1).padStart(3, '0')}`; const inv = { id: uid('invoice'), number: num, revision: 0, amount, dueDate: form.dueDate || '2026-12-10', issueDate: '2026-11-02', status: 'Unpaid', payments: [], replacedBy: null, reason: '' }; updateProject(project.id, p => ({ ...p, invoices: [inv, ...p.invoices] })); addActivity(project.id, 'Invoice issued', `${num} diterbitkan sebesar ${money(amount)}.`); finish('Invoice berhasil dibuat.'); })}><div className="modal-highlight"><FileText size={18} /><div><strong>New invoice</strong><small>{project.name}</small></div></div>{input('Invoice amount (Rp)', 'amount', 'e.g. 10000000', 'number', true)}{input('Due date', 'dueDate', '', 'date')}{textarea('Description / billing note', 'description', 'Optional billing details.')}{footer('Create invoice')}</form>;
   if (modal.type === 'revise-invoice') body = <form onSubmit={submit(() => { if (!form.reason?.trim()) throw new Error('Revision reason wajib diisi.'); const amount = Number(form.amount || modal.invoice.amount); const newId = uid('invoice'); const newInv = { ...modal.invoice, id: newId, number: `${modal.invoice.number}-R${modal.invoice.revision + 1}`, revision: modal.invoice.revision + 1, amount, dueDate: form.dueDate || modal.invoice.dueDate, issueDate: '2026-11-02', status: 'Unpaid', payments: modal.invoice.payments.filter(p => p.status === 'Approved').map((p, i) => ({ ...p, id: uid('payment'), receipt: `RCPT-RELINK-${i + 1}` })), replacedBy: null, reason: form.reason, revisionOf: modal.invoice.id }; const paid = newInv.payments.reduce((s, p) => s + p.approved, 0); newInv.status = paid >= amount ? 'Paid' : paid > 0 ? 'Partially Paid' : 'Unpaid'; updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === modal.invoice.id ? { ...i, status: 'Cancelled', replacedBy: newId, reason: form.reason } : i).concat(newInv) })); addActivity(project.id, 'Invoice revised', `${modal.invoice.number} diganti dengan ${newInv.number}. Reason: ${form.reason}`); finish('Invoice direvisi. Histori invoice lama tetap dipertahankan.'); })}><div className="payment-verify-summary"><small>REPLACING {modal.invoice.number}</small><strong>{money(modal.invoice.amount)}</strong><span>Original due date · {dateFmt(modal.invoice.dueDate)}</span></div>{input('Revised amount (Rp)', 'amount', String(modal.invoice.amount), 'number', true)}{input('New due date (leave unchanged if same)', 'dueDate', '', 'date')}{textarea('Mandatory revision reason', 'reason', 'Explain why this invoice needs revision.')}<div className="modal-footnote">The old invoice will be archived as Cancelled / Replaced. Approved payments are carried forward without double counting.</div>{footer('Create revised invoice')}</form>;
 
@@ -1049,6 +1087,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
       <NewReportModalView
         project={project}
         isStaff={isStaff}
+        setDb={setDb}
         close={close}
         updateProject={updateProject}
         addActivity={addActivity}
@@ -1079,6 +1118,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
         project={project}
         isClient={!!modal.isClient}
         isStaff={isStaff || !!modal.isStaff}
+        setDb={setDb}
         close={close}
         updateProject={updateProject}
         addActivity={addActivity}
@@ -1100,6 +1140,9 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     };
     updateProject(project.id, p => ({ ...p, files: [d, ...p.files] }));
     addActivity(project.id, 'Document uploaded', `${d.name} (${d.visibility}) uploaded to direct studio storage.`);
+    if (!isStaff && d.visibility === 'Published') {
+      pushPublishedNotif(setDb, project.id, 'Output & Desain Dipublikasikan', `File "${d.name}" (${d.category}) untuk proyek ${project.name} telah dipublikasikan.`);
+    }
     finish(isStaff ? 'Draft dokumen berhasil diunggah untuk review Admin.' : 'Dokumen & file output berhasil diunggah.');
   })}>{input('Document / file name', 'name', 'e.g. Floor Plan — Rev 02.pdf', 'text', true)}
   <div className="form-grid">
@@ -1111,7 +1154,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
   {isStaff && <div className="modal-footnote">File yang diunggah Staff otomatis tersimpan sebagai <strong>Draft</strong> untuk ditinjau Admin sebelum dipublikasikan ke klien.</div>}
   {textarea('Description', 'description', 'Short description of this file output or design render.')}
   <label className="upload-box"><Upload size={18} /><span><strong>Upload Direct File (Supabase Storage Ready)</strong><small>PDF, high-res render (JPG, PNG, WebP), or drawing</small></span><input type="file" onChange={e => { const fileObj = e.target.files?.[0]; if (fileObj) { set('name', fileObj.name); set('fileUrl', URL.createObjectURL(fileObj)); } }} /></label>{footer('Upload document')}</form>;
-  if (modal.type === 'new-legal') body = <form onSubmit={submit(() => { const d = { id: uid('legal'), name: form.name, version: form.version || 'v1.0', date: form.date || '2026-11-02', visibility: form.visibility || 'Internal Only' }; updateProject(project.id, p => ({ ...p, legal: [d, ...p.legal] })); addActivity(project.id, 'Legal document added', d.name); finish('Legal document berhasil ditambahkan.'); })}>{input('Document name', 'name', 'e.g. Addendum 02', 'text', true)}<div className="form-grid">{input('Version', 'version', 'v1.0')}{input('Document date', 'date', '', 'date')}{select('Visibility', 'visibility', [['Internal Only', 'Internal Only'], ['Published', 'Published to Client']])}</div>{footer('Add legal document')}</form>;
+  if (modal.type === 'new-legal') body = <form onSubmit={submit(() => { const d = { id: uid('legal'), name: form.name, version: form.version || 'v1.0', date: form.date || '2026-11-02', visibility: form.visibility || 'Internal Only' }; updateProject(project.id, p => ({ ...p, legal: [d, ...p.legal] })); addActivity(project.id, 'Legal document added', d.name); if (!isStaff && d.visibility === 'Published') { pushPublishedNotif(setDb, project.id, 'Dokumen Legal Dipublikasikan', `Dokumen "${d.name}" (${d.version}) untuk proyek ${project.name} telah dipublikasikan.`); } finish('Legal document berhasil ditambahkan.'); })}>{input('Document name', 'name', 'e.g. Addendum 02', 'text', true)}<div className="form-grid">{input('Version', 'version', 'v1.0')}{input('Document date', 'date', '', 'date')}{select('Visibility', 'visibility', [['Internal Only', 'Internal Only'], ['Published', 'Published to Client']])}</div>{footer('Add legal document')}</form>;
   if (modal.type === 'new-material') body = <form onSubmit={submit(() => { const s = { id: uid('material'), date: form.date || '2026-11-02', material: form.material, specification: form.specification || '', quantity: Number(form.quantity || 0), unit: form.unit || 'unit', status: 'Belum Dibeli', visibility: 'Draft', supplier: isStaff ? '' : (form.supplier || ''), unitCost: isStaff ? 0 : Number(form.unitCost || 0) }; updateProject(project.id, p => ({ ...p, shopping: [s, ...p.shopping] })); addActivity(project.id, 'Shopping item added', `${s.material} ditambahkan sebagai Draft.`); finish('Material requirement berhasil ditambahkan.'); })}>{input('Material name', 'material', 'e.g. Besi beton Ø10', 'text', true)}{input('Specification', 'specification', 'Grade, size, brand, etc.')}<div className="form-grid">{input('Date needed', 'date', '', 'date')}{input('Quantity', 'quantity', 'e.g. 120', 'number')}{input('Unit', 'unit', 'e.g. batang')}{!isStaff && input('Internal unit cost (Rp)', 'unitCost', 'Optional', 'number')}</div>{!isStaff && input('Supplier (internal)', 'supplier', 'Supplier name')}<div className="modal-footnote">{isStaff ? 'New material requests are saved as Draft (quantities & specs only) for Admin procurement review.' : 'New shopping items are saved as Draft. Publish them from Shopping & Materials to show them to the Client.'}</div>{footer('Add material')}</form>;
   if (modal.type === 'new-usage') body = <form onSubmit={submit(() => { const u = { id: uid('usage'), date: form.date || '2026-11-02', material: form.material, quantity: Number(form.quantity || 0), unit: form.unit || 'unit', area: form.area || '' }; updateProject(project.id, p => ({ ...p, usage: [u, ...p.usage] })); addActivity(project.id, 'Material usage recorded', `${u.material}: ${u.quantity} ${u.unit}.`); finish('Material usage berhasil dicatat.'); })}>{input('Material', 'material', 'Material name', 'text', true)}<div className="form-grid">{input('Date', 'date', '', 'date')}{input('Quantity', 'quantity', 'Amount', 'number')}{input('Unit', 'unit', 'e.g. batang')}{input('Work area', 'area', 'e.g. Lantai 2')}</div>{footer('Record usage')}</form>;
   if (modal.type === 'invoice-detail' || modal.type === 'invoice-detail-admin') { const inv = modal.invoice; const paid = inv.payments.filter(p => p.status === 'Approved').reduce((s, p) => s + p.approved, 0); body = <div><div className="invoice-detail-summary"><small>{inv.number}</small><h2>{money(inv.amount)}</h2><StatusTag value={inv.status} /><p>Issue date {dateFmt(inv.issueDate)} · Due {dateFmt(inv.dueDate)}</p><ProgressBar value={inv.amount ? paid / inv.amount * 100 : 0} /><div className="detail-amounts"><span>Verified paid <strong>{money(paid)}</strong></span><span>Remaining <strong>{money(Math.max(0, inv.amount - paid))}</strong></span></div></div><h4 className="modal-subtitle">Payment history</h4>{inv.payments.map(p => <div className="payment-history-row" key={p.id}><div><strong>{money(p.approved || p.claimed)}</strong><small>{dateFmt(p.date)} · claimed {money(p.claimed)}</small>{p.reason && <small>Reason: {p.reason}</small>}{p.overpaymentAmount > 0 && <small>Overpayment {money(p.overpaymentAmount)} · {p.overpaymentDecision}</small>}</div><div><StatusTag value={p.status} />{p.receipt && <small className="receipt-ref">{p.receipt}</small>}</div></div>)}{!inv.payments.length && <EmptyState title="No payments yet" detail="Payment records will appear here." />}{modal.type === 'invoice-detail-admin' && inv.status !== 'Paid' && inv.status !== 'Cancelled' && <button className="btn btn-outline modal-wide-btn" onClick={() => setTimeout(() => { }, 1)}>Download invoice statement</button>}<div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>; }
@@ -1129,6 +1172,9 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     };
     updateProject(project.id, p => syncProjectFromMilestones({ ...p, milestones: [...(p.milestones || []), m] }));
     addActivity(project.id, 'Milestone added', `Milestone baru "${m.title}" ditambahkan.`);
+    if (!isStaff) {
+      pushPublishedNotif(setDb, project.id, 'Milestone Proyek Ditambahkan', `Milestone baru "${m.title}" pada proyek ${project.name} telah ditambahkan (${m.status}).`);
+    }
     finish('Milestone berhasil ditambahkan.');
   })}>{input('Milestone Title', 'title', 'e.g. Struktur lantai 2', 'text', true)}<label className="field"><span>Target Date</span><input type="date" value={form.date ?? '2026-11-20'} onChange={e => set('date', e.target.value)} /></label><label className="field"><span>Status</span><select value={form.status ?? 'Upcoming'} onChange={e => set('status', e.target.value)}><option value="Upcoming">Upcoming</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option></select></label>{input('Progress (%)', 'progress', '0-100', 'number')}{footer('Add milestone')}</form>;
 
@@ -1147,6 +1193,9 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
         milestones: (p.milestones || []).map(m => m.id === mId ? { ...m, title, date: form.date || m.date, status: nextStatus, progress: rawProg } : m)
       }));
       addActivity(project.id, 'Milestone updated', `Milestone "${title}" diperbarui.`);
+      if (!isStaff) {
+        pushPublishedNotif(setDb, project.id, 'Milestone Proyek Diperbarui', `Milestone "${title}" pada proyek ${project.name} diperbarui (${nextStatus} · ${rawProg}%).`);
+      }
       finish('Milestone berhasil diperbarui.');
     })}>{input('Milestone Title', 'title', existing.title || '', 'text', true)}<label className="field"><span>Target Date</span><input type="date" value={form.date ?? existing.date ?? ''} onChange={e => set('date', e.target.value)} /></label><label className="field"><span>Status</span><select value={form.status ?? existing.status ?? 'Upcoming'} onChange={e => set('status', e.target.value)}><option value="Upcoming">Upcoming</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option></select></label>{input('Progress (%)', 'progress', String(existing.progress ?? 0), 'number')}{footer('Save milestone')}</form>;
   }
@@ -1195,7 +1244,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     );
   }
   if (modal.type === 'file-list') body = <div className="document-list">{(project.files || []).filter(f => f.visibility === 'Published').map(f => <div className="document-row" key={f.id}><span className="document-icon"><FileText /></span><div><strong>{f.name}</strong><small>{f.category} · {dateFmt(f.date)}</small></div><StatusTag value={f.visibility} /></div>)}</div>;
-  if (modal.type === 'client-notifications') body = <ClientNotificationsModalView notifications={db.notifications || []} notify={notify} />;
+  if (modal.type === 'client-notifications') body = <ClientNotificationsModalView notifications={db.notifications || []} projects={modal.projects || (selectedProject ? [selectedProject] : [])} notify={notify} />;
   if (modal.type === 'info') body = <div><p className="modal-lead preserve-lines">{modal.body}</p><div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>;
 
   const isWide = modal.type === 'new-report' || modal.type === 'report-detail';
@@ -1222,10 +1271,37 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
   );
 }
 
-function ClientNotificationsModalView({ notifications, notify }) {
+function ClientNotificationsModalView({ notifications, projects = [], notify }) {
   const [permission, setPermission] = useState(() => (
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
   ));
+
+  const visibleNotifications = filterClientNotifications(notifications, projects);
+
+  const verificationItems = projects
+    .flatMap(p => (p.activity || [])
+      .filter(a => a && a.internal !== true && a.visibility !== 'Draft' && a.visibility !== 'Internal Only' && a.visibility !== 'internal')
+      .filter(a => a.category === 'verification' || /approved client payment|rejected client payment|payment verified|payment rejected/i.test(a.action || ''))
+      .map(a => ({ ...a, projectName: p.name })))
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+    .slice(0, 6);
+
+  const unpaidAlerts = projects.flatMap(p =>
+    (p.invoices || [])
+      .filter(i => i.status !== 'Cancelled' && i.status !== 'Paid')
+      .map(i => {
+        const paid = (i.payments || []).filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0);
+        const remaining = Math.max(0, i.amount - paid);
+        return {
+          id: `${p.id}-${i.id}`,
+          projectName: p.name,
+          number: i.number,
+          dueDate: i.dueDate,
+          status: i.status,
+          remaining
+        };
+      })
+  );
 
   const handleEnablePush = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -1240,6 +1316,8 @@ function ClientNotificationsModalView({ notifications, notify }) {
       notify('Izin notifikasi browser ditolak.');
     }
   };
+
+  const hasAny = verificationItems.length > 0 || unpaidAlerts.length > 0 || visibleNotifications.length > 0;
 
   return (
     <div className="notification-modal-wrap">
@@ -1267,7 +1345,27 @@ function ClientNotificationsModalView({ notifications, notify }) {
         </button>
       </div>
       <div className="notification-modal-list">
-        {notifications.map(n => (
+        {verificationItems.map(v => (
+          <div className="notification-row notification-verification" key={v.id}>
+            <span className="notification-icon"><ShieldCheck size={17} /></span>
+            <div>
+              <strong>{v.action} · {v.projectName}</strong>
+              <p>{v.detail}</p>
+              <small>{v.actor} · {v.date}</small>
+            </div>
+          </div>
+        ))}
+        {unpaidAlerts.map(b => (
+          <div className="notification-row notification-billing" key={b.id}>
+            <span className="notification-icon"><Wallet size={17} /></span>
+            <div>
+              <strong>Tagihan {b.number} ({b.status})</strong>
+              <p>{b.projectName} · Sisa tagihan {money(b.remaining)}</p>
+              <small>Jatuh tempo · {dateFmt(b.dueDate)}</small>
+            </div>
+          </div>
+        ))}
+        {visibleNotifications.map(n => (
           <div className="notification-row" key={n.id}>
             <span className="notification-icon"><Bell size={17} /></span>
             <div>
@@ -1277,7 +1375,7 @@ function ClientNotificationsModalView({ notifications, notify }) {
             </div>
           </div>
         ))}
-        {!notifications.length && <EmptyState title="Belum ada notifikasi" detail="Pembaruan proyek dan tagihan akan tampil di sini." />}
+        {!hasAny && <EmptyState title="Belum ada notifikasi" detail="Pembaruan proyek dan tagihan akan tampil di sini." />}
       </div>
     </div>
   );
