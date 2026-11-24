@@ -55,21 +55,21 @@ function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, ent
           className={`btn btn-small ${mode === 'client' ? 'btn-dark' : 'btn-outline'}`}
           onClick={() => { setMode('client'); setError(''); }}
         >
-          Client (Username)
+          Client
         </button>
         <button
           type="button"
           className={`btn btn-small ${mode === 'admin' ? 'btn-dark' : 'btn-outline'}`}
           onClick={() => { setMode('admin'); setError(''); }}
         >
-          Admin (Google Whitelist)
+          Admin
         </button>
       </div>
 
       {mode === 'client' ? (
         <form onSubmit={handleClientLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="field">
-            <span>Username Klien (Dibuat oleh Admin) <b>*</b></span>
+            <span>Username <b>*</b></span>
             <input
               type="text"
               placeholder="e.g. aditya"
@@ -77,9 +77,6 @@ function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, ent
               onChange={e => setUsername(e.target.value)}
               required
             />
-          </div>
-          <div className="modal-footnote">
-            Klien masuk menggunakan username yang didaftarkan oleh admin studio (tanpa password/Google).
           </div>
           {error && <div className="form-error"><AlertCircle size={15}/>{error}</div>}
           <div className="modal-actions" style={{ justifyContent: 'space-between', paddingTop: '6px' }}>
@@ -103,9 +100,6 @@ function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, ent
             <GoogleIcon size={19} />
             <span>Login with Google (Verify Whitelist)</span>
           </button>
-          <div className="modal-footnote">
-            Database memverifikasi email Anda terhadap daftar whitelisted admin di panel Settings.
-          </div>
           {error && <div className="form-error"><AlertCircle size={15}/>{error}</div>}
           <div className="modal-actions" style={{ justifyContent: 'flex-end', paddingTop: '6px' }}>
             <button type="button" className="btn btn-outline" onClick={close}>Cancel</button>
@@ -727,7 +721,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
   };
 
   const titleMap = {
-    login: 'Manage Your Project',
+    login: 'Manage Project',
     'invite-admin': 'Invite an Admin',
     'create-project': 'Create a new project',
     'invite-client': 'Invite a client',

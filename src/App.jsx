@@ -6,6 +6,20 @@ import { ModalHost } from './components/ModalHost';
 import { STORE_KEY, loadDB, uid, nowLabel } from './lib/utils';
 import { seedData } from './data/seed';
 import { CheckCircle2 } from 'lucide-react';
+import vectorLogo from './public/Vector.svg';
+
+function IntroSplash({ leaving }) {
+  return (
+    <div className={`intro-splash ${leaving ? 'is-leaving' : ''}`} aria-hidden="true">
+      <div className="intro-splash-inner">
+        <div className="intro-splash-logo-wrap">
+          <img src={vectorLogo} alt="NA Associates" className="intro-splash-logo" />
+        </div>
+        <span className="intro-splash-line" />
+      </div>
+    </div>
+  );
+}
 
 function resolveAppPath(pathname) {
   if (pathname.startsWith('/admin')) return { role: 'admin', page: 'home', adminTab: pathname.split('/')[2] || 'dashboard' };
@@ -34,6 +48,20 @@ function App() {
   const [workspaceSection, setWorkspaceSection] = useState('overview');
   const [adminTab, setAdminTab] = useState(initialRoute.adminTab || 'dashboard');
   const [theme, setTheme] = useState(() => localStorage.getItem('na-theme-mode') || 'light');
+  const [splashState, setSplashState] = useState(() => (initialRoute.role === 'guest' ? 'active' : 'done'));
+  const [heroReady, setHeroReady] = useState(() => initialRoute.role !== 'guest');
+
+  useEffect(() => {
+    if (initialRoute.role !== 'guest') return;
+    const leaveTimer = setTimeout(() => setSplashState('leaving'), 1600);
+    const heroTimer = setTimeout(() => setHeroReady(true), 1880);
+    const doneTimer = setTimeout(() => setSplashState('done'), 2150);
+    return () => {
+      clearTimeout(leaveTimer);
+      clearTimeout(heroTimer);
+      clearTimeout(doneTimer);
+    };
+  }, [initialRoute.role]);
 
   useEffect(() => {
     localStorage.setItem('na-theme-mode', theme);
@@ -70,7 +98,8 @@ function App() {
   const isDarkActive = role !== 'guest' && theme === 'dark';
 
   return <div className={`app-shell ${isDarkActive ? 'dark-mode' : ''}`} data-theme={isDarkActive ? 'dark' : 'light'} data-role={role}>
-    {role === 'guest' && <PublicShell page={page} setPage={setPage} go={goPublic} onLogin={() => setModal({ type: 'login' })} role={role} changeRole={changeRole} mobileNav={mobileNav} setMobileNav={setMobileNav} />}
+    {splashState !== 'done' && <IntroSplash leaving={splashState === 'leaving'} />}
+    {role === 'guest' && <PublicShell page={page} setPage={setPage} go={goPublic} onLogin={() => setModal({ type: 'login' })} role={role} changeRole={changeRole} mobileNav={mobileNav} setMobileNav={setMobileNav} heroReady={heroReady} />}
     {role === 'client' && <ClientShell db={db} client={client} projects={clientProjects} selectedProject={selectedProject} page={clientPage} setPage={setPage} onOpen={openWorkspace} onBack={() => setPage('my-projects')} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} workspaceSection={workspaceSection} setWorkspaceSection={setWorkspaceSection} mobileNav={mobileNav} setMobileNav={setMobileNav} theme={theme} toggleTheme={toggleTheme} />}
     {role === 'admin' && <AdminShell db={db} setDb={setDb} projects={db.projects} clients={db.clients} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={adminTab} setTab={setAdminTab} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} theme={theme} toggleTheme={toggleTheme} />}
     {modal && <ModalHost modal={modal} close={() => setModal(null)} db={db} setDb={setDb} projects={db.projects} selectedProject={selectedProject} updateProject={updateProject} addActivity={addActivity} notify={notify} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} theme={theme} />}

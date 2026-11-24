@@ -24,23 +24,23 @@ export function GoogleIcon({ size = 18 }) {
 
 export function Brand({ inverse = false }) {
   return (
-    <button 
-      className={`brand ${inverse ? 'brand-inverse' : ''}`} 
-      onClick={() => window.dispatchEvent(new CustomEvent('na-home'))} 
+    <button
+      type="button"
+      className={`brand ${inverse ? 'brand-inverse' : ''}`}
+      onClick={() => window.dispatchEvent(new CustomEvent('na-home'))}
       aria-label="NA Associates home"
-      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
     >
-      <img 
-        src={vectorLogo} 
-        alt="NA Associates Logo" 
-        style={{ height: '18px', width: 'auto', display: 'block' }} 
+      <img
+        src={vectorLogo}
+        alt="NA Associates Logo"
+        className="brand-logo"
       />
     </button>
   );
 }
 export function PageIntro({ eyebrow, title, italic, desc }) { return <section className="page-intro wrap"><div className="eyebrow">{eyebrow}</div><h1>{title} <em>{italic}</em></h1>{desc && <p>{desc}</p>}</section>; }
 export function Field({ label, required, placeholder, type='text', textarea=false }) { return <label className="field"><span>{label}{required && <b> *</b>}</span>{textarea ? <textarea placeholder={placeholder} required={required} rows="4"/> : <input type={type} placeholder={placeholder} required={required}/>}</label>; }
-export function PublicFooter({ go }) { return <footer className="public-footer"><div className="wrap footer-top"><div><Brand inverse/><p>Architecture shaped by context,<br/>clarity, and everyday life.</p></div><div className="footer-links"><div><small>EXPLORE</small><button onClick={() => go('projects')}>Projects</button><button onClick={() => go('services')}>Services</button><button onClick={() => go('about')}>About</button></div><div><small>CONNECT</small><button onClick={() => go('career')}>Career</button><button onClick={() => go('contact')}>Contact</button><button onClick={() => go('home')}>Back to top ↑</button></div></div></div><div className="wrap footer-bottom"><span>© 2026 NA Associates</span><span>ARCHITECTURE & DESIGN · JAKARTA, INDONESIA</span></div></footer>; }
+export function PublicFooter({ go }) { return <footer className="public-footer"><div className="wrap footer-top"><div><Brand inverse/><p>Arsitektur yang dibentuk oleh konteks,<br/>kejelasan, dan kehidupan sehari-hari.</p></div><div className="footer-links"><div><small>JELAJAHI</small><button onClick={() => go('projects')}>Projects</button><button onClick={() => go('services')}>Services</button><button onClick={() => go('about')}>About</button></div><div><small>TERHUBUNG</small><button onClick={() => go('career')}>Career</button><button onClick={() => go('contact')}>Contact</button><button onClick={() => go('home')}>Back to top ↑</button></div></div></div><div className="wrap footer-bottom"><span>© 2026 NA Associates</span><span>ARSITEKTUR & DESAIN · JAKARTA, INDONESIA</span></div></footer>; }
 export function ProgressBar({ value=0 }) { return <div className="progress-bar"><span style={{width:`${Math.max(0,Math.min(100,value))}%`}}/></div>; }
 export function SectionHeading({ number, title, description, action, onAction }) { return <div className="workspace-section-head"><div><div className="eyebrow">{number} / PROJECT MODULE</div><h2>{title}</h2><p>{description}</p></div>{action && <button className="btn btn-outline" onClick={onAction}>{action} <ArrowUpRight size={14}/></button>}</div>; }
 export function FileTile({ file, onOpen }) {
