@@ -5332,3 +5332,271 @@ body {
     font-size: 21.5px !important;
   }
 }
+
+/* ==========================================================================
+   Client Project Workspace — Module A Search & Module B Split Refinements
+   ========================================================================== */
+
+.client-module-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc5b7;
+  background: #e6e1d7;
+  color: #52594d;
+  margin-bottom: 16px;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.client-module-search:focus-within {
+  border-color: #6b7b63;
+}
+
+.client-module-search > svg {
+  flex-shrink: 0;
+  color: #52594d;
+}
+
+.client-module-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #21241f;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  outline: none;
+  padding: 0;
+}
+
+.client-module-search input::placeholder {
+  color: #6b7265;
+}
+
+.client-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 0;
+  background: transparent;
+  color: #52594d;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.client-search-clear:hover {
+  background: rgba(33, 36, 31, 0.08);
+  color: #21241f;
+}
+
+.dark-mode .client-module-search {
+  background: #181c18;
+  border-color: #343d32;
+  color: #a7b0a1;
+}
+
+.dark-mode .client-module-search:focus-within {
+  border-color: #8ca17e;
+}
+
+.dark-mode .client-module-search > svg,
+.dark-mode .client-search-clear {
+  color: #a7b0a1;
+}
+
+.dark-mode .client-module-search input {
+  color: #e9ede4;
+}
+
+.dark-mode .client-module-search input::placeholder {
+  color: #7d8777;
+}
+
+.dark-mode .client-search-clear:hover {
+  background: rgba(233, 237, 228, 0.08);
+  color: #ffffff;
+}
+
+.client-design-scroll {
+  max-height: 290px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+.client-design-scroll .file-grid .empty-state {
+  grid-column: 1 / -1;
+}
+
+.client-progress-grid {
+  display: grid;
+  grid-template-columns: minmax(270px, 0.82fr) minmax(0, 1.18fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.client-progress-grid > .panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.client-milestones-scroll,
+.client-daily-scroll {
+  max-height: 360px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+}
+
+.client-daily-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Subtle 6px scrollbars (Light Warm Stone & Dark Mode) */
+.client-design-scroll,
+.client-milestones-scroll,
+.client-daily-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #b8b1a1 transparent;
+}
+
+.client-design-scroll::-webkit-scrollbar,
+.client-milestones-scroll::-webkit-scrollbar,
+.client-daily-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.client-design-scroll::-webkit-scrollbar-track,
+.client-milestones-scroll::-webkit-scrollbar-track,
+.client-daily-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.client-design-scroll::-webkit-scrollbar-thumb,
+.client-milestones-scroll::-webkit-scrollbar-thumb,
+.client-daily-scroll::-webkit-scrollbar-thumb {
+  background: #b8b1a1;
+  border-radius: 999px;
+}
+
+.client-design-scroll::-webkit-scrollbar-thumb:hover,
+.client-milestones-scroll::-webkit-scrollbar-thumb:hover,
+.client-daily-scroll::-webkit-scrollbar-thumb:hover {
+  background: #968f80;
+}
+
+.dark-mode .client-design-scroll,
+.dark-mode .client-milestones-scroll,
+.dark-mode .client-daily-scroll {
+  scrollbar-color: #3d483b transparent;
+}
+
+.dark-mode .client-design-scroll::-webkit-scrollbar-thumb,
+.dark-mode .client-milestones-scroll::-webkit-scrollbar-thumb,
+.dark-mode .client-daily-scroll::-webkit-scrollbar-thumb {
+  background: #3d483b;
+}
+
+.dark-mode .client-design-scroll::-webkit-scrollbar-thumb:hover,
+.dark-mode .client-milestones-scroll::-webkit-scrollbar-thumb:hover,
+.dark-mode .client-daily-scroll::-webkit-scrollbar-thumb:hover {
+  background: #536350;
+}
+
+/* Compact Daily Progress Cards */
+.client-update-card.client-update-compact {
+  padding: 15px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  background: #e6e1d7;
+  border-color: #ccc5b7;
+}
+
+.client-update-card.client-update-compact .client-update-title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.38;
+  color: #21241f;
+}
+
+.client-update-compact-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 12px;
+  color: #52594d;
+}
+
+.client-update-file-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #43523b;
+  font-weight: 600;
+}
+
+.client-update-card.client-update-compact .btn {
+  margin-top: 2px;
+}
+
+.dark-mode .client-update-card.client-update-compact {
+  background: #181c18;
+  border-color: #30372f;
+}
+
+.dark-mode .client-update-card.client-update-compact .client-update-title {
+  color: #eef1ea;
+}
+
+.dark-mode .client-update-compact-meta {
+  color: #a7b0a1;
+}
+
+.dark-mode .client-update-file-count {
+  color: #a9c29b;
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .client-progress-grid {
+    grid-template-columns: minmax(225px, 0.85fr) minmax(0, 1.15fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 780px) {
+  .client-module-search input {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .client-progress-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .client-milestones-scroll {
+    max-height: 265px;
+    padding-right: 4px;
+  }
+
+  .client-daily-scroll {
+    max-height: 330px;
+    padding-right: 4px;
+  }
+}
+

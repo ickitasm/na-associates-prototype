@@ -123,10 +123,15 @@ function easeInOutCubic(t) {
 
 function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setModal, updateProject, addActivity, onNotify, workspaceSection, setWorkspaceSection, mobileNav, setMobileNav, theme, toggleTheme }) {
   const [openSection, setOpenSection] = useState('overview');
+  const [designQuery, setDesignQuery] = useState('');
   const scrollAnimRef = useRef(null);
   const scrollSpyLockRef = useRef(false);
   const prevScrollBehaviorRef = useRef(null);
   const interruptCleanupRef = useRef(null);
+
+  useEffect(() => {
+    setDesignQuery('');
+  }, [project.id]);
 
   const cancelSoftScroll = useCallback(() => {
     if (scrollAnimRef.current !== null) {
@@ -242,8 +247,16 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
 
     scrollAnimRef.current = requestAnimationFrame(step);
   }, [cancelSoftScroll, setMobileNav, setWorkspaceSection]);
-  const publishedReports = (project.reports||[]).filter(r=>r.visibility==='Published');
-  const publishedFiles = (project.files||[]).filter(f=>f.visibility==='Published');
+  const publishedReports = [...(project.reports||[])]
+    .filter(r=>r.visibility==='Published')
+    .sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  const publishedFiles = [...(project.files||[])]
+    .filter(f=>f.visibility==='Published')
+    .sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  const normalizedDesignQuery = designQuery.trim().toLowerCase();
+  const filteredDesignFiles = normalizedDesignQuery
+    ? publishedFiles.filter(f => [f.name, f.category, f.type].filter(Boolean).some(v => String(v).toLowerCase().includes(normalizedDesignQuery)))
+    : publishedFiles;
   const publishedLegal = (project.legal||[]).filter(f=>f.visibility==='Published');
   const publishedShopping = (project.shopping||[]).filter(s=>s.visibility==='Published');
   const invoices = project.invoices||[];
@@ -304,75 +317,88 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
 
         <section className="workspace-hero" id="section-overview"><div className="workspace-hero-img"><img src={project.cover}/><div className="workspace-hero-overlay"/></div><div className="workspace-hero-content"><div className="eyebrow light">{project.code} / PROJECT OVERVIEW</div><h1>{project.name}<span>.</span></h1><p><MapPin size={14}/>{project.location}</p><div className="hero-progress"><span>PROJECT PROGRESS</span><strong>{project.progress}%</strong></div><ProgressBar value={project.progress}/></div></section>
         {(() => { const nextUp = getProjectNextUp(project); return <div className="workspace-stats"><div><small>LAND AREA</small><strong>{project.landArea || '—'}</strong></div><div><small>BUILDING AREA</small><strong>{project.buildingArea || '—'}</strong></div><div><small>NEXT UP</small><strong>{nextUp.label}</strong>{nextUp.label !== '—' && nextUp.label !== 'DONE' && nextUp.date && <span>{dateFmt(nextUp.date)}</span>}</div><div><small>OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div></div>; })()}
-        <section className="workspace-section" id="section-design"><SectionHeading number="A" title="Output & Design" description="Design development and project deliverables shared by the studio." action="Browse files" onAction={()=>setModal({type:'file-list',project})}/><div className="file-grid">{publishedFiles.map(f=><FileTile key={f.id} file={f} onOpen={()=>setModal({type:'file-preview',file:f})}/>)}{!publishedFiles.length && <EmptyState title="No files published yet" detail="New design outputs will appear here once shared by the studio."/>}</div></section>
+        <section className="workspace-section" id="section-design">
+          <SectionHeading number="A" title="Output & Design"/>
+          <div className="client-module-search">
+            <Search size={15}/>
+            <input
+              type="text"
+              placeholder="Search design outputs by title, category, or file type..."
+              value={designQuery}
+              onChange={e=>setDesignQuery(e.target.value)}
+              aria-label="Search design outputs"
+            />
+            {designQuery && (
+              <button
+                type="button"
+                className="client-search-clear"
+                aria-label="Clear search"
+                onClick={()=>setDesignQuery('')}
+              >
+                <X size={14}/>
+              </button>
+            )}
+          </div>
+          <div className="client-design-scroll">
+            <div className="file-grid">
+              {filteredDesignFiles.map(f=><FileTile key={f.id} file={f} onOpen={()=>setModal({type:'file-preview',file:f})}/>)}
+              {!filteredDesignFiles.length && (
+                <EmptyState
+                  title={publishedFiles.length ? 'No matching design outputs' : 'No files published yet'}
+                  detail={publishedFiles.length ? `No files match "${designQuery.trim()}". Try another title, category, or file type.` : 'New design outputs will appear here once shared by the studio.'}
+                />
+              )}
+            </div>
+          </div>
+        </section>
         <section className="workspace-section" id="section-progress">
-          <SectionHeading number="B" title="Progress & Field Operations" description="A transparent view of milestones and published site updates."/>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <SectionHeading number="B" title="Progress & Field Operations"/>
+          <div className="client-progress-grid">
             <div className="panel">
               <div className="panel-heading">
-                <h3>Project timeline milestones</h3>
+                <h3>Milestones</h3>
                 <span className="subtle-tag">{project.milestones?.length||0} milestones</span>
               </div>
-              <div className="timeline">
-                {(project.milestones||[]).map((m,i)=>(
-                  <div className={`timeline-item ${m.status==='Completed'?'done':''} ${m.status==='In Progress'?'current':''}`} key={m.id}>
-                    <div className="timeline-marker">{m.status==='Completed'?<Check size={12}/>:i+1}</div>
-                    <div className="timeline-body">
-                      <div><strong>{m.title}</strong><span>{dateFmt(m.date)}</span></div>
-                      <small>{m.status} · Progress {m.progress}%</small>
-                      {m.status==='In Progress' && <ProgressBar value={m.progress}/>}
-                    </div>
+              <div className="client-milestones-scroll">
+                {project.milestones?.length ? (
+                  <div className="timeline">
+                    {project.milestones.map((m,i)=>(
+                      <div className={`timeline-item ${m.status==='Completed'?'done':''} ${m.status==='In Progress'?'current':''}`} key={m.id}>
+                        <div className="timeline-marker">{m.status==='Completed'?<Check size={12}/>:i+1}</div>
+                        <div className="timeline-body">
+                          <div><strong>{m.title}</strong><span>{dateFmt(m.date)}</span></div>
+                          <small>{m.status} · Progress {m.progress}%</small>
+                          {m.status==='In Progress' && <ProgressBar value={m.progress}/>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <EmptyState title="Timeline not available" detail="Milestones will appear here."/>
+                )}
               </div>
-              {!project.milestones?.length && <EmptyState title="Timeline not available" detail="Milestones will appear here."/>}
             </div>
 
             <div className="panel">
               <div className="panel-heading">
-                <h3>Published daily progress updates</h3>
+                <h3>Daily Progress</h3>
                 <span className="subtle-tag">{publishedReports.length} reports</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="client-daily-scroll">
                 {publishedReports.map(r => {
-                  const workers = r.workers || [];
-                  const hadirCount = workers.filter(w => w.attendance === 'Hadir').length;
-                  const photoNames = r.photoNames || ['Foto-lapangan-1.jpg', 'Foto-lapangan-2.jpg'];
+                  const fileCount = Array.isArray(r.photoNames) ? r.photoNames.length : 2;
                   return (
-                    <article key={r.id} className="client-update-card">
-                      <div className="client-update-head">
-                        <span className="client-update-meta">{dateFmt(r.date)} · {r.category}</span>
-                        <span className="client-update-prog">{r.fieldNote || 'Log Operasional'}</span>
-                      </div>
+                    <article key={r.id} className="client-update-card client-update-compact">
                       <h4 className="client-update-title">{r.title}</h4>
-                      <p className="client-update-desc">{r.description}</p>
-                      
-                      <div className="client-update-workforce">
-                        <div><strong>Personil Lapangan Bertugas:</strong> {hadirCount > 0 ? `${hadirCount} Personil Aktif` : `${workers.length} Pekerja`}</div>
-                        <div><strong>Cakupan Kerja:</strong> {workers.map(w => w.task).filter(Boolean).slice(0, 3).join(' · ') || 'Pekerjaan konstruksi & struktur'}</div>
-                        {r.tools && <div><strong>Peralatan Operasional:</strong> {r.tools}</div>}
+                      <div className="client-update-compact-meta">
+                        <span>{dateFmt(r.date)}</span>
+                        <span className="client-update-file-count">
+                          <Camera size={13}/> {fileCount} {fileCount === 1 ? 'file' : 'files'}
+                        </span>
                       </div>
-
-                      <div className="client-update-photos">
-                        {photoNames.map((pName, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            className="client-photo-chip"
-                            onClick={() => setModal({ type: 'photo-lightbox', url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85', caption: `${r.title} — ${pName}` })}
-                            title="Klik untuk memperbesar foto"
-                          >
-                            <Camera size={14}/>
-                            <span>{pName}</span>
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="client-update-actions">
-                        <button className="btn btn-small btn-outline" onClick={() => setModal({ type: 'report-detail', report: r, project, isClient: true })}>
-                          View full log details <ArrowUpRight size={14}/>
-                        </button>
-                      </div>
+                      <button type="button" className="btn btn-small btn-outline" onClick={() => setModal({ type: 'report-detail', report: r, project, isClient: true })}>
+                        View full log details <ArrowUpRight size={14}/>
+                      </button>
                     </article>
                   );
                 })}
@@ -381,10 +407,10 @@ function ClientWorkspace({ db, client, project, onBack, onLogout, onReset, setMo
             </div>
           </div>
         </section>
-        <section className="workspace-section" id="section-legal"><SectionHeading number="C" title="Legal Documents" description="Contracts, addenda, and approved supporting documents."/><div className="document-list">{publishedLegal.map(l=><div className="document-row" key={l.id}><span className="document-icon"><FileText size={19}/></span><div><strong>{l.name}</strong><small>{l.version} · {dateFmt(l.date)}</small></div><button className="icon-btn" onClick={()=>setModal({type:'file-preview',file:{name:l.name,type:'PDF',description:`${l.version} · ${dateFmt(l.date)}`}})}><Eye size={17}/></button><button className="icon-btn" onClick={()=>setModal({type:'info',title:'Legal document',body:'Dokumen proyek tersimpan dalam format resmi studio.'})}><Download size={17}/></button></div>)}{!publishedLegal.length && <EmptyState title="No legal documents" detail="Approved documents will be shared here."/>}</div></section>
-        <section className="workspace-section" id="section-billing"><SectionHeading number="D" title="Billing & Payments" description="Invoices, payment records, and official receipts." action="Upload payment proof" onAction={()=>setModal({type:'payment-upload',project})}/><div className="billing-summary"><div><small>TOTAL OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div><div><small>INVOICES</small><strong>{invoices.filter(i=>i.status!=='Cancelled').length}</strong></div><div><small>PAYMENTS UNDER REVIEW</small><strong>{invoices.filter(i=>i.status!=='Cancelled').reduce((s,i)=>s+i.payments.filter(p=>p.status==='Pending').length,0)}</strong></div></div><div className="invoice-list">{invoices.filter(i=>i.status!=='Cancelled').map(inv=><InvoiceClientCard key={inv.id} invoice={inv} setModal={setModal}/>)}{!invoices.length && <EmptyState title="No invoices yet" detail="Invoices issued by the studio will appear here."/>}</div></section>
-        <section className="workspace-section" id="section-shopping"><SectionHeading number="E" title="Shopping List" description="Materials planned for your project and their procurement status."/><div className="shopping-list">{publishedShopping.map(s=><div className="shopping-row" key={s.id}><div className="shopping-date">{dateFmt(s.date)}</div><div className="shopping-name"><strong>{s.material}</strong><small>{s.specification}</small></div><div className="shopping-qty">{s.quantity} {s.unit}</div><StatusTag value={s.status}/></div>)}{!publishedShopping.length && <EmptyState title="No materials published" detail="Material requirements will appear here."/>}</div></section>
-        <section className="workspace-section" id="section-recap"><SectionHeading number="F" title="Monthly Recapitulation" description="A monthly overview of your invoices and verified payments."/><MonthlyRecap invoices={invoices}/></section>
+        <section className="workspace-section" id="section-legal"><SectionHeading number="C" title="Legal Documents"/><div className="document-list">{publishedLegal.map(l=><div className="document-row" key={l.id}><span className="document-icon"><FileText size={19}/></span><div><strong>{l.name}</strong><small>{l.version} · {dateFmt(l.date)}</small></div><button className="icon-btn" onClick={()=>setModal({type:'file-preview',file:{name:l.name,type:'PDF',description:`${l.version} · ${dateFmt(l.date)}`}})}><Eye size={17}/></button><button className="icon-btn" onClick={()=>setModal({type:'info',title:'Legal document',body:'Dokumen proyek tersimpan dalam format resmi studio.'})}><Download size={17}/></button></div>)}{!publishedLegal.length && <EmptyState title="No legal documents" detail="Approved documents will be shared here."/>}</div></section>
+        <section className="workspace-section" id="section-billing"><SectionHeading number="D" title="Billing & Payments" action="Upload payment proof" onAction={()=>setModal({type:'payment-upload',project})}/><div className="billing-summary"><div><small>TOTAL OUTSTANDING</small><strong>{money(totalRemaining)}</strong></div><div><small>INVOICES</small><strong>{invoices.filter(i=>i.status!=='Cancelled').length}</strong></div><div><small>PAYMENTS UNDER REVIEW</small><strong>{invoices.filter(i=>i.status!=='Cancelled').reduce((s,i)=>s+i.payments.filter(p=>p.status==='Pending').length,0)}</strong></div></div><div className="invoice-list">{invoices.filter(i=>i.status!=='Cancelled').map(inv=><InvoiceClientCard key={inv.id} invoice={inv} setModal={setModal}/>)}{!invoices.length && <EmptyState title="No invoices yet" detail="Invoices issued by the studio will appear here."/>}</div></section>
+        <section className="workspace-section" id="section-shopping"><SectionHeading number="E" title="Shopping List"/><div className="shopping-list">{publishedShopping.map(s=><div className="shopping-row" key={s.id}><div className="shopping-date">{dateFmt(s.date)}</div><div className="shopping-name"><strong>{s.material}</strong><small>{s.specification}</small></div><div className="shopping-qty">{s.quantity} {s.unit}</div><StatusTag value={s.status}/></div>)}{!publishedShopping.length && <EmptyState title="No materials published" detail="Material requirements will appear here."/>}</div></section>
+        <section className="workspace-section" id="section-recap"><SectionHeading number="F" title="Monthly Recapitulation"/><MonthlyRecap invoices={invoices}/></section>
         <footer className="workspace-footer"><Brand/><span>Need assistance? Contact the NA Associates team.</span><button className="under-link" onClick={()=>setModal({type:'info',title:'Contact the studio',body:'For project questions, contact hello@naassociates.com or use the official studio WhatsApp channel.'})}>Contact studio <ArrowUpRight size={14}/></button></footer>
       </main>
     </div>
