@@ -1199,10 +1199,11 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
   if (modal.type === 'info') body = <div><p className="modal-lead preserve-lines">{modal.body}</p><div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>;
 
   const isWide = modal.type === 'new-report' || modal.type === 'report-detail';
+  const isCentered = modal.type === 'login';
 
   return (
-    <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
-      <section className={`modal-card ${isWide ? 'modal-card-wide' : ''}`}>
+    <div className={`modal-backdrop ${isCentered ? 'modal-backdrop-centered' : ''}`} onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+      <section className={`modal-card ${isWide ? 'modal-card-wide' : ''} ${isCentered ? 'modal-card-centered' : ''}`}>
         <header className="modal-header">
           <div>
             <div className="eyebrow">NA ASSOCIATES / PROJECT SPACE</div>
