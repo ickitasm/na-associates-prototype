@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, Bell, Building2, CalendarDays, Check,
+  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, Bell, Building2, CalendarDays, Check,
   CheckCircle2, ChevronDown, ChevronRight, ClipboardList, Clock3, CreditCard,
   Download, ExternalLink, FileCheck2, FileImage, FileText, FolderOpen, HardHat,
   Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, Package, Plus,
@@ -8,21 +8,83 @@ import {
   Users, Wallet, X, Eye, Activity, AlertCircle
 } from 'lucide-react';
 import { Brand, PageIntro, Field, PublicFooter, WhatsAppIcon, EmptyState } from '../components/ui';
+import naassHeadImg from '../public/naass_head.jpg';
+
+const HERO_SLIDES = [
+  {
+    id: 'slide-1',
+    src: naassHeadImg,
+    alt: 'NA Associates warm timber dining and living interior',
+    scaled: true,
+  },
+  {
+    id: 'slide-2',
+    src: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2200&q=90',
+    alt: 'Contemporary courtyard residential architecture',
+    scaled: false,
+  },
+  {
+    id: 'slide-3',
+    src: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85',
+    alt: 'Warm contemporary timber and stone residence',
+    scaled: false,
+  },
+];
+
+const HERO_TRACK_FRAMES = [...HERO_SLIDES, { ...HERO_SLIDES[0], id: 'slide-1-clone' }];
 
 function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMobileNav, heroReady = true }) {
   const [scrolled, setScrolled] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(true);
+
+  const getHeaderOffset = () => {
+    const header = document.querySelector('.public-header');
+    return header ? header.getBoundingClientRect().height : 82;
+  };
+
+  const getMainSections = () => Array.from(document.querySelectorAll('.public-main > section'));
+
+  const getNextSection = () => {
+    const sections = getMainSections();
+    if (!sections.length) return null;
+    const offset = getHeaderOffset();
+    return sections.find((sec) => sec.getBoundingClientRect().top > offset + 28) || null;
+  };
+
   useEffect(() => { const fn = () => go('home'); window.addEventListener('na-home', fn); return () => window.removeEventListener('na-home', fn); }, []);
+
   useEffect(() => {
-    const onScroll = () => {
+    const updateScroll = () => {
       const y = window.scrollY;
       setScrolled(y > 10);
-      setShowBackToTop(y > 280);
+      setShowBackToTop(y > 260);
+      const sections = getMainSections();
+      const offset = getHeaderOffset();
+      const lastSec = sections[sections.length - 1];
+      const atBottom = window.innerHeight + y >= document.documentElement.scrollHeight - 40;
+      const atLastSection = lastSec ? lastSec.getBoundingClientRect().top <= offset + 32 : true;
+      const hasNext = Boolean(sections.find((sec) => sec.getBoundingClientRect().top > offset + 28));
+      setShowScrollDown(hasNext && !atBottom && !atLastSection);
     };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    const raf = requestAnimationFrame(updateScroll);
+    window.addEventListener('scroll', updateScroll, { passive: true });
+    window.addEventListener('resize', updateScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', updateScroll);
+      window.removeEventListener('resize', updateScroll);
+    };
+  }, [page]);
+
+  const scrollToNextSection = () => {
+    const nextSec = getNextSection();
+    if (!nextSec) return;
+    const offset = getHeaderOffset();
+    const targetTop = Math.max(0, window.scrollY + nextSec.getBoundingClientRect().top - offset);
+    window.scrollTo({ top: targetTop, behavior: 'smooth' });
+  };
+
   const links = [['Projects','projects'],['Services','services'],['About','about'],['Career','career'],['Contact','contact']];
   const openPortal = () => {
     setMobileNav(false);
@@ -44,21 +106,101 @@ function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMob
     </header>
     <main className="public-main">{page === 'home' && <HomePage go={go} onLogin={onLogin} heroReady={heroReady}/>} {page === 'projects' && <ProjectsPage go={go}/>} {page === 'project-detail' && <ProjectDetailPage go={go}/>} {page === 'services' && <ServicesPage go={go}/>} {page === 'about' && <AboutPage go={go}/>} {page === 'career' && <CareerPage/>} {page === 'contact' && <ContactPage/>}</main>
     <PublicFooter go={go}/>
-    <button
-      type="button"
-      className={`back-to-top-btn ${showBackToTop ? 'visible' : ''}`}
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      aria-label="Kembali ke atas"
-    >
-      <ArrowUp size={18}/>
-    </button>
+    <div className="public-floating-nav" aria-label="Navigasi gulir cepat">
+      <button
+        type="button"
+        className={`floating-nav-btn floating-nav-up ${showBackToTop ? 'is-visible' : 'is-hidden'}`}
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        aria-label="Kembali ke atas"
+        aria-hidden={!showBackToTop}
+        tabIndex={showBackToTop ? 0 : -1}
+      >
+        <ArrowUp size={18}/>
+      </button>
+      <button
+        type="button"
+        className={`floating-nav-btn floating-nav-down ${showScrollDown ? 'is-visible' : 'is-hidden'}`}
+        onClick={scrollToNextSection}
+        aria-label="Gulir ke bagian berikutnya"
+        aria-hidden={!showScrollDown}
+        tabIndex={showScrollDown ? 0 : -1}
+      >
+        <ArrowDown size={18}/>
+      </button>
+    </div>
   </>;
 }
 
 function HomePage({ go, heroReady }) {
+  const [slideIdx, setSlideIdx] = useState(0);
+  const [noTransition, setNoTransition] = useState(false);
+  const [cycleNonce, setCycleNonce] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNoTransition(false);
+      setSlideIdx((prev) => (prev >= 3 ? 3 : prev + 1));
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [cycleNonce]);
+
+  useEffect(() => {
+    if (!noTransition) return undefined;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setNoTransition(false);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [noTransition]);
+
+  useEffect(() => {
+    if (slideIdx !== 3) return undefined;
+    const fallback = setTimeout(() => {
+      setNoTransition(true);
+      setSlideIdx(0);
+    }, 900);
+    return () => clearTimeout(fallback);
+  }, [slideIdx]);
+
+  const handleTrackTransitionEnd = (e) => {
+    if (e.target !== e.currentTarget) return;
+    if (slideIdx === 3) {
+      setNoTransition(true);
+      setSlideIdx(0);
+    }
+  };
+
+  const selectSlide = (idx) => {
+    setNoTransition(false);
+    setSlideIdx(idx);
+    setCycleNonce((n) => n + 1);
+  };
+
+  const activeDot = slideIdx % HERO_SLIDES.length;
+
   return <>
     <section className="hero">
-      <div className="hero-image"/>
+      <div className="hero-carousel" aria-hidden="true">
+        <div
+          className={`hero-carousel-track is-slide-${slideIdx} ${noTransition ? 'is-instant' : ''}`}
+          onTransitionEnd={handleTrackTransitionEnd}
+        >
+          {HERO_TRACK_FRAMES.map((slide) => (
+            <div className="hero-carousel-slide" key={slide.id}>
+              <img
+                src={slide.src}
+                alt={slide.alt}
+                className={`hero-carousel-img ${slide.scaled ? 'is-scaled' : ''}`}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="hero-shade"/>
       <div className={`hero-content wrap ${heroReady ? 'hero-animate' : 'hero-pending'}`}>
         <h1>Spaces that<br/><em>feel like home.</em></h1>
@@ -68,6 +210,19 @@ function HomePage({ go, heroReady }) {
           <button className="btn btn-outline-light" onClick={() => go('contact')}>Start a conversation</button>
         </div>
         <div className="hero-index">01 <span/> 04</div>
+      </div>
+      <div className="hero-carousel-dots" role="tablist" aria-label="Pilih slide hero">
+        {HERO_SLIDES.map((slide, idx) => (
+          <button
+            key={slide.id}
+            type="button"
+            role="tab"
+            aria-selected={activeDot === idx}
+            aria-label={`Slide ${idx + 1}`}
+            className={`hero-carousel-dot ${activeDot === idx ? 'is-active' : ''}`}
+            onClick={() => selectSlide(idx)}
+          />
+        ))}
       </div>
       <div className="hero-caption">KARYA ARSITEKTUR PILIHAN / 2024—2026</div>
     </section>

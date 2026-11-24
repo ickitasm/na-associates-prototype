@@ -6647,5 +6647,194 @@ body {
   color: #ffffff;
 }
 
+/* ==========================================================================
+   Public Homepage: 3-Slide Hero Carousel & Dual Floating Navigation Controls
+   ========================================================================== */
+
+.hero {
+  overflow-x: hidden;
+  overflow: hidden;
+}
+
+.hero-shade {
+  z-index: 1;
+}
+
+.hero-content,
+.hero-caption {
+  z-index: 2;
+}
+
+.hero-carousel {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hero-carousel-track {
+  display: flex;
+  width: 400%;
+  height: 100%;
+  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.hero-carousel-track.is-instant {
+  transition: none !important;
+}
+
+.hero-carousel-track.is-slide-0 {
+  transform: translateX(0%);
+}
+
+.hero-carousel-track.is-slide-1 {
+  transform: translateX(-25%);
+}
+
+.hero-carousel-track.is-slide-2 {
+  transform: translateX(-50%);
+}
+
+.hero-carousel-track.is-slide-3 {
+  transform: translateX(-75%);
+}
+
+.hero-carousel-slide {
+  flex: 0 0 25%;
+  width: 25%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.hero-carousel-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 48%;
+  display: block;
+}
+
+.hero-carousel-img.is-scaled {
+  transform: scale(1.06);
+}
+
+.hero-carousel-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+.hero-carousel-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: width 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+}
+
+.hero-carousel-dot:hover {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.hero-carousel-dot.is-active {
+  width: 22px;
+  background: #f7f6f2;
+  border-color: #f7f6f2;
+}
+
+@media (max-width: 780px) {
+  .hero-carousel-dots {
+    bottom: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-carousel-track {
+    transition: none;
+  }
+}
+
+.public-floating-nav {
+  position: fixed;
+  right: 20px;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 45;
+  pointer-events: none;
+}
+
+.floating-nav-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  background: #343a32;
+  color: #f7f6f2;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 26px rgba(24, 27, 23, 0.22);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.floating-nav-btn:hover {
+  background: #4c5648;
+  transform: translateY(-2px);
+}
+
+.floating-nav-btn:active {
+  transform: translateY(0);
+}
+
+.floating-nav-btn.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.floating-nav-btn.is-hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+.dark-mode .floating-nav-btn {
+  background: #232823;
+  color: #f4f5f0;
+  border-color: rgba(212, 220, 204, 0.24);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.42);
+}
+
+.dark-mode .floating-nav-btn:hover {
+  background: #364135;
+  border-color: rgba(212, 220, 204, 0.44);
+}
+
+@media (max-width: 480px) {
+  .public-floating-nav {
+    right: 16px;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
+  .floating-nav-btn {
+    width: 42px;
+    height: 42px;
+  }
+}
 
 
