@@ -2,6 +2,17 @@ export const seedData = {
   currentClientId: null,
   admins: [{ id: 'admin-primary', name: 'NA Owner', email: 'owner@example.com', isPrimary: true, status: 'Active' }],
   allowedAdminEmails: ['owner@example.com', 'admin@na-associates.id', 'mike777rafael@gmail.com'],
+  staffMembers: [
+    {
+      id: 'staff-01',
+      name: 'Raka Pratama',
+      roleTitle: 'Field Architect / Staff',
+      email: 'raka.staff@na-associates.id',
+      assignedProjects: ['project-01', 'project-02'],
+      status: 'Active'
+    }
+  ],
+  allowedStaffEmails: ['raka.staff@na-associates.id'],
   clients: [
     { id: 'client-01', username: 'aditya_frhouse', name: 'Aditya Pratama', email: 'aditya@example.com', phone: '+62 812 3456 7890', date: '2026-02-01', projects: ['project-01'], status: 'Active' },
     { id: 'client-02', username: 'budi_kuningan', name: 'Budi Santoso', email: 'budi@example.com', phone: '+62 819 8765 4321', date: '2026-05-10', projects: ['project-02'], status: 'Active' },

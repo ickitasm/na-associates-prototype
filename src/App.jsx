@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PublicShell } from './pages/PublicSite';
 import { ClientShell } from './pages/ClientPortal';
 import { AdminShell } from './pages/AdminDashboard';
+import { StaffShell } from './pages/StaffDashboard';
 import { ModalHost } from './components/ModalHost';
 import { STORE_KEY, loadDB, uid, nowLabel } from './lib/utils';
 import { seedData } from './data/seed';
@@ -23,13 +24,15 @@ function IntroSplash({ leaving }) {
 
 function resolveAppPath(pathname) {
   if (pathname.startsWith('/admin')) return { role: 'admin', page: 'home', adminTab: pathname.split('/')[2] || 'dashboard' };
+  if (pathname.startsWith('/staff')) return { role: 'staff', page: 'home', staffTab: pathname.split('/')[2] || 'dashboard' };
   if (pathname.startsWith('/portal/client/projects/')) return { role: 'client', page: 'workspace', projectId: pathname.split('/')[4] || 'project-01' };
   if (pathname === '/portal/client' || pathname === '/portal') return { role: 'client', page: 'my-projects' };
   const publicRoutes = { '/': 'home', '/projects': 'projects', '/projects/fr-house': 'project-detail', '/projects/rumah-teduh': 'project-detail', '/services': 'services', '/about': 'about', '/career': 'career', '/contact': 'contact' };
   return { role: 'guest', page: publicRoutes[pathname] || 'home' };
 }
-function routePath(role,page,projectId,adminTab) {
+function routePath(role,page,projectId,adminTab,staffTab) {
   if (role === 'admin') return `/admin/${adminTab || 'dashboard'}`;
+  if (role === 'staff') return `/staff/${staffTab || 'dashboard'}`;
   if (role === 'client') return page === 'workspace' ? `/portal/client/projects/${projectId}` : '/portal/client';
   return ({ home: '/', projects: '/projects', 'project-detail': '/projects/fr-house', services: '/services', about: '/about', career: '/career', contact: '/contact' })[page] || '/';
 }
@@ -47,6 +50,7 @@ function App() {
   const [filter, setFilter] = useState('All');
   const [workspaceSection, setWorkspaceSection] = useState('overview');
   const [adminTab, setAdminTab] = useState(initialRoute.adminTab || 'dashboard');
+  const [staffTab, setStaffTab] = useState(initialRoute.staffTab || 'dashboard');
   const [theme, setTheme] = useState(() => localStorage.getItem('na-theme-mode') || 'light');
   const [splashState, setSplashState] = useState(() => (initialRoute.role === 'guest' ? 'active' : 'done'));
   const [heroReady, setHeroReady] = useState(() => initialRoute.role !== 'guest');
@@ -72,28 +76,35 @@ function App() {
   };
 
   useEffect(() => { localStorage.setItem(STORE_KEY, JSON.stringify(db)); }, [db]);
-  useEffect(() => { const path = routePath(role,page,selectedProjectId,adminTab); if (window.location.pathname !== path) window.history.pushState({}, '', path); }, [role,page,selectedProjectId,adminTab]);
-  useEffect(() => { const onPopState = () => { const next = resolveAppPath(window.location.pathname); setRole(next.role); setPage(next.page || 'home'); setAdminTab(next.adminTab || 'dashboard'); if (next.projectId) setSelectedProjectId(next.projectId); }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState); }, []);
+  useEffect(() => { const path = routePath(role,page,selectedProjectId,adminTab,staffTab); if (window.location.pathname !== path) window.history.pushState({}, '', path); }, [role,page,selectedProjectId,adminTab,staffTab]);
+  useEffect(() => { const onPopState = () => { const next = resolveAppPath(window.location.pathname); setRole(next.role); setPage(next.page || 'home'); setAdminTab(next.adminTab || 'dashboard'); setStaffTab(next.staffTab || 'dashboard'); if (next.projectId) setSelectedProjectId(next.projectId); }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState); }, []);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 3200); return () => clearTimeout(t); }, [toast]);
   useEffect(() => { const goHome = () => { setRole('guest'); setPage('home'); setMobileNav(false); }; window.addEventListener('na-home', goHome); return () => window.removeEventListener('na-home', goHome); }, []);
 
   const client = db.clients.find(c => c.id === db.currentClientId) || db.clients[0];
   const clientProjects = db.projects.filter(p => p.clientId === client?.id && client?.projects.includes(p.id));
+  const staffMember = (db.staffMembers && db.staffMembers[0]) || seedData.staffMembers[0];
+  const assignedStaffIds = staffMember?.assignedProjects || [];
+  const staffAssigned = assignedStaffIds.length > 0 ? db.projects.filter(p => assignedStaffIds.includes(p.id)) : [];
+  const staffProjects = staffAssigned.length > 0 ? staffAssigned : db.projects.filter(p => p.status === 'Active');
   const selectedProject = role === 'client'
     ? (clientProjects.find(p => p.id === selectedProjectId) || clientProjects[0] || null)
-    : (db.projects.find(p => p.id === selectedProjectId) || db.projects[0]);
+    : role === 'staff'
+      ? (staffProjects.find(p => p.id === selectedProjectId) || staffProjects[0] || null)
+      : (db.projects.find(p => p.id === selectedProjectId) || db.projects[0]);
   const clientPage = page === 'workspace' && !selectedProject ? 'my-projects' : page;
   const notify = (msg) => setToast(msg);
   const goPublic = (p) => { setRole('guest'); setPage(p); setMobileNav(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const enterClient = () => { setRole('client'); setPage('my-projects'); setSelectedProjectId(clientProjects[0]?.id || 'project-01'); setMobileNav(false); };
   const enterAdmin = () => { setRole('admin'); setAdminTab('dashboard'); setMobileNav(false); };
+  const enterStaff = () => { setRole('staff'); setStaffTab('dashboard'); if (staffProjects[0]) setSelectedProjectId(staffProjects[0].id); setMobileNav(false); };
   const openWorkspace = (id) => { setSelectedProjectId(id); setRole('client'); setPage('workspace'); setWorkspaceSection('overview'); setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 20); };
-  const addActivity = (projectId, action, detail, actor = role === 'admin' ? 'Admin NA Associates' : client?.name || 'Guest') => {
+  const addActivity = (projectId, action, detail, actor = role === 'admin' ? 'Admin NA Associates' : role === 'staff' ? 'Staff NA Associates' : client?.name || 'Guest') => {
     setDb(old => ({ ...old, projects: old.projects.map(p => p.id === projectId ? { ...p, activity: [{ id: uid('act'), date: nowLabel(), actor, action, detail }, ...(p.activity || [])] } : p) }));
   };
   const updateProject = (id, updater) => setDb(old => ({ ...old, projects: old.projects.map(p => p.id === id ? updater(p) : p) }));
-  const resetDemo = () => { setDb(structuredClone(seedData)); setRole('guest'); setPage('home'); setAdminTab('dashboard'); setModal(null); notify('Data workspace berhasil direset.'); };
-  const changeRole = (r) => { setRole(r); setMobileNav(false); if (r === 'guest') setPage('home'); if (r === 'client') setPage('my-projects'); if (r === 'admin') setAdminTab('dashboard'); };
+  const resetDemo = () => { setDb(structuredClone(seedData)); setRole('guest'); setPage('home'); setAdminTab('dashboard'); setStaffTab('dashboard'); setModal(null); notify('Data workspace berhasil direset.'); };
+  const changeRole = (r) => { setRole(r); setMobileNav(false); if (r === 'guest') setPage('home'); if (r === 'client') setPage('my-projects'); if (r === 'admin') setAdminTab('dashboard'); if (r === 'staff') setStaffTab('dashboard'); };
 
   const isDarkActive = role !== 'guest' && theme === 'dark';
 
@@ -102,7 +113,8 @@ function App() {
     {role === 'guest' && <PublicShell page={page} setPage={setPage} go={goPublic} onLogin={() => setModal({ type: 'login' })} role={role} changeRole={changeRole} mobileNav={mobileNav} setMobileNav={setMobileNav} heroReady={heroReady} />}
     {role === 'client' && <ClientShell db={db} client={client} projects={clientProjects} selectedProject={selectedProject} page={clientPage} setPage={setPage} onOpen={openWorkspace} onBack={() => setPage('my-projects')} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} workspaceSection={workspaceSection} setWorkspaceSection={setWorkspaceSection} mobileNav={mobileNav} setMobileNav={setMobileNav} theme={theme} toggleTheme={toggleTheme} />}
     {role === 'admin' && <AdminShell db={db} setDb={setDb} projects={db.projects} clients={db.clients} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={adminTab} setTab={setAdminTab} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} theme={theme} toggleTheme={toggleTheme} />}
-    {modal && <ModalHost modal={modal} close={() => setModal(null)} db={db} setDb={setDb} projects={db.projects} selectedProject={selectedProject} updateProject={updateProject} addActivity={addActivity} notify={notify} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} theme={theme} />}
+    {role === 'staff' && <StaffShell db={db} setDb={setDb} staffMember={staffMember} projects={staffProjects} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={staffTab} setTab={setStaffTab} onLogout={() => changeRole('guest')} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} theme={theme} toggleTheme={toggleTheme} />}
+    {modal && <ModalHost modal={modal} close={() => setModal(null)} db={db} setDb={setDb} projects={role === 'staff' ? staffProjects : db.projects} selectedProject={selectedProject} updateProject={updateProject} addActivity={addActivity} notify={notify} role={role} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} enterStaff={enterStaff} theme={theme} />}
     {toast && <div className="toast"><CheckCircle2 size={17}/>{toast}</div>}
   </div>;
 }

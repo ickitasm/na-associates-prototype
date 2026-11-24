@@ -20,6 +20,8 @@ export const loadDB = () => {
     if (!parsed || typeof parsed !== 'object') return structuredClone(seedData);
     if (!Array.isArray(parsed.admins)) parsed.admins = structuredClone(seedData.admins);
     if (!Array.isArray(parsed.allowedAdminEmails)) parsed.allowedAdminEmails = structuredClone(seedData.allowedAdminEmails);
+    if (!Array.isArray(parsed.staffMembers)) parsed.staffMembers = structuredClone(seedData.staffMembers);
+    if (!Array.isArray(parsed.allowedStaffEmails)) parsed.allowedStaffEmails = structuredClone(seedData.allowedStaffEmails);
     if (!Array.isArray(parsed.clients)) parsed.clients = [];
     if (!Array.isArray(parsed.projects)) parsed.projects = [];
     if (!Array.isArray(parsed.notifications)) parsed.notifications = [];
