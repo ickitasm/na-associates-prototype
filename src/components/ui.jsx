@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, CalendarDays, Clock3, FileText, FolderOpen, Image, Info, Plus, Activity, ExternalLink, Upload } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Clock3, FileText, FolderOpen, Image, Info, Instagram, Mail, MapPin, Phone, Plus, Activity, ExternalLink, Upload } from 'lucide-react';
 import { money, dateFmt } from '../lib/utils';
 import vectorLogo from '../public/Vector.svg';
 
@@ -40,7 +40,52 @@ export function Brand({ inverse = false }) {
 }
 export function PageIntro({ eyebrow, title, italic, desc }) { return <section className="page-intro wrap">{eyebrow && <div className="eyebrow">{eyebrow}</div>}<h1>{title} <em>{italic}</em></h1>{desc && <p>{desc}</p>}</section>; }
 export function Field({ label, required, placeholder, type='text', textarea=false }) { return <label className="field"><span>{label}{required && <b> *</b>}</span>{textarea ? <textarea placeholder={placeholder} required={required} rows="4"/> : <input type={type} placeholder={placeholder} required={required}/>}</label>; }
-export function PublicFooter({ go }) { return <footer className="public-footer"><div className="wrap footer-top"><div><Brand inverse/><p>Arsitektur yang dibentuk oleh konteks,<br/>kejelasan, dan kehidupan sehari-hari.</p></div><div className="footer-links"><div><small>JELAJAHI</small><button onClick={() => go('projects')}>Projects</button><button onClick={() => go('services')}>Services</button><button onClick={() => go('about')}>About</button></div><div><small>TERHUBUNG</small><button onClick={() => go('career')}>Career</button><button onClick={() => go('contact')}>Contact</button><button onClick={() => go('home')}>Back to top ↑</button></div></div></div><div className="wrap footer-bottom"><span>© 2026 NA Associates</span><span>ARSITEKTUR & DESAIN · JAKARTA, INDONESIA</span></div></footer>; }
+export function PublicFooter({ go }) {
+  return (
+    <footer className="public-footer">
+      <div className="wrap footer-top">
+        <div className="footer-brand-col">
+          <Brand inverse/>
+          <p>Arsitektur yang dibentuk oleh konteks, kejelasan, dan kehidupan sehari-hari.</p>
+          <a
+            className="footer-social-link"
+            href="https://instagram.com/naassociates.id"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Instagram size={16}/>
+            <span>@naassociates.id</span>
+          </a>
+        </div>
+        <div className="footer-links">
+          <div>
+            <small>JELAJAHI</small>
+            <button type="button" onClick={() => go('projects')}>Projects</button>
+            <button type="button" onClick={() => go('services')}>Services</button>
+            <button type="button" onClick={() => go('about')}>About</button>
+          </div>
+          <div>
+            <small>TERHUBUNG</small>
+            <button type="button" onClick={() => go('career')}>Career</button>
+            <button type="button" onClick={() => go('contact')}>Contact</button>
+            <a href="https://instagram.com/naassociates.id" target="_blank" rel="noopener noreferrer">Instagram</a>
+            <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Back to top ↑</button>
+          </div>
+          <div className="footer-contact-col">
+            <small>KONTAK &amp; STUDIO</small>
+            <a href="mailto:hello@naassociates.com"><Mail size={14}/><span>hello@naassociates.com</span></a>
+            <a href="https://wa.me/62895337060007" target="_blank" rel="noopener noreferrer"><Phone size={14}/><span>+62 895-3370-60007</span></a>
+            <span className="footer-contact-item"><MapPin size={14}/><span>Jakarta, Indonesia</span></span>
+          </div>
+        </div>
+      </div>
+      <div className="wrap footer-bottom">
+        <span>© 2026 NA Associates</span>
+        <span>ARSITEKTUR &amp; DESAIN · JAKARTA, INDONESIA</span>
+      </div>
+    </footer>
+  );
+}
 export function ProgressBar({ value=0 }) { return <div className="progress-bar"><span style={{width:`${Math.max(0,Math.min(100,value))}%`}}/></div>; }
 export function SectionHeading({ number, title, badge = null, description, action, onAction, actionClassName = '', actionIcon = null }) {
   return (
