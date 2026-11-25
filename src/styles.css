@@ -7392,6 +7392,51 @@ summary:focus:not(:focus-visible),
   }
 }
 
+/* ==========================================================================
+   Tablet & Mobile Homepage Hero Typography Scale & Axis Alignment
+   ========================================================================== */
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .public-header-inner {
+    width: calc(100% - 88px);
+  }
+
+  .hero-content.wrap {
+    width: min(1200px, calc(100% - 88px));
+  }
+
+  .hero h1 {
+    font-size: clamp(56px, 8.2vw, 84px) !important;
+    line-height: 1.01;
+    letter-spacing: -2.8px;
+  }
+
+  .hero-content > p {
+    font-size: 15.5px !important;
+    line-height: 1.75;
+    max-width: 500px;
+  }
+
+  .hero-buttons .btn {
+    font-size: 13.5px !important;
+    padding: 14px 22px;
+  }
+}
+
+@media (max-width: 640px) {
+  .public-header-inner,
+  .hero-content.wrap {
+    width: calc(100% - 40px);
+  }
+
+  .hero h1 {
+    font-size: clamp(44px, 11.8vw, 56px) !important;
+    line-height: 1.02;
+    letter-spacing: -2px;
+  }
+}
+
+
 
 
 
