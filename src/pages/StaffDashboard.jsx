@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Activity, AlertCircle, ArrowLeft, ArrowUpRight, Bell, Building2, Check,
+  Activity, AlertCircle, ArrowLeft, ArrowUpRight, Bell, Building2,
   ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Edit3, Eye, FileText, HardHat,
   LayoutDashboard, MapPin, Moon, Menu, MoreHorizontal, Package, Plus,
   Sun, Trash2, Upload, X
@@ -364,7 +364,6 @@ function StaffOperations({ projects, selectedProjectId, setSelectedProjectId, se
   const p = projects.find((x) => x.id === selectedProjectId) || projects[0];
   const [filter, setFilter] = useState('All');
   const reports = p?.reports || [];
-  const milestones = p?.milestones || [];
   const isOnHold = p?.status === 'On Hold';
   const visibleReports = reports.filter((r) => filter === 'All' || r.visibility === filter);
 
@@ -372,13 +371,13 @@ function StaffOperations({ projects, selectedProjectId, setSelectedProjectId, se
     <>
       <StaffPageHeader
         title="Field Operations"
-        infoHint="Create and edit draft daily progress logs before Admin review. Project milestones are read-only schedule references."
+        infoHint="Create and edit draft daily progress logs before Admin review. View current project status and completion progress."
         action={!p || isOnHold ? null : 'New daily log'}
         onAction={() => p && setModal({ type: 'new-report', project: p })}
       />
 
       {isOnHold && (
-        <div className="project-status-notice project-on-hold-banner" style={{ marginBottom: '20px' }}>
+        <div className="project-status-notice project-on-hold-banner">
           <AlertCircle size={17} />
           <div>
             <strong>Proyek sedang On Hold</strong>
@@ -412,30 +411,6 @@ function StaffOperations({ projects, selectedProjectId, setSelectedProjectId, se
           <span className="staff-status-pct">({p?.progress ?? 0}%)</span>
         </strong>
         <StatusTag value={p?.status || 'Active'} />
-      </div>
-
-      <div className="admin-panel">
-        <div className="admin-panel-head">
-          <h3>Milestones</h3>
-          <span className="subtle-tag">READ ONLY</span>
-        </div>
-        <div className="milestone-admin-list">
-          {milestones.map((m, i) => (
-            <div className="milestone-admin-row" key={m.id || i}>
-              <span className={`milestone-admin-num ${m.status === 'Completed' ? 'done' : ''}`}>
-                {m.status === 'Completed' ? <Check size={14} /> : i + 1}
-              </span>
-              <div className="milestone-admin-info">
-                <strong>{m.title}</strong>
-                <small>
-                  {dateFmt(m.date)} · Progress {m.progress}%
-                </small>
-              </div>
-              <StatusTag value={m.status} />
-            </div>
-          ))}
-          {!milestones.length && <EmptyState title="No milestones" detail="No timeline milestones scheduled yet." />}
-        </div>
       </div>
 
       <div className="admin-panel">

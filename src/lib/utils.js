@@ -32,88 +32,155 @@ export const loadDB = () => {
 
 export const syncProjectFromMilestones = (project) => {
   if (!project) return project;
-  const rawMilestones = Array.isArray(project.milestones) ? project.milestones : [];
-
-  const milestones = rawMilestones.map((m) => {
-    const rawStatus = m?.status || 'Upcoming';
-    let status = rawStatus;
-    let progress = Number(m?.progress ?? 0);
-    if (!Number.isFinite(progress)) progress = 0;
-
-    if (rawStatus === 'Completed') {
-      status = 'Completed';
-      progress = 100;
-    } else if (rawStatus === 'Upcoming') {
-      status = 'Upcoming';
-      progress = 0;
-    } else {
-      const clamped = Math.round(Math.min(100, Math.max(0, progress)));
-      if (clamped <= 0) {
-        status = 'Upcoming';
-        progress = 0;
-      } else if (clamped >= 100) {
-        status = 'Completed';
-        progress = 100;
-      } else {
-        status = 'In Progress';
-        progress = clamped;
-      }
-    }
-
-    return { ...m, status, progress };
-  });
-
-  const overallProgress = milestones.length === 0
-    ? 0
-    : Math.round(milestones.reduce((sum, m) => sum + Number(m.progress || 0), 0) / milestones.length);
-
-  const allDone = milestones.length > 0 && milestones.every((m) => m.status === 'Completed');
-  const latestMilestone = milestones.length > 0 ? milestones[milestones.length - 1] : null;
-
-  let nextMilestone = '—';
-  let nextMilestoneDate = null;
-
-  if (allDone) {
-    nextMilestone = 'DONE';
-    nextMilestoneDate = latestMilestone?.date || project.targetDate || project.nextMilestoneDate || null;
-  } else if (latestMilestone) {
-    nextMilestone = latestMilestone.title || '—';
-    nextMilestoneDate = latestMilestone.date || project.nextMilestoneDate || null;
-  }
+  const rawProgress = Number(project.progress ?? 0);
+  const overallProgress = Number.isFinite(rawProgress)
+    ? Math.round(Math.min(100, Math.max(0, rawProgress)))
+    : 0;
 
   const isHeld = project.status === 'On Hold' || project.status === 'Ready to Resume';
   const status = isHeld
     ? project.status
-    : (allDone && overallProgress === 100 ? 'Completed' : 'Active');
+    : (overallProgress >= 100 ? 'Completed' : 'Active');
 
   return {
     ...project,
-    milestones,
     progress: overallProgress,
-    nextMilestone: status === 'Completed' ? 'DONE' : nextMilestone,
-    nextMilestoneDate,
     status
   };
 };
 
-export const getProjectNextUp = (project) => {
+export const getProjectLatestUpdate = (project) => {
   if (!project) return { label: '—', date: null };
-  const milestones = Array.isArray(project.milestones) ? project.milestones : [];
-  const allDone = milestones.length > 0 && milestones.every((m) => m.status === 'Completed');
-  if (project.status === 'Completed' || (allDone && Number(project.progress) === 100)) {
+  const published = [...(Array.isArray(project.reports) ? project.reports : [])]
+    .filter((r) => r && r.visibility === 'Published')
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  const latestPublished = published[0] || null;
+
+  if (project.status === 'Completed' || Number(project.progress) >= 100) {
     return {
       label: 'DONE',
-      date: milestones[milestones.length - 1]?.date || project.targetDate || null
+      date: latestPublished?.date || project.targetDate || null
     };
   }
-  if (milestones.length === 0) {
+  if (!latestPublished) {
     return { label: '—', date: null };
   }
-  const latest = milestones[milestones.length - 1];
   return {
-    label: latest?.title || '—',
-    date: latest?.date || null
+    label: latestPublished.title || '—',
+    date: latestPublished.date || null
   };
+};
+
+const ID_MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const ID_MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+const getWeekOfMonth = (dayNum) => {
+  if (dayNum <= 7) return 1;
+  if (dayNum <= 14) return 2;
+  if (dayNum <= 21) return 3;
+  if (dayNum <= 28) return 4;
+  return 5;
+};
+
+export const groupReportsByMonthAndWeek = (reports = []) => {
+  const sorted = [...(Array.isArray(reports) ? reports : [])]
+    .filter(Boolean)
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+
+  if (!sorted.length) return [];
+
+  const monthMap = new Map();
+
+  sorted.forEach((report) => {
+    const dateStr = String(report.date || '').trim();
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const year = match ? match[1] : '0000';
+    const monthIdx = match ? Math.max(0, Math.min(11, Number(match[2]) - 1)) : 0;
+    const dayNum = match ? Math.max(1, Math.min(31, Number(match[3]))) : 1;
+    const monthKey = match ? `${year}-${match[2]}` : 'unknown';
+    const monthLabel = match ? `${ID_MONTHS[monthIdx]} ${year}` : 'Lainnya';
+    const shortMonth = match ? ID_MONTHS_SHORT[monthIdx] : '';
+
+    if (!monthMap.has(monthKey)) {
+      monthMap.set(monthKey, {
+        key: monthKey,
+        label: monthLabel,
+        year,
+        shortMonth,
+        reports: [],
+        weekMap: new Map()
+      });
+    }
+    const mBucket = monthMap.get(monthKey);
+    mBucket.reports.push(report);
+
+    const weekNum = getWeekOfMonth(dayNum);
+    if (!mBucket.weekMap.has(weekNum)) {
+      mBucket.weekMap.set(weekNum, {
+        weekNum,
+        days: [],
+        reports: []
+      });
+    }
+    const wBucket = mBucket.weekMap.get(weekNum);
+    wBucket.days.push(dayNum);
+    wBucket.reports.push(report);
+  });
+
+  return Array.from(monthMap.values())
+    .sort((a, b) => b.key.localeCompare(a.key))
+    .map((mBucket) => {
+      const weeks = Array.from(mBucket.weekMap.values())
+        .sort((a, b) => b.weekNum - a.weekNum)
+        .map((wBucket) => {
+          const minDay = Math.min(...wBucket.days);
+          const maxDay = Math.max(...wBucket.days);
+          const dateRange = mBucket.shortMonth
+            ? (minDay === maxDay
+              ? `${minDay} ${mBucket.shortMonth} ${mBucket.year}`
+              : `${minDay}–${maxDay} ${mBucket.shortMonth} ${mBucket.year}`)
+            : '—';
+
+          const categories = [...new Set(wBucket.reports.map((r) => r.category).filter(Boolean))];
+          const totalPhotos = wBucket.reports.reduce((sum, r) => {
+            if (Array.isArray(r.photoUrls) && r.photoUrls.length > 0) return sum + r.photoUrls.length;
+            if (Array.isArray(r.photoNames) && r.photoNames.length > 0) return sum + r.photoNames.length;
+            return sum + Number(r.photos || 0);
+          }, 0);
+
+          const totalHadir = wBucket.reports.reduce((sum, r) => {
+            const list = Array.isArray(r.workers) ? r.workers : [];
+            return sum + list.filter((w) => w?.attendance === 'Hadir').length;
+          }, 0);
+          const avgWorkers = wBucket.reports.length > 0
+            ? Math.round(totalHadir / wBucket.reports.length)
+            : 0;
+
+          const highlights = wBucket.reports
+            .map((r) => r.title)
+            .filter(Boolean)
+            .join(' · ');
+
+          return {
+            id: `${mBucket.key}-w${wBucket.weekNum}`,
+            weekNumber: wBucket.weekNum,
+            dateRange,
+            reportCount: wBucket.reports.length,
+            categories,
+            totalPhotos,
+            avgWorkers,
+            highlights,
+            reports: wBucket.reports
+          };
+        });
+
+      return {
+        key: mBucket.key,
+        label: mBucket.label,
+        count: mBucket.reports.length,
+        weeks
+      };
+    });
 };
 
 export const createClientNotification = ({

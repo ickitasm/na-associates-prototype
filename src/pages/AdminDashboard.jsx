@@ -2,13 +2,13 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Camera, Check,
   CheckCircle2, ChevronDown, ChevronRight, ChevronLeft, ClipboardList, Clock3, CreditCard,
-  Download, Edit3, ExternalLink, EyeOff, FileCheck2, FileImage, FileText, FolderOpen, Globe, HardHat,
+  Download, Edit3, ExternalLink, EyeOff, FileCheck2, FileImage, FileText, Folder, FolderOpen, Globe, HardHat,
   Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, MoreVertical, Package, Plus,
   RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, Upload, User, UserPlus,
   Users, Wallet, X, Eye, Activity, AlertCircle, Sun, Moon
 } from 'lucide-react';
 import { Brand, ProgressBar, StatusTag, EmptyState, AdminPageHeader, Metric, ActivityTable, InfoHint, WhatsAppIcon } from '../components/ui';
-import { money, dateFmt, syncProjectFromMilestones, createClientNotification } from '../lib/utils';
+import { money, dateFmt, syncProjectFromMilestones, createClientNotification, groupReportsByMonthAndWeek } from '../lib/utils';
 
 const pushPublishedNotif = (setDb, projectId, title, body) => {
   setDb?.(old => ({
@@ -181,60 +181,482 @@ function AdminClients({ clients,projects,setModal }) {
 function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updateProject,addActivity,setModal,setDb }) {
   const p=projects.find(x=>x.id===selectedProjectId)||projects[0];
   const [filter,setFilter]=useState('All');
-  const [deleteConfirmId, setDeleteConfirmId]=useState(null);
-  const reports=p?.reports||[];
-  const milestones=p?.milestones||[];
-  const isOnHold = p?.status === 'On Hold';
-  const allMilestonesDone=milestones.length>0&&milestones.every(m=>m.status==='Completed');
+  const [progressDraft,setProgressDraft]=useState(String(p?.progress??0));
+  const [activeMonthKey,setActiveMonthKey]=useState('');
+  const [expandedWeeks,setExpandedWeeks]=useState({});
+  const [menuState,setMenuState]=useState(null);
+  const [undoState,setUndoState]=useState(null);
+  const popoverRef=useRef(null);
 
-  const completeAllMilestones=()=>{
-    updateProject(p.id,x=>syncProjectFromMilestones({
+  const reports=p?.reports||[];
+  const filteredReports=reports.filter(r=>filter==='All'||r.visibility===filter);
+  const monthFolders=groupReportsByMonthAndWeek(filteredReports);
+  const selectedMonth=monthFolders.find(m=>m.key===activeMonthKey)||monthFolders[0]||null;
+  const isOnHold=p?.status==='On Hold';
+
+  useEffect(()=>{
+    setProgressDraft(String(p?.progress??0));
+  },[p?.id,p?.progress]);
+
+  useEffect(()=>{
+    setMenuState(null);
+  },[p?.id,filter]);
+
+  useLayoutEffect(()=>{
+    if(!menuState||!popoverRef.current) return;
+    popoverRef.current.style.setProperty('--doc-menu-top',`${menuState.top}px`);
+    popoverRef.current.style.setProperty('--doc-menu-left',`${menuState.left}px`);
+  },[menuState]);
+
+  useEffect(()=>{
+    if(!menuState) return;
+    const onMouseDown=(e)=>{
+      if(popoverRef.current?.contains(e.target)) return;
+      if(e.target.closest?.('.doc-menu-trigger')) return;
+      setMenuState(null);
+    };
+    const onKeyDown=(e)=>{
+      if(e.key==='Escape') setMenuState(null);
+    };
+    document.addEventListener('mousedown',onMouseDown);
+    document.addEventListener('keydown',onKeyDown);
+    return()=>{
+      document.removeEventListener('mousedown',onMouseDown);
+      document.removeEventListener('keydown',onKeyDown);
+    };
+  },[Boolean(menuState)]);
+
+  useEffect(()=>{
+    if(!menuState?.confirmDelete) return;
+    const timer=setTimeout(()=>{
+      setMenuState(prev=>(prev?{...prev,confirmDelete:false}:null));
+    },4000);
+    return()=>clearTimeout(timer);
+  },[menuState?.confirmDelete,menuState?.report?.id]);
+
+  useEffect(()=>{
+    if(!undoState) return;
+    const timer=setTimeout(()=>{
+      setUndoState(null);
+    },5000);
+    return()=>clearTimeout(timer);
+  },[undoState]);
+
+  const isWeekOpen=(weekId,idx)=>(expandedWeeks[weekId]!==undefined?expandedWeeks[weekId]:idx===0);
+  const toggleWeek=(weekId,idx)=>{
+    setExpandedWeeks(prev=>({...prev,[weekId]:!isWeekOpen(weekId,idx)}));
+  };
+
+  const handleSaveProgress=(e)=>{
+    e.preventDefault();
+    if(!p||isOnHold) return;
+    const parsed=Number(progressDraft);
+    const nextProgress=Number.isFinite(parsed)?Math.min(100,Math.max(0,Math.round(parsed))):0;
+    setProgressDraft(String(nextProgress));
+    updateProject(p.id,x=>{
+      const nextStatus=x.status==='On Hold'
+        ?'On Hold'
+        :(nextProgress>=100?'Completed':(x.status==='Completed'?'Active':x.status));
+      return {...x,progress:nextProgress,status:nextStatus};
+    });
+    addActivity(p.id,'Project progress updated',`Admin memperbarui progres proyek ${p.name} menjadi ${nextProgress}%.`);
+    if(nextProgress>=100){
+      pushPublishedNotif(setDb,p.id,'Proyek Selesai (100%)',`Progres proyek ${p.name} telah mencapai 100% dan ditandai selesai.`);
+    }else{
+      pushPublishedNotif(setDb,p.id,'Progres Proyek Diperbarui',`Progres proyek ${p.name} diperbarui menjadi ${nextProgress}%.`);
+    }
+  };
+
+  const markProjectCompleted=()=>{
+    if(!p) return;
+    updateProject(p.id,x=>({
       ...x,
-      status:'Active',
+      status:'Completed',
       holdReason:'',
-      milestones:(x.milestones||[]).map(m=>({...m,status:'Completed',progress:100}))
+      progress:100
     }));
-    addActivity(p.id,'Project completed','Admin menetapkan seluruh milestone selesai dan status proyek Completed (100%).');
-    pushPublishedNotif(setDb, p.id, 'Proyek Selesai (100%)', `Seluruh milestone pada proyek ${p.name} telah diselesaikan (100%).`);
+    addActivity(p.id,'Project completed',`Admin menandai proyek ${p.name} selesai (100%).`);
+    pushPublishedNotif(setDb,p.id,'Proyek Selesai (100%)',`Proyek ${p.name} telah mencapai penyelesaian 100% (Completed).`);
   };
 
   const reactivateProject=()=>{
-    updateProject(p.id,x=>syncProjectFromMilestones({
-      ...x,
-      status:'Active',
-      holdReason:'',
-      milestones:(x.milestones||[]).map((m,idx,arr)=>idx===arr.length-1?{...m,status:'In Progress',progress:50}:m)
-    }));
-    addActivity(p.id,'Project reactivated','Admin mengaktifkan kembali status proyek.');
-    pushPublishedNotif(setDb, p.id, 'Milestone Proyek Diperbarui', `Proyek ${p.name} diaktifkan kembali dan milestone diperbarui.`);
-  };
-
-  const handleMilestoneStatusChange=(mId,nextStatus)=>{
-    if (isOnHold) return;
-    const targetMilestone = (p?.milestones || []).find(item => item.id === mId);
+    if(!p) return;
     updateProject(p.id,x=>{
-      const updated=(x.milestones||[]).map(item=>{
-        if(item.id!==mId) return item;
-        const nextProg=nextStatus==='Completed'
-          ?100
-          :nextStatus==='Upcoming'
-            ?0
-            :(Number(item.progress)>0&&Number(item.progress)<100?Number(item.progress):50);
-        return {...item,status:nextStatus,progress:nextProg};
-      });
-      return syncProjectFromMilestones({...x,milestones:updated});
+      const nextProg=Number(x.progress||0)>=100?90:Number(x.progress||0);
+      return {
+        ...x,
+        status:'Active',
+        holdReason:'',
+        progress:nextProg
+      };
     });
-    addActivity(p.id,'Milestone updated',`Status milestone diperbarui menjadi ${nextStatus}.`);
-    pushPublishedNotif(setDb, p.id, 'Milestone Proyek Diperbarui', `Milestone "${targetMilestone?.title || 'Tahap Proyek'}" pada proyek ${p.name} diperbarui menjadi ${nextStatus}.`);
+    addActivity(p.id,'Project reactivated',`Admin mengaktifkan kembali status proyek ${p.name}.`);
+    pushPublishedNotif(setDb,p.id,'Proyek Diaktifkan Kembali',`Status proyek ${p.name} diaktifkan kembali oleh studio.`);
   };
 
-  return <><AdminPageHeader title="Field Operations" infoHint="Manage project milestones (automatically syncing progress %), review and publish Staff field drafts to the Client Portal, or place/resume project hold status." action={isOnHold?null:'New daily log'} onAction={()=>setModal({type:'new-report',project:p})}/>
-  {isOnHold && <div className="project-status-notice project-on-hold-banner" style={{marginBottom:'20px'}}><AlertCircle size={17}/><div><strong>Proyek sedang On Hold (Penagihan / Tertahan)</strong><p>{p?.holdReason ? `Alasan: ${p.holdReason}. ` : ''}Penambahan, pengeditan, dan penghapusan milestone serta pembuatan daily log baru dikunci hingga status proyek diaktifkan kembali.</p></div></div>}
-  <div className="admin-toolbar"><select value={p?.id||''} onChange={e=>setSelectedProjectId(e.target.value)}>{projects.map(x=><option value={x.id} key={x.id}>{x.name}</option>)}</select><select value={filter} onChange={e=>setFilter(e.target.value)}><option>All</option><option>Published</option><option>Draft</option></select><span className="muted">{reports.length} daily records</span></div>  <div className="admin-panel project-control-panel"><div><strong>Project status · {p?.status} ({p?.progress}%)</strong><p>{p?.status==='On Hold'?'Operational progress updates are paused. Existing reports and project records remain available.':p?.status==='Ready to Resume'?'Payment conditions are cleared. Confirm to resume operational updates.':p?.status==='Completed'?'Proyek ini telah ditandai selesai. Seluruh fase milestone telah terpenuhi 100%.':'Project operations are active.'}</p></div><div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>{(p?.status==='Active'||p?.status==='On Hold')&&<><button type="button" className="btn btn-small btn-dark" onClick={completeAllMilestones}><Check size={14}/> Mark as completed</button>{p?.status==='Active'&&<button type="button" className="btn btn-small btn-outline" onClick={()=>setModal({type:'hold-reason',project:p})}>Place on hold</button>}<button type="button" className="btn btn-small btn-outline" onClick={()=>setModal({type:'rollback-reason',project:p})}><RotateCcw size={14}/> Roll Back Month (Mundur Bulan)</button></>}{p?.status==='Completed'&&<button type="button" className="btn btn-small btn-outline" onClick={reactivateProject}><RotateCcw size={14}/> Reactivate project</button>}{p?.status==='On Hold'&&<button type="button" className="btn btn-small btn-outline" onClick={()=>{updateProject(p.id,x=>({...x,status:'Ready to Resume'}));addActivity(p.id,'Project ready to resume','Admin marked project ready for resume review.');}}>Mark ready to resume</button>}{p?.status==='Ready to Resume'&&<button type="button" className="btn btn-small btn-dark" onClick={()=>{updateProject(p.id,x=>syncProjectFromMilestones({...x,status:'Active',holdReason:'',billingPaused:false}));addActivity(p.id,'Project resumed','Admin confirmed project resume.');}}>Confirm resume</button>}</div></div>
-  
-  <div className="admin-panel"><div className="admin-panel-head"><h3>{p?.name} / Project timeline milestones</h3><div style={{display:'flex',gap:'8px'}}><button type="button" className="btn btn-small btn-dark" disabled={isOnHold} onClick={()=>setModal({type:'new-milestone',project:p})}><Plus size={14}/> Add Milestone</button>{milestones.length>0&&<button type="button" className="btn btn-small btn-outline" disabled={isOnHold} onClick={allMilestonesDone?reactivateProject:completeAllMilestones}>{allMilestonesDone?'Reset milestones':'Complete all'}</button>}</div></div><div className="milestone-admin-list">{milestones.map((m,i)=><div className="milestone-admin-row" key={m.id||i}><span className={`milestone-admin-num ${m.status==='Completed'?'done':''}`}>{m.status==='Completed'?<Check size={14}/>:i+1}</span><div className="milestone-admin-info"><strong>{m.title}</strong><small>{dateFmt(m.date)} · Progress {m.progress}%</small></div><select disabled={isOnHold} value={m.status} onChange={e=>handleMilestoneStatusChange(m.id,e.target.value)}><option value="Completed">Completed</option><option value="In Progress">In Progress</option><option value="Upcoming">Upcoming</option></select><button type="button" className="btn btn-small btn-outline" disabled={isOnHold} onClick={()=>setModal({type:'edit-milestone',project:p,milestoneId:m.id})} style={{marginLeft:'6px'}}>Edit</button><button type="button" className="btn btn-small btn-outline" disabled={isOnHold} onClick={()=>{if(deleteConfirmId===m.id){updateProject(p.id, x=>syncProjectFromMilestones({...x, milestones: (x.milestones||[]).filter(item=>item.id!==m.id)}));addActivity(p.id,'Milestone deleted',`Milestone "${m.title}" dihapus dari proyek.`);setDeleteConfirmId(null);}else{setDeleteConfirmId(m.id);}}} style={{color:'#b91c1c',borderColor:'#fca5a5',marginLeft:'4px'}}>{deleteConfirmId===m.id?'Yakin Hapus?':'Hapus'}</button></div>)}{!milestones.length&&<EmptyState title="No milestones" detail="Tambahkan milestone baru untuk memulai."/>}</div></div>
-  
-  <div className="admin-panel"><div className="admin-panel-head"><h3>{p?.name} / Daily project logs</h3><span className="subtle-tag">{p?.code}</span></div><div className="log-list">{reports.filter(r=>filter==='All'||r.visibility===filter).map(r=><article className="log-card" key={r.id}><div className="log-card-date">{dateFmt(r.date)}<span>{r.category}</span></div><div className="log-card-main"><h4>{r.title}</h4><p>{r.description}</p><small>{r.photos||1} attachments{r.fieldNote?` · ${r.fieldNote}`:''} · {r.workers?.length||0} pekerja</small></div><div className="log-card-actions"><StatusTag value={r.visibility}/><button className="btn btn-small btn-dark" onClick={()=>setModal({type:'report-detail',report:r,project:p,isClient:false})}><Eye size={13}/> View log</button><button className="btn btn-small btn-outline" onClick={()=>{const nextVis=r.visibility==='Published'?'Draft':'Published';updateProject(p.id,x=>({...x,reports:x.reports.map(y=>y.id===r.id?{...y,visibility:nextVis}:y)}));addActivity(p.id,'Report visibility changed',`${r.title} diubah menjadi ${nextVis}.`);if(nextVis==='Published'){pushPublishedNotif(setDb,p.id,'Laporan Lapangan Dipublikasikan',`Daily Progress "${r.title}" untuk proyek ${p.name} telah dipublikasikan.`);}}}> {r.visibility==='Published'?'Unpublish':'Publish'} </button></div></article>)}{!reports.length&&<EmptyState title="No daily logs" detail="Create the first field report for this project."/>}</div></div><div className="admin-panel note-panel"><ShieldCheck size={19}/><div><strong>Client visibility rule</strong><p>Hanya laporan berstatus Published yang tampil di Client Portal. Attendance dan catatan internal tetap disembunyikan.</p></div></div></>;
+  const openReportMenu=(e,report)=>{
+    if(menuState?.report?.id===report.id){
+      setMenuState(null);
+      return;
+    }
+    const rect=e.currentTarget.getBoundingClientRect();
+    const menuW=216;
+    const menuH=192;
+    const left=Math.max(12,Math.min(rect.right-menuW,window.innerWidth-menuW-12));
+    const placeAbove=rect.bottom+menuH>window.innerHeight-12&&rect.top>menuH+12;
+    const top=placeAbove?Math.max(12,rect.top-menuH+20):Math.min(rect.bottom+6,window.innerHeight-menuH-12);
+    setMenuState({report,top,left,confirmDelete:false});
+  };
+
+  const toggleReportVisibility=(report)=>{
+    if(!p||!report) return;
+    const nextVis=report.visibility==='Published'?'Draft':'Published';
+    updateProject(p.id,x=>({...x,reports:(x.reports||[]).map(y=>y.id===report.id?{...y,visibility:nextVis}:y)}));
+    addActivity(
+      p.id,
+      'Report visibility changed',
+      `${report.title} diubah menjadi ${nextVis}.`,
+      undefined,
+      {crudType:'UPDATE',module:'Field Operations',visibility:nextVis,...(nextVis!=='Published'?{internal:true}:{})}
+    );
+    if(nextVis==='Published'){
+      pushPublishedNotif(setDb,p.id,'Laporan Lapangan Dipublikasikan',`Daily Progress "${report.title}" untuk proyek ${p.name} telah dipublikasikan.`);
+    }
+    setMenuState(null);
+  };
+
+  const confirmDeleteReport=()=>{
+    if(!menuState?.report||!p) return;
+    const report=menuState.report;
+    const list=p.reports||[];
+    const originalIndex=list.findIndex(x=>x.id===report.id);
+    updateProject(p.id,x=>({
+      ...x,
+      reports:(x.reports||[]).filter(y=>y.id!==report.id)
+    }));
+    addActivity(
+      p.id,
+      'Daily log deleted',
+      `Daily log "${report.title}" (${dateFmt(report.date)}) dihapus dari proyek.`,
+      undefined,
+      {crudType:'DELETE',module:'Field Operations',internal:true}
+    );
+    setMenuState(null);
+    setUndoState({
+      projectId:p.id,
+      report,
+      index:originalIndex>=0?originalIndex:0
+    });
+  };
+
+  const handleUndoDelete=()=>{
+    if(!undoState) return;
+    const {projectId,report,index}=undoState;
+    updateProject(projectId,x=>{
+      const current=[...(x.reports||[])];
+      if(current.some(item=>item.id===report.id)) return x;
+      const safeIndex=Math.min(index,current.length);
+      current.splice(safeIndex,0,report);
+      return {...x,reports:current};
+    });
+    addActivity(
+      projectId,
+      'Daily log restored',
+      `Daily log "${report.title}" dipulihkan oleh Admin.`,
+      undefined,
+      {crudType:'UPDATE',module:'Field Operations',visibility:report.visibility||'Draft',...(report.visibility!=='Published'?{internal:true}:{})}
+    );
+    setUndoState(null);
+  };
+
+  return (
+    <>
+      <AdminPageHeader
+        title="Field Operations"
+        infoHint="Kelola persentase progres proyek secara langsung, tinjau folder bulanan & ringkasan mingguan, serta publikasikan atau edit daily progress log lapangan."
+        action={isOnHold?null:'New daily log'}
+        onAction={()=>setModal({type:'new-report',project:p})}
+      />
+      {isOnHold && (
+        <div className="project-status-notice project-on-hold-banner admin-hold-notice">
+          <AlertCircle size={17}/>
+          <div>
+            <strong>Proyek sedang On Hold (Penagihan / Tertahan)</strong>
+            <p>{p?.holdReason?`Alasan: ${p.holdReason}. `:''}Pembaruan progres dan pembuatan daily log baru dikunci hingga status proyek diaktifkan kembali.</p>
+          </div>
+        </div>
+      )}
+      <div className="admin-toolbar">
+        <select value={p?.id||''} onChange={e=>{setSelectedProjectId(e.target.value);setActiveMonthKey('');}}>
+          {projects.map(x=><option value={x.id} key={x.id}>{x.name}</option>)}
+        </select>
+        <select value={filter} onChange={e=>setFilter(e.target.value)}>
+          <option value="All">All</option>
+          <option value="Published">Published</option>
+          <option value="Draft">Draft</option>
+        </select>
+        <span className="muted">{filteredReports.length} daily records</span>
+      </div>
+
+      <div className="admin-panel project-control-panel">
+        <div>
+          <strong>Project status · {p?.status} ({p?.progress}%)</strong>
+          <p>
+            {p?.status==='On Hold'
+              ?'Operational progress updates are paused. Existing reports and project records remain available.'
+              :p?.status==='Ready to Resume'
+                ?'Payment conditions are cleared. Confirm to resume operational updates.'
+                :p?.status==='Completed'
+                  ?'Proyek ini telah ditandai selesai dengan progres 100%.'
+                  :'Project operations are active. Atur persentase progres keseluruhan secara langsung.'}
+          </p>
+          <form className="progress-inline-control" onSubmit={handleSaveProgress}>
+            <label htmlFor="admin-progress-input">Project Progress (%)</label>
+            <input
+              id="admin-progress-input"
+              type="number"
+              min="0"
+              max="100"
+              value={progressDraft}
+              disabled={isOnHold}
+              onChange={e=>setProgressDraft(e.target.value)}
+            />
+            <button type="submit" className="btn btn-small btn-dark" disabled={isOnHold}>Simpan %</button>
+          </form>
+        </div>
+        <div className="admin-control-actions">
+          {(p?.status==='Active'||p?.status==='On Hold') && (
+            <>
+              <button type="button" className="btn btn-small btn-dark" onClick={markProjectCompleted}>
+                <Check size={14}/> Mark as completed
+              </button>
+              {p?.status==='Active' && (
+                <button type="button" className="btn btn-small btn-outline" onClick={()=>setModal({type:'hold-reason',project:p})}>
+                  Place on hold
+                </button>
+              )}
+              <button type="button" className="btn btn-small btn-outline" onClick={()=>setModal({type:'rollback-reason',project:p})}>
+                <RotateCcw size={14}/> Roll Back Month (Mundur Bulan)
+              </button>
+            </>
+          )}
+          {p?.status==='Completed' && (
+            <button type="button" className="btn btn-small btn-outline" onClick={reactivateProject}>
+              <RotateCcw size={14}/> Reactivate project
+            </button>
+          )}
+          {p?.status==='On Hold' && (
+            <button
+              type="button"
+              className="btn btn-small btn-outline"
+              onClick={()=>{
+                updateProject(p.id,x=>({...x,status:'Ready to Resume'}));
+                addActivity(p.id,'Project ready to resume','Admin marked project ready for resume review.');
+              }}
+            >
+              Mark ready to resume
+            </button>
+          )}
+          {p?.status==='Ready to Resume' && (
+            <button
+              type="button"
+              className="btn btn-small btn-dark"
+              onClick={()=>{
+                updateProject(p.id,x=>syncProjectFromMilestones({...x,status:'Active',holdReason:'',billingPaused:false}));
+                addActivity(p.id,'Project resumed','Admin confirmed project resume.');
+              }}
+            >
+              Confirm resume
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="admin-panel">
+        <div className="admin-panel-head">
+          <h3>{p?.name} / Daily project logs</h3>
+          <span className="subtle-tag">{p?.code}</span>
+        </div>
+
+        {!monthFolders.length ? (
+          <EmptyState
+            title="No daily logs"
+            detail={reports.length?'Tidak ada laporan yang cocok dengan filter status ini.':'Create the first field report for this project.'}
+          />
+        ) : (
+          <>
+            <div className="period-folder-tabs" role="tablist" aria-label="Monthly field log folders">
+              {monthFolders.map(m=>(
+                <button
+                  key={m.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={m.key===selectedMonth?.key}
+                  className={`period-folder-tab ${m.key===selectedMonth?.key?'is-active':''}`}
+                  onClick={()=>{setActiveMonthKey(m.key);setMenuState(null);}}
+                >
+                  <FolderOpen size={14}/>
+                  <span>{m.label} ({m.count})</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="weekly-folder-list">
+              {(selectedMonth?.weeks||[]).map((week,wIdx)=>{
+                const open=isWeekOpen(week.id,wIdx);
+                return (
+                  <div className={`weekly-folder-card ${open?'is-open':''}`} key={week.id}>
+                    <button
+                      type="button"
+                      className="weekly-folder-head"
+                      aria-expanded={open}
+                      onClick={()=>toggleWeek(week.id,wIdx)}
+                    >
+                      <div className="weekly-folder-head-top">
+                        <span className="weekly-folder-title">
+                          <Folder size={15}/>
+                          <strong>Minggu {week.weekNumber}</strong>
+                          <span>· {week.dateRange}</span>
+                        </span>
+                        <ChevronDown size={16} className="weekly-folder-chevron"/>
+                      </div>
+                      <div className="weekly-folder-badges">
+                        <span className="weekly-summary-chip">{week.reportCount} Daily Logs</span>
+                        {week.categories.length>0 && (
+                          <span className="weekly-summary-chip">{week.categories.join(' · ')}</span>
+                        )}
+                        <span className="weekly-summary-chip"><Camera size={12}/> {week.totalPhotos} Foto</span>
+                        <span className="weekly-summary-chip"><Users size={12}/> {week.avgWorkers} Personil</span>
+                      </div>
+                      {week.highlights && <p className="weekly-folder-highlights">{week.highlights}</p>}
+                    </button>
+
+                    {open && (
+                      <div className="weekly-folder-body">
+                        {week.reports.map(r=>{
+                          const photoCount=Array.isArray(r.photoUrls)&&r.photoUrls.length
+                            ?r.photoUrls.length
+                            :(Array.isArray(r.photoNames)&&r.photoNames.length?r.photoNames.length:Number(r.photos||1));
+                          const isOpen=menuState?.report?.id===r.id;
+                          return (
+                            <article className="log-card admin-log-row" key={r.id}>
+                              <div className="log-card-date">{dateFmt(r.date)}<span>{r.category}</span></div>
+                              <div className="log-card-main">
+                                <h4>{r.title}</h4>
+                                <p>{r.description}</p>
+                                <small>{photoCount} foto{r.fieldNote?` · ${r.fieldNote}`:''} · {r.workers?.length||0} pekerja</small>
+                              </div>
+                              <div className="log-card-actions">
+                                <StatusTag value={r.visibility}/>
+                                <button
+                                  type="button"
+                                  className="btn btn-small btn-dark"
+                                  onClick={()=>setModal({type:'report-detail',report:r,project:p,isClient:false})}
+                                >
+                                  <Eye size={13}/> View log
+                                </button>
+                                <button
+                                  type="button"
+                                  className="icon-btn doc-menu-trigger"
+                                  aria-label={`Actions for ${r.title}`}
+                                  aria-expanded={isOpen}
+                                  onClick={e=>openReportMenu(e,r)}
+                                >
+                                  <MoreVertical size={16}/>
+                                </button>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+
+      {menuState && (
+        <div
+          ref={popoverRef}
+          className="doc-action-popover"
+          role="menu"
+          aria-label="Daily log actions"
+        >
+          <button
+            type="button"
+            className="doc-menu-item"
+            role="menuitem"
+            onClick={()=>toggleReportVisibility(menuState.report)}
+          >
+            {menuState.report.visibility==='Published'?<EyeOff size={14}/>:<Globe size={14}/>}
+            <span>{menuState.report.visibility==='Published'?'Unpublish':'Publish'}</span>
+          </button>
+          <button
+            type="button"
+            className="doc-menu-item"
+            role="menuitem"
+            onClick={()=>{
+              const target=menuState.report;
+              setMenuState(null);
+              setModal({type:'edit-report',report:target,project:p});
+            }}
+          >
+            <Edit3 size={14}/>
+            <span>Edit</span>
+          </button>
+          <hr className="doc-menu-divider"/>
+          {!menuState.confirmDelete ? (
+            <button
+              type="button"
+              className="doc-menu-item doc-menu-item-danger"
+              role="menuitem"
+              onClick={()=>setMenuState(prev=>(prev?{...prev,confirmDelete:true}:null))}
+            >
+              <Trash2 size={14}/>
+              <span>Hapus</span>
+            </button>
+          ) : (
+            <div className="doc-delete-confirm-row">
+              <button
+                type="button"
+                className="doc-confirm-yes"
+                onClick={confirmDeleteReport}
+              >
+                <Check size={13}/> Ya, Hapus
+              </button>
+              <button
+                type="button"
+                className="doc-confirm-cancel"
+                onClick={()=>setMenuState(prev=>(prev?{...prev,confirmDelete:false}:null))}
+              >
+                Batal
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {undoState && (
+        <div className="doc-undo-toast" role="status" aria-live="polite">
+          <span>Daily log dihapus.</span>
+          <button type="button" className="doc-undo-btn" onClick={handleUndoDelete}>
+            <RotateCcw size={13}/> Urungkan
+          </button>
+        </div>
+      )}
+
+      <div className="admin-panel note-panel">
+        <ShieldCheck size={19}/>
+        <div>
+          <strong>Client visibility rule</strong>
+          <p>Hanya laporan berstatus Published yang tampil di Client Portal. Attendance dan catatan internal tetap disembunyikan.</p>
+        </div>
+      </div>
+    </>
+  );
 }
 function AdminDocuments({projects,updateProject,addActivity,setModal,setDb}) {
   const [pid,setPid]=useState(projects[0]?.id);

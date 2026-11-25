@@ -8,7 +8,7 @@ import {
   Users, Wallet, X, Eye, Activity, AlertCircle, AlertTriangle, Trash2, Camera, Wrench
 } from 'lucide-react';
 import { StatusTag, EmptyState, GoogleIcon, ProgressBar } from './ui';
-import { money, dateFmt, nowLabel, uid, syncProjectFromMilestones, createClientNotification, filterClientNotifications } from '../lib/utils';
+import { money, dateFmt, nowLabel, uid, createClientNotification, filterClientNotifications } from '../lib/utils';
 
 const pushPublishedNotif = (setDb, projectId, title, body) => {
   setDb?.(old => ({
@@ -188,8 +188,9 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
   const [visibility, setVisibility] = useState(isStaff ? 'Draft' : 'Published');
   const [tools, setTools] = useState('Molen beton 1 unit, Vibrator cor, Scaffolding 16 set, Bar bender');
   const [internalNotes, setInternalNotes] = useState('');
-  const [photosCount, setPhotosCount] = useState(3);
-  const [photoNames, setPhotoNames] = useState(['balok-lantai2-01.jpg', 'tulangan-cor-02.jpg', 'bekisting-03.jpg']);
+  const [photosCount, setPhotosCount] = useState(0);
+  const [photoNames, setPhotoNames] = useState([]);
+  const [photoUrls, setPhotoUrls] = useState([]);
   const [error, setError] = useState('');
 
   const [workers, setWorkers] = useState([
@@ -220,12 +221,32 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
     setWorkers(prev => prev.filter(w => w.id !== id));
   };
 
-  const handlePhotoUpload = (e) => {
+  const handlePhotoUpload = async (e) => {
     const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      setPhotosCount(files.length);
-      setPhotoNames(files.map(f => f.name));
-    }
+    if (!files.length) return;
+    const readFileAsDataUrl = (file) => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (evt) => resolve({ name: file.name, url: evt.target?.result || '' });
+      reader.onerror = () => resolve({ name: file.name, url: '' });
+      reader.readAsDataURL(file);
+    });
+    const results = await Promise.all(files.map(readFileAsDataUrl));
+    setPhotoNames(prev => {
+      const nextNames = [...prev, ...results.map(r => r.name)];
+      setPhotosCount(nextNames.length);
+      return nextNames;
+    });
+    setPhotoUrls(prev => [...prev, ...results.map(r => r.url)]);
+    e.target.value = '';
+  };
+
+  const removeUploadedPhoto = (idx) => {
+    setPhotoNames(prev => {
+      const next = prev.filter((_, i) => i !== idx);
+      setPhotosCount(next.length);
+      return next;
+    });
+    setPhotoUrls(prev => prev.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = (e) => {
@@ -241,6 +262,7 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
     }
 
     const finalVisibility = isStaff ? 'Draft' : visibility;
+    const resolvedNames = photoNames.length > 0 ? photoNames : ['dokumentasi-lapangan.jpg'];
 
     const newReport = {
       id: uid('report'),
@@ -250,8 +272,9 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
       fieldNote: fieldNote.trim(),
       description: description.trim(),
       visibility: finalVisibility,
-      photos: photosCount || 1,
-      photoNames: photoNames.length > 0 ? photoNames : ['dokumentasi-lapangan.jpg'],
+      photos: photosCount || resolvedNames.length || 1,
+      photoNames: resolvedNames,
+      photoUrls,
       workers: workers.filter(w => w.name.trim()),
       tools: tools.trim(),
       internalNotes: internalNotes.trim()
@@ -298,7 +321,7 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
           <span className="section-badge">1</span>
           <div>
             <h4>Konteks Pembaruan Harian & Jurnal Lapangan</h4>
-            <p>Catatan operasional aktivitas pengerjaan fisik di lokasi proyek (terpisah dari kalkulasi progres milestone).</p>
+            <p>Catatan operasional aktivitas pengerjaan fisik di lokasi proyek dan progres lapangan harian.</p>
           </div>
         </div>
 
@@ -496,11 +519,33 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
             <small>
               {photoNames.length > 0
                 ? `${photoNames.length} foto terpilih (${photoNames.slice(0, 3).join(', ')}${photoNames.length > 3 ? '...' : ''})`
-                : 'Pilih file JPG, PNG dari kamera atau galeri'}
+                : 'Pilih file PNG, JPG, atau WebP dari kamera atau galeri'}
             </small>
           </span>
-          <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} />
+          <input type="file" accept="image/png, image/jpeg, image/webp" multiple onChange={handlePhotoUpload} />
         </label>
+        {photoUrls.length > 0 && (
+          <div className="report-upload-previews">
+            {photoUrls.map((url, idx) => (
+              <div className="report-upload-preview-item" key={`${photoNames[idx] || idx}-${idx}`}>
+                {url ? (
+                  <img src={url} alt={photoNames[idx] || `Foto ${idx + 1}`} className="report-photo-thumb" />
+                ) : (
+                  <div className="photo-placeholder-art"><FileImage size={18} /></div>
+                )}
+                <small>{photoNames[idx] || `Foto #${idx + 1}`}</small>
+                <button
+                  type="button"
+                  className="report-upload-remove"
+                  aria-label={`Hapus ${photoNames[idx] || 'foto'}`}
+                  onClick={() => removeUploadedPhoto(idx)}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {error && (
@@ -531,6 +576,8 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
   const [tools, setTools] = useState(report.tools || '');
   const [internalNotes, setInternalNotes] = useState(report.internalNotes || '');
   const [workers, setWorkers] = useState(report.workers || []);
+  const [photoNames, setPhotoNames] = useState(Array.isArray(report.photoNames) ? report.photoNames : []);
+  const [photoUrls, setPhotoUrls] = useState(Array.isArray(report.photoUrls) ? report.photoUrls : []);
   const [error, setError] = useState('');
 
   const addWorker = () => {
@@ -543,12 +590,33 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
     setWorkers(prev => prev.filter(w => w.id !== id));
   };
 
+  const handlePhotoUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const readFileAsDataUrl = (file) => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (evt) => resolve({ name: file.name, url: evt.target?.result || '' });
+      reader.onerror = () => resolve({ name: file.name, url: '' });
+      reader.readAsDataURL(file);
+    });
+    const results = await Promise.all(files.map(readFileAsDataUrl));
+    setPhotoNames(prev => [...prev, ...results.map(r => r.name)]);
+    setPhotoUrls(prev => [...prev, ...results.map(r => r.url)]);
+    e.target.value = '';
+  };
+
+  const removePhoto = (idx) => {
+    setPhotoNames(prev => prev.filter((_, i) => i !== idx));
+    setPhotoUrls(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) {
       setError('Judul pembaruan wajib diisi.');
       return;
     }
+    const resolvedPhotoCount = Math.max(photoUrls.length, photoNames.length, Number(report.photos || 0), 1);
     updateProject(project.id, p => ({
       ...p,
       reports: (p.reports || []).map(r => r.id === report.id ? {
@@ -561,7 +629,10 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
         visibility: isStaff ? 'Draft' : r.visibility,
         tools: tools.trim(),
         internalNotes: internalNotes.trim(),
-        workers
+        workers,
+        photoNames,
+        photoUrls,
+        photos: photoNames.length || photoUrls.length || resolvedPhotoCount
       } : r)
     }));
     addActivity(
@@ -623,6 +694,36 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
       <div className="report-form-section">
         <label className="field"><span>Alat / Perlengkapan</span><input type="text" value={tools} onChange={e => setTools(e.target.value)} /></label>
         <label className="field"><span>Catatan Internal</span><textarea rows="2" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} /></label>
+        <label className="upload-box">
+          <Upload size={18} />
+          <span>
+            <strong>Tambah / Ganti Foto Dokumentasi Lapangan</strong>
+            <small>{photoNames.length ? `${photoNames.length} foto terlampir` : 'Pilih file PNG, JPG, atau WebP'}</small>
+          </span>
+          <input type="file" accept="image/png, image/jpeg, image/webp" multiple onChange={handlePhotoUpload} />
+        </label>
+        {(photoNames.length > 0 || photoUrls.length > 0) && (
+          <div className="report-upload-previews">
+            {(photoNames.length >= photoUrls.length ? photoNames : photoUrls.map((_, i) => `Foto #${i + 1}`)).map((name, idx) => (
+              <div className="report-upload-preview-item" key={`${name}-${idx}`}>
+                {photoUrls[idx] ? (
+                  <img src={photoUrls[idx]} alt={name} className="report-photo-thumb" />
+                ) : (
+                  <div className="photo-placeholder-art"><FileImage size={18} /></div>
+                )}
+                <small>{name}</small>
+                <button
+                  type="button"
+                  className="report-upload-remove"
+                  aria-label={`Hapus ${name}`}
+                  onClick={() => removePhoto(idx)}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       {error && <div className="form-error"><AlertCircle size={15}/>{error}</div>}
       <div className="modal-actions">
@@ -633,10 +734,14 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
   );
 }
 
-function ReportDetailModalView({ report, project, isClient, isStaff = false, setDb, close, updateProject, addActivity, notify }) {
+function ReportDetailModalView({ report, project, isClient, isStaff = false, setDb, setModal, close, updateProject, addActivity, notify }) {
   const workers = report.workers || [];
   const hadirCount = workers.filter(w => w.attendance === 'Hadir').length;
   const photoNames = report.photoNames || [];
+  const photoUrls = report.photoUrls || [];
+  const photoItems = photoNames.length > 0
+    ? photoNames
+    : (photoUrls.length > 0 ? photoUrls.map((_, idx) => `Dokumentasi-${idx + 1}.jpg`) : ['Foto-lapangan-1.jpg', 'Foto-lapangan-2.jpg']);
 
   const toggleVisibility = () => {
     const nextVis = report.visibility === 'Published' ? 'Draft' : 'Published';
@@ -679,18 +784,32 @@ function ReportDetailModalView({ report, project, isClient, isStaff = false, set
       <div className="report-detail-block">
         <div className="report-detail-block-head">
           <Camera size={16} />
-          <strong>Dokumentasi Foto Lapangan ({report.photos || photoNames.length || 1} Foto)</strong>
+          <strong>Dokumentasi Foto Lapangan ({photoUrls.length || report.photos || photoItems.length} Foto)</strong>
         </div>
         <div className="report-photos-grid">
-          {(photoNames.length > 0 ? photoNames : ['Foto-lapangan-1.jpg', 'Foto-lapangan-2.jpg']).map((name, idx) => (
-            <div className="report-photo-card" key={idx}>
-              <div className="photo-placeholder-art">
-                <FileImage size={24} />
-                <span>DOKUMENTASI #{idx + 1}</span>
+          {photoItems.map((name, idx) => {
+            const url = photoUrls[idx];
+            return (
+              <div className="report-photo-card" key={`${name}-${idx}`}>
+                {url ? (
+                  <button
+                    type="button"
+                    className="report-photo-thumb-btn"
+                    onClick={() => setModal?.({ type: 'photo-lightbox', url, caption: name })}
+                    title="Klik untuk perbesar foto"
+                  >
+                    <img src={url} alt={name} className="report-photo-thumb" />
+                  </button>
+                ) : (
+                  <div className="photo-placeholder-art">
+                    <FileImage size={24} />
+                    <span>DOKUMENTASI #{idx + 1}</span>
+                  </div>
+                )}
+                <small>{name}</small>
               </div>
-              <small>{name}</small>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -787,7 +906,7 @@ function ReportDetailModalView({ report, project, isClient, isStaff = false, set
   );
 }
 
-function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateProject, addActivity, notify, role, changeRole, enterClient, enterAdmin, enterStaff }) {
+function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProject, updateProject, addActivity, notify, role, changeRole, enterClient, enterAdmin, enterStaff }) {
   const [form, setForm] = useState({});
   const [error, setError] = useState('');
   if (!modal) return null;
@@ -864,8 +983,6 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     'client-notifications': 'Notifications',
     'hold-reason': 'Place Project on Hold',
     'rollback-reason': 'Roll Back Month (Mundur Bulan)',
-    'new-milestone': 'Add Milestone',
-    'edit-milestone': 'Edit Milestone',
     'client-detail': modal.title || 'Client Account Details',
     info: modal.title || 'Information'
   };
@@ -904,7 +1021,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
         </div>
         {textarea('Hold Reason (Wajib diisi) *', 'holdReason', 'Mis. Menunggu pelunasan termin tertunggak atau evaluasi teknis desain lantai 2...')}
         <div className="modal-footnote">
-          Selama status On Hold, penambahan milestone dan pembuatan daily log baru dikunci, sementara dokumen dan pembayaran tetap dapat diakses klien.
+          Selama status On Hold, pembaruan progres dan pembuatan daily log baru dikunci, sementara dokumen dan pembayaran tetap dapat diakses klien.
         </div>
         {footer('Confirm Place on Hold')}
       </form>
@@ -915,76 +1032,66 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     const targetProject = modal?.project || allProjects.find(p => p.id === modal?.projectId) || selectedProject;
     if (!targetProject) return null;
     const paidInvoicesCount = (targetProject?.invoices || []).filter(inv => inv?.status === 'Paid').length;
+    const currentProg = Number(targetProject?.progress || 0);
+    const defaultRollbackProg = Math.max(0, currentProg - 10);
+    const rollbackTargetValue = form.targetProgress ?? String(defaultRollbackProg);
     body = (
       <form onSubmit={submit(() => {
         const reason = (form.reason || '').trim();
         if (!reason) throw new Error('Alasan Roll Back / Mundur Bulan wajib diisi.');
+        const parsedTarget = Number(form.targetProgress ?? defaultRollbackProg);
+        const clampedTarget = Number.isFinite(parsedTarget)
+          ? Math.min(100, Math.max(0, Math.round(parsedTarget)))
+          : defaultRollbackProg;
+
         updateProject(targetProject.id, x => {
-          const currentProg = Number(x?.progress || 0);
-          const existingMilestones = Array.isArray(x?.milestones) ? [...x.milestones] : [];
-
-          let targetIdx = -1;
-          for (let i = existingMilestones.length - 1; i >= 0; i--) {
-            if (existingMilestones[i]?.status === 'In Progress') {
-              targetIdx = i;
-              break;
-            }
-          }
-          if (targetIdx === -1) {
-            for (let i = existingMilestones.length - 1; i >= 0; i--) {
-              if (existingMilestones[i]?.status === 'Completed') {
-                targetIdx = i;
-                break;
-              }
-            }
-          }
-
-          const updatedMilestones = existingMilestones.map((m, idx) => {
-            if (idx !== targetIdx) return m;
-            const baseProg = m?.status === 'Completed' ? 100 : Number(m?.progress || 0);
-            const steppedProg = Math.max(0, baseProg - 25);
-            return {
-              ...m,
-              progress: steppedProg,
-              status: steppedProg <= 0 ? 'Upcoming' : 'In Progress'
-            };
-          });
-
+          const prevProg = Number(x?.progress || 0);
           const invoices = (Array.isArray(x?.invoices) ? x.invoices : []).map(inv => {
             if (inv?.status === 'Paid' || inv?.status === 'Cancelled') return inv;
             return { ...inv, billingPaused: true, pauseReason: reason };
           });
 
-          const synced = syncProjectFromMilestones({
+          const history = Array.isArray(x?.rollbackHistory) ? x.rollbackHistory : [];
+          return {
             ...x,
+            progress: clampedTarget,
             status: 'Active',
             holdReason: '',
             billingPaused: true,
-            milestones: updatedMilestones,
-            invoices
-          });
-
-          const history = Array.isArray(x?.rollbackHistory) ? x.rollbackHistory : [];
-          return {
-            ...synced,
-            rollbackHistory: [...history, { date: new Date().toISOString(), reason, progressFrom: currentProg, progressTo: synced.progress }]
+            invoices,
+            rollbackHistory: [...history, { date: new Date().toISOString(), reason, progressFrom: prevProg, progressTo: clampedTarget }]
           };
         });
-        addActivity(targetProject.id, 'Project month rolled back (Mundur Bulan)', `Admin melakukan roll back bulan aktif (status tetap Active untuk pekerjaan ulang). Alasan: ${reason}`);
-        finish('Project berhasil di-rollback (Mundur Bulan). Status tetap Active untuk pekerjaan lanjutan.');
+        addActivity(
+          targetProject.id,
+          'Project month rolled back (Mundur Bulan)',
+          `Admin melakukan roll back progres proyek (${currentProg}% → ${clampedTarget}%, status tetap Active). Alasan: ${reason}`
+        );
+        finish(`Project berhasil di-rollback ke ${clampedTarget}%. Status tetap Active untuk pekerjaan lanjutan.`);
       })}>
         <div className="modal-highlight" style={{ background: '#f4eee4', color: '#8d7449' }}>
           <RotateCcw size={18} />
           <div>
             <strong>Roll Back Month · {targetProject?.name || 'Proyek'}</strong>
             <small>
-              Progres saat ini: {targetProject?.progress ?? 0}% · {targetProject?.milestones?.length ?? 0} milestones · {paidInvoicesCount} invoice Paid dipertahankan
+              Progres saat ini: {currentProg}% · {paidInvoicesCount} invoice Paid dipertahankan
             </small>
           </div>
         </div>
+        <label className="field">
+          <span>Target Progress Setelah Roll Back (%)</span>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={rollbackTargetValue}
+            onChange={e => set('targetProgress', e.target.value)}
+            required
+          />
+        </label>
         {textarea('Alasan Roll Back / Mundur Bulan *', 'reason', 'Mis. Progres lapangan belum memenuhi standar kualitas sehingga jadwal termin digeser...')}
         <div className="modal-footnote">
-          Roll back akan memundurkan milestone aktif (atau milestone selesai terakhir) sebesar 25%, menghitung ulang progres proyek, menjeda hitungan tagihan termin berikutnya, dan mempertahankan status proyek tetap Active serta invoice berstatus Sudah Dibayar (Paid).
+          Roll back akan menyesuaikan progres proyek ke target persentase yang dipilih, menjeda hitungan tagihan termin berikutnya, serta mempertahankan status proyek tetap Active dan invoice berstatus Sudah Dibayar (Paid).
         </div>
         {footer('Konfirmasi Roll Back')}
       </form>
@@ -1302,6 +1409,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
         isClient={!!modal.isClient}
         isStaff={isStaff || !!modal.isStaff}
         setDb={setDb}
+        setModal={setModal}
         close={close}
         updateProject={updateProject}
         addActivity={addActivity}
@@ -1544,47 +1652,6 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     );
   }
   if (modal.type === 'invoice-detail' || modal.type === 'invoice-detail-admin') { const inv = modal.invoice; const paid = inv.payments.filter(p => p.status === 'Approved').reduce((s, p) => s + p.approved, 0); body = <div><div className="invoice-detail-summary"><small>{inv.number}</small><h2>{money(inv.amount)}</h2><StatusTag value={inv.status} /><p>Issue date {dateFmt(inv.issueDate)} · Due {dateFmt(inv.dueDate)}</p><ProgressBar value={inv.amount ? paid / inv.amount * 100 : 0} /><div className="detail-amounts"><span>Verified paid <strong>{money(paid)}</strong></span><span>Remaining <strong>{money(Math.max(0, inv.amount - paid))}</strong></span></div></div><h4 className="modal-subtitle">Payment history</h4>{inv.payments.map(p => <div className="payment-history-row" key={p.id}><div><strong>{money(p.approved || p.claimed)}</strong><small>{dateFmt(p.date)} · claimed {money(p.claimed)}</small>{p.reason && <small>Reason: {p.reason}</small>}{p.overpaymentAmount > 0 && <small>Overpayment {money(p.overpaymentAmount)} · {p.overpaymentDecision}</small>}</div><div><StatusTag value={p.status} />{p.receipt && <small className="receipt-ref">{p.receipt}</small>}</div></div>)}{!inv.payments.length && <EmptyState title="No payments yet" detail="Payment records will appear here." />}{modal.type === 'invoice-detail-admin' && inv.status !== 'Paid' && inv.status !== 'Cancelled' && <button className="btn btn-outline modal-wide-btn" onClick={() => setTimeout(() => { }, 1)}>Download invoice statement</button>}<div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>; }
-  if (modal.type === 'new-milestone') body = <form onSubmit={submit(() => {
-    const title = form.title?.trim();
-    if (!title) throw new Error('Judul milestone wajib diisi.');
-    const nextStatus = form.status || 'Upcoming';
-    const hasCustomProg = form.progress !== undefined && form.progress !== '';
-    const m = {
-      id: uid('milestone'),
-      title,
-      date: form.date || '2026-11-20',
-      status: nextStatus,
-      progress: hasCustomProg ? Number(form.progress) : (nextStatus === 'Completed' ? 100 : nextStatus === 'In Progress' ? 50 : 0)
-    };
-    updateProject(project.id, p => syncProjectFromMilestones({ ...p, milestones: [...(p.milestones || []), m] }));
-    addActivity(project.id, 'Milestone added', `Milestone baru "${m.title}" ditambahkan.`);
-    if (!isStaff) {
-      pushPublishedNotif(setDb, project.id, 'Milestone Proyek Ditambahkan', `Milestone baru "${m.title}" pada proyek ${project.name} telah ditambahkan (${m.status}).`);
-    }
-    finish('Milestone berhasil ditambahkan.');
-  })}>{input('Milestone Title', 'title', 'e.g. Struktur lantai 2', 'text', true)}<label className="field"><span>Target Date</span><input type="date" value={form.date ?? '2026-11-20'} onChange={e => set('date', e.target.value)} /></label><label className="field"><span>Status</span><select value={form.status ?? 'Upcoming'} onChange={e => set('status', e.target.value)}><option value="Upcoming">Upcoming</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option></select></label>{input('Progress (%)', 'progress', '0-100', 'number')}{footer('Add milestone')}</form>;
-
-  if (modal.type === 'edit-milestone') {
-    const mId = modal.milestoneId;
-    const existing = (project.milestones || []).find(m => m.id === mId) || {};
-    body = <form onSubmit={submit(() => {
-      const title = form.title?.trim() || existing.title;
-      const nextStatus = form.status ?? existing.status ?? 'Upcoming';
-      const hasCustomProg = form.progress !== undefined && form.progress !== '';
-      const rawProg = hasCustomProg
-        ? Number(form.progress)
-        : (nextStatus === 'In Progress' && (!existing.progress || existing.progress <= 0 || existing.progress >= 100) ? 50 : Number(existing.progress ?? 0));
-      updateProject(project.id, p => syncProjectFromMilestones({
-        ...p,
-        milestones: (p.milestones || []).map(m => m.id === mId ? { ...m, title, date: form.date || m.date, status: nextStatus, progress: rawProg } : m)
-      }));
-      addActivity(project.id, 'Milestone updated', `Milestone "${title}" diperbarui.`);
-      if (!isStaff) {
-        pushPublishedNotif(setDb, project.id, 'Milestone Proyek Diperbarui', `Milestone "${title}" pada proyek ${project.name} diperbarui (${nextStatus} · ${rawProg}%).`);
-      }
-      finish('Milestone berhasil diperbarui.');
-    })}>{input('Milestone Title', 'title', existing.title || '', 'text', true)}<label className="field"><span>Target Date</span><input type="date" value={form.date ?? existing.date ?? ''} onChange={e => set('date', e.target.value)} /></label><label className="field"><span>Status</span><select value={form.status ?? existing.status ?? 'Upcoming'} onChange={e => set('status', e.target.value)}><option value="Upcoming">Upcoming</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option></select></label>{input('Progress (%)', 'progress', String(existing.progress ?? 0), 'number')}{footer('Save milestone')}</form>;
-  }
 
   if (modal.type === 'photo-lightbox') {
     body = (
