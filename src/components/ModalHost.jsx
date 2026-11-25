@@ -1405,87 +1405,112 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
       );
     }
   }
-  if (modal.type === 'payment-upload') body = <form onSubmit={submit(() => { const amount = Number(form.amount); if (!amount || amount <= 0) throw new Error('Masukkan nominal pembayaran yang valid.'); const invoice = project.invoices.find(i => i.id === form.invoiceId); if (!invoice) throw new Error('Pilih invoice.'); const fileName = form.proofName || 'payment-proof.jpg'; const pay = { id: uid('payment'), date: form.date || new Date().toISOString().slice(0, 10), claimed: amount, approved: 0, status: 'Pending', proof: fileName, receipt: null }; updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === invoice.id ? { ...i, status: 'Pending Verification', payments: [...i.payments, pay] } : i) })); addActivity(project.id, 'Uploaded payment proof', `Invoice ${invoice.number} · Claimed ${money(amount)} · File: ${fileName}`, db.clients.find(c => c.id === project.clientId)?.name || 'Client', { category: 'upload', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }); finish('Bukti pembayaran berhasil diunggah.'); })}><div className="modal-highlight"><Wallet size={18} /><div><strong>Upload payment proof</strong><small>{project.name} · {project.code}</small></div></div>{select('Invoice', 'invoiceId', project.invoices.filter(i => i.status !== 'Cancelled').map(i => [i.id, `${i.number} · ${money(i.amount)}`]))}{input('Payment date', 'date', '', 'date')}{input('Claimed payment amount (Rp)', 'amount', 'e.g. 4000000', 'number', true)}<label className="upload-box"><Upload size={18} /><span><strong>Choose payment proof</strong><small>JPG, PNG, or PDF format</small></span><input type="file" accept="image/*,.pdf" onChange={e => set('proofName', e.target.files?.[0]?.name || '')} /></label>{form.proofName && <small className="selected-file">Selected: {form.proofName}</small>}<div className="modal-footnote">Bukti pembayaran akan diverifikasi oleh tim administrasi studio.</div>{footer('Submit proof')}</form>;
+  if (modal.type === 'payment-upload') body = <form className="billing-modal-form" onSubmit={submit(() => { const amount = Number(form.amount); if (!amount || amount <= 0) throw new Error('Masukkan nominal pembayaran yang valid.'); const invoice = project.invoices.find(i => i.id === form.invoiceId); if (!invoice) throw new Error('Pilih invoice.'); const fileName = form.proofName || 'payment-proof.jpg'; const pay = { id: uid('payment'), date: form.date || new Date().toISOString().slice(0, 10), claimed: amount, approved: 0, status: 'Pending', proof: fileName, proofUrl: form.proofUrl || '', receipt: null }; updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === invoice.id ? { ...i, status: 'Pending Verification', payments: [...i.payments, pay] } : i) })); addActivity(project.id, 'Uploaded payment proof', `Invoice ${invoice.number} · Claimed ${money(amount)} · File: ${fileName}`, db.clients.find(c => c.id === project.clientId)?.name || 'Client', { category: 'upload', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }); finish('Bukti pembayaran berhasil diunggah.'); })}><div className="modal-highlight"><Wallet size={18} /><div><strong>Upload payment proof</strong><small>{project.name} · {project.code}</small></div></div>{select('Invoice', 'invoiceId', project.invoices.filter(i => i.status !== 'Cancelled').map(i => [i.id, `${i.number} · ${money(i.amount)}`]))}{input('Payment date', 'date', '', 'date')}{input('Claimed payment amount (Rp)', 'amount', 'e.g. 4000000', 'number', true)}<label className="upload-box"><Upload size={18} /><span><strong>Choose payment proof</strong><small>JPG, PNG, or PDF format</small></span><input type="file" accept="image/*,.pdf" onChange={e => { const f = e.target.files?.[0]; if (f) { set('proofName', f.name); set('proofUrl', URL.createObjectURL(f)); } }} /></label>{form.proofName && <small className="selected-file">Selected: {form.proofName}</small>}<div className="modal-footnote">Bukti pembayaran akan diverifikasi oleh tim administrasi studio.</div>{footer('Submit proof')}</form>;
   if (modal.type === 'verify-payment') {
     const previousPaid = modal.invoice.payments.filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0);
     const remainingBefore = Math.max(0, modal.invoice.amount - previousPaid);
-    const excess = Math.max(0, Number(form.approved ?? modal.payment.claimed) - remainingBefore);
+    const approvedVal = form.approved ?? String(modal.payment.claimed ?? '');
+    const excess = Math.max(0, Number(approvedVal || 0) - remainingBefore);
+    const proofName = modal.payment.proof || 'bukti-transfer-bank.jpg';
+    const isPdfProof = proofName.toLowerCase().endsWith('.pdf');
     body = (
-      <form onSubmit={submit(() => {
-        const approved = Number(form.approved ?? modal.payment.claimed);
-        if (!Number.isFinite(approved) || approved <= 0) throw new Error('Nominal persetujuan harus lebih dari nol.');
-        const reason = form.reason || '';
-        if (approved !== modal.payment.claimed && !reason.trim()) throw new Error('Alasan wajib diisi jika nominal berbeda.');
-        if (excess > 0 && !form.overpaymentDecision) throw new Error('Pilih penanganan nominal lebih bayar.');
-        updateProject(project.id, p => {
-          const invoices = p.invoices.map(i => {
-            if (i.id !== modal.invoice.id) return i;
-            const payments = i.payments.map(x => x.id === modal.payment.id ? {
-              ...x,
-              approved,
-              status: 'Approved',
-              verifiedAt: nowLabel(),
-              verifiedBy: 'Admin NA',
-              reason,
-              overpaymentAmount: Math.max(0, approved - remainingBefore),
-              overpaymentDecision: excess > 0 ? form.overpaymentDecision : null,
-              receipt: form.receiptName || modal.payment.proof || `RCPT-${project.code}-${i.payments.indexOf(x) + 1}`
-            } : x);
-            const paid = payments.filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0);
-            const pending = payments.some(x => x.status === 'Pending');
-            return { ...i, payments, status: paid >= i.amount ? 'Paid' : pending ? 'Pending Verification' : paid > 0 ? 'Partially Paid' : 'Unpaid' };
+      <form
+        className="billing-modal-form"
+        onSubmit={submit(() => {
+          const approved = Number(approvedVal);
+          if (!Number.isFinite(approved) || approved <= 0) throw new Error('Nominal persetujuan harus lebih dari nol.');
+          const reason = form.reason || '';
+          if (approved !== modal.payment.claimed && !reason.trim()) throw new Error('Alasan wajib diisi jika nominal berbeda.');
+          if (excess > 0 && !form.overpaymentDecision) throw new Error('Pilih penanganan nominal lebih bayar.');
+          updateProject(project.id, p => {
+            const invoices = p.invoices.map(i => {
+              if (i.id !== modal.invoice.id) return i;
+              const payments = i.payments.map(x => x.id === modal.payment.id ? {
+                ...x,
+                approved,
+                status: 'Approved',
+                verifiedAt: nowLabel(),
+                verifiedBy: 'Admin NA',
+                reason,
+                overpaymentAmount: Math.max(0, approved - remainingBefore),
+                overpaymentDecision: excess > 0 ? form.overpaymentDecision : null,
+                receipt: form.receiptName || modal.payment.proof || `RCPT-${project.code}-${i.payments.indexOf(x) + 1}`
+              } : x);
+              const paid = payments.filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0);
+              const pending = payments.some(x => x.status === 'Pending');
+              return { ...i, payments, status: paid >= i.amount ? 'Paid' : pending ? 'Pending Verification' : paid > 0 ? 'Partially Paid' : 'Unpaid' };
+            });
+            const stillDue = invoices.some(i => i.status !== 'Cancelled' && i.amount > i.payments.filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0));
+            return { ...p, invoices, status: p.status === 'On Hold' && !stillDue ? 'Ready to Resume' : p.status };
           });
-          const stillDue = invoices.some(i => i.status !== 'Cancelled' && i.amount > i.payments.filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0));
-          return { ...p, invoices, status: p.status === 'On Hold' && !stillDue ? 'Ready to Resume' : p.status };
-        });
-        addActivity(
-          project.id,
-          'Approved client payment proof',
-          `Invoice ${modal.invoice.number} · Verified ${money(approved)}${reason ? ` · ${reason}` : ''}${excess > 0 ? ` · Overpayment ${money(excess)}: ${form.overpaymentDecision}` : ''}`,
-          'Admin Studio',
-          { category: 'verification', visibility: 'Published', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }
-        );
-        pushPublishedNotif(
-          setDb,
-          project.id,
-          'Pembayaran Disetujui',
-          `Pembayaran ${money(approved)} untuk ${modal.invoice.number} (${project.name}) telah disetujui dan kwitansi diterbitkan.`
-        );
-        finish('Pembayaran disetujui dan kwitansi diterbitkan.');
-      })}>
+          addActivity(
+            project.id,
+            'Approved client payment proof',
+            `Invoice ${modal.invoice.number} · Verified ${money(approved)}${reason ? ` · ${reason}` : ''}${excess > 0 ? ` · Overpayment ${money(excess)}: ${form.overpaymentDecision}` : ''}`,
+            'Admin Studio',
+            { category: 'verification', visibility: 'Published', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }
+          );
+          pushPublishedNotif(
+            setDb,
+            project.id,
+            'Pembayaran Disetujui',
+            `Pembayaran ${money(approved)} untuk ${modal.invoice.number} (${project.name}) telah disetujui dan kwitansi diterbitkan.`
+          );
+          finish('Pembayaran disetujui dan kwitansi diterbitkan.');
+        })}
+      >
         <div className="payment-verify-summary">
           <small>{modal.invoice.number}</small>
           <strong>{money(modal.payment.claimed)}</strong>
           <span>Claimed by client · {dateFmt(modal.payment.date)}</span>
         </div>
 
-        {/* Display Client's Uploaded Payment Proof */}
-        <div className="proof-display-box" style={{ background: '#f4f5f0', border: '1px solid #dcded5', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '4px' }}>
-          <div className="proof-placeholder" style={{ width: '48px', height: '54px', background: '#e5e8df', display: 'grid', placeItems: 'center', color: '#525b48', flexShrink: 0 }}>
-            <FileImage size={24} />
+        <div className="proof-display-box">
+          <div className="proof-placeholder">
+            {isPdfProof ? <FileText size={24} /> : <FileImage size={24} />}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
-            <strong style={{ fontSize: '11px', color: '#333' }}>Bukti Transfer / Bayar Klien</strong>
-            <small style={{ color: '#666', fontSize: '10px', wordBreak: 'break-all' }}>{modal.payment.proof || 'bukti-transfer-bank.jpg'}</small>
+          <div className="proof-display-meta">
+            <strong>Bukti Transfer / Bayar Klien</strong>
+            <small>{proofName}</small>
           </div>
           <button
             type="button"
-            className="btn btn-small btn-outline"
-            style={{ flexShrink: 0 }}
-            onClick={() => alert(`Melihat bukti bayar: ${modal.payment.proof || 'bukti-transfer-bank.jpg'}`)}
+            className="btn btn-small btn-outline proof-view-btn"
+            onClick={() => set('previewProof', !form.previewProof)}
           >
-            Lihat Bukti
+            <Eye size={14} /> {form.previewProof ? 'Tutup Bukti' : 'Lihat Bukti'}
           </button>
         </div>
 
-        {input('Approved amount (Rp)', 'approved', String(modal.payment.claimed), 'number', true)}
+        {form.previewProof && (
+          <div className="proof-preview-panel">
+            {modal.payment.proofUrl && !isPdfProof ? (
+              <img src={modal.payment.proofUrl} alt={proofName} className="proof-preview-image" />
+            ) : (
+              <div className="proof-preview-fallback">
+                {isPdfProof ? <FileText size={32} /> : <FileImage size={32} />}
+                <strong>{proofName}</strong>
+                <span>{dateFmt(modal.payment.date)} · Klaim {money(modal.payment.claimed)}</span>
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Upload Kwitansi Resmi Studio */}
-        <label className="upload-box" style={{ marginTop: '4px' }}>
+        <label className="field">
+          <span>Approved Amount (Rp)<b> *</b></span>
+          <input
+            type="number"
+            value={approvedVal}
+            onChange={e => set('approved', e.target.value)}
+            required
+          />
+        </label>
+
+        <label className="upload-box">
           <Upload size={18} />
           <span>
-            <strong>Upload Kwitansi / Bukti Penerimaan Resmi Studio</strong>
-            <small>{form.receiptName ? `Kwitansi terpilih: ${form.receiptName}` : 'Pilih file PDF atau Gambar kwitansi studio (Opsional)'}</small>
+            <strong>Upload Kwitansi Studio (Opsional)</strong>
+            <small>{form.receiptName ? `Kwitansi terpilih: ${form.receiptName}` : 'Pilih file PDF atau gambar kwitansi studio'}</small>
           </span>
           <input
             type="file"
@@ -1507,15 +1532,175 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
           </>
         )}
 
-        {textarea('Reason (required if amount differs)', 'reason', 'Explain the adjustment, if any.')}
-        <div className="modal-footnote">Kwitansi resmi studio akan diterbitkan dan dikirim ke portal klien setelah verifikasi disetujui.</div>
+        <div className="field">
+          <div className="field-label-row">
+            <span>Catatan / Alasan Penyesuaian</span>
+            <InfoHint text="Wajib diisi jika nominal persetujuan berbeda dari klaim klien. Kwitansi resmi otomatis diterbitkan ke Portal Klien setelah disetujui." />
+          </div>
+          <textarea
+            rows="3"
+            value={form.reason ?? ''}
+            onChange={e => set('reason', e.target.value)}
+          />
+        </div>
+
         {footer('Approve payment & Issue Receipt')}
       </form>
     );
   }
-  if (modal.type === 'reject-payment') body = <form onSubmit={submit(() => { if (!form.reason?.trim()) throw new Error('Alasan penolakan wajib diisi.'); updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === modal.invoice.id ? { ...i, payments: i.payments.map(x => x.id === modal.payment.id ? { ...x, status: 'Rejected', reason: form.reason } : x), status: i.payments.some(x => x.id !== modal.payment.id && x.status === 'Pending') ? 'Pending Verification' : i.payments.some(x => x.status === 'Approved') ? 'Partially Paid' : 'Unpaid' } : i) })); addActivity(project.id, 'Rejected client payment proof', `Invoice ${modal.invoice.number} · Verified ${money(0)} · Reason: ${form.reason}`, 'Admin Studio', { category: 'verification', visibility: 'Published', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }); pushPublishedNotif(setDb, project.id, 'Bukti Pembayaran Ditolak', `Bukti pembayaran untuk ${modal.invoice.number} (${project.name}) ditolak. Alasan: ${form.reason}`); finish('Bukti pembayaran ditolak. Bukti lama tetap tersimpan.'); })}><div className="payment-verify-summary"><small>{modal.invoice.number}</small><strong>{money(modal.payment.claimed)}</strong><span>{modal.payment.proof || 'Payment proof'}</span></div>{textarea('Rejection reason', 'reason', 'Describe why the proof cannot be accepted.')}{footer('Reject proof')}</form>;
-  if (modal.type === 'new-invoice') body = <form onSubmit={submit(() => { const amount = Number(form.amount); if (!amount || amount <= 0) throw new Error('Nominal invoice harus lebih dari nol.'); const num = `INV-${project.code}-${String(project.invoices.length + 1).padStart(3, '0')}`; const inv = { id: uid('invoice'), number: num, revision: 0, amount, dueDate: form.dueDate || '2026-12-10', issueDate: '2026-11-02', status: 'Unpaid', payments: [], replacedBy: null, reason: '' }; updateProject(project.id, p => ({ ...p, invoices: [inv, ...p.invoices] })); addActivity(project.id, 'Invoice issued', `${num} diterbitkan sebesar ${money(amount)}.`); finish('Invoice berhasil dibuat.'); })}><div className="modal-highlight"><FileText size={18} /><div><strong>New invoice</strong><small>{project.name}</small></div></div>{input('Invoice amount (Rp)', 'amount', 'e.g. 10000000', 'number', true)}{input('Due date', 'dueDate', '', 'date')}{textarea('Description / billing note', 'description', 'Optional billing details.')}{footer('Create invoice')}</form>;
-  if (modal.type === 'revise-invoice') body = <form onSubmit={submit(() => { if (!form.reason?.trim()) throw new Error('Revision reason wajib diisi.'); const amount = Number(form.amount || modal.invoice.amount); const newId = uid('invoice'); const newInv = { ...modal.invoice, id: newId, number: `${modal.invoice.number}-R${modal.invoice.revision + 1}`, revision: modal.invoice.revision + 1, amount, dueDate: form.dueDate || modal.invoice.dueDate, issueDate: '2026-11-02', status: 'Unpaid', payments: modal.invoice.payments.filter(p => p.status === 'Approved').map((p, i) => ({ ...p, id: uid('payment'), receipt: `RCPT-RELINK-${i + 1}` })), replacedBy: null, reason: form.reason, revisionOf: modal.invoice.id }; const paid = newInv.payments.reduce((s, p) => s + p.approved, 0); newInv.status = paid >= amount ? 'Paid' : paid > 0 ? 'Partially Paid' : 'Unpaid'; updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === modal.invoice.id ? { ...i, status: 'Cancelled', replacedBy: newId, reason: form.reason } : i).concat(newInv) })); addActivity(project.id, 'Invoice revised', `${modal.invoice.number} diganti dengan ${newInv.number}. Reason: ${form.reason}`); finish('Invoice direvisi. Histori invoice lama tetap dipertahankan.'); })}><div className="payment-verify-summary"><small>REPLACING {modal.invoice.number}</small><strong>{money(modal.invoice.amount)}</strong><span>Original due date · {dateFmt(modal.invoice.dueDate)}</span></div>{input('Revised amount (Rp)', 'amount', String(modal.invoice.amount), 'number', true)}{input('New due date (leave unchanged if same)', 'dueDate', '', 'date')}{textarea('Mandatory revision reason', 'reason', 'Explain why this invoice needs revision.')}<div className="modal-footnote">The old invoice will be archived as Cancelled / Replaced. Approved payments are carried forward without double counting.</div>{footer('Create revised invoice')}</form>;
+  if (modal.type === 'reject-payment') {
+    body = (
+      <form
+        className="billing-modal-form"
+        onSubmit={submit(() => {
+          if (!form.reason?.trim()) throw new Error('Alasan penolakan wajib diisi.');
+          updateProject(project.id, p => ({
+            ...p,
+            invoices: p.invoices.map(i => i.id === modal.invoice.id ? {
+              ...i,
+              payments: i.payments.map(x => x.id === modal.payment.id ? { ...x, status: 'Rejected', reason: form.reason } : x),
+              status: i.payments.some(x => x.id !== modal.payment.id && x.status === 'Pending') ? 'Pending Verification' : i.payments.some(x => x.status === 'Approved') ? 'Partially Paid' : 'Unpaid'
+            } : i)
+          }));
+          addActivity(project.id, 'Rejected client payment proof', `Invoice ${modal.invoice.number} · Verified ${money(0)} · Reason: ${form.reason}`, 'Admin Studio', { category: 'verification', visibility: 'Published', date: new Date().toISOString().slice(0, 16).replace('T', ' ') });
+          pushPublishedNotif(setDb, project.id, 'Bukti Pembayaran Ditolak', `Bukti pembayaran untuk ${modal.invoice.number} (${project.name}) ditolak. Alasan: ${form.reason}`);
+          finish('Bukti pembayaran ditolak. Bukti lama tetap tersimpan.');
+        })}
+      >
+        <div className="payment-verify-summary">
+          <small>{modal.invoice.number}</small>
+          <strong>{money(modal.payment.claimed)}</strong>
+          <span>{modal.payment.proof || 'Payment proof'}</span>
+        </div>
+        <div className="field">
+          <div className="field-label-row">
+            <span>Alasan Penolakan<b> *</b></span>
+            <InfoHint text="Alasan penolakan akan dikirim ke notifikasi klien dan bukti lama tetap tersimpan sebagai riwayat." />
+          </div>
+          <textarea
+            rows="3"
+            value={form.reason ?? ''}
+            onChange={e => set('reason', e.target.value)}
+            required
+          />
+        </div>
+        {footer('Reject proof')}
+      </form>
+    );
+  }
+  if (modal.type === 'new-invoice') {
+    body = (
+      <form
+        className="billing-modal-form"
+        onSubmit={submit(() => {
+          const amount = Number(form.amount);
+          if (!amount || amount <= 0) throw new Error('Nominal invoice harus lebih dari nol.');
+          const num = `INV-${project.code}-${String(project.invoices.length + 1).padStart(3, '0')}`;
+          const inv = { id: uid('invoice'), number: num, revision: 0, amount, dueDate: form.dueDate || '2026-12-10', issueDate: '2026-11-02', status: 'Unpaid', payments: [], replacedBy: null, reason: '', note: (form.description || '').trim() };
+          updateProject(project.id, p => ({ ...p, invoices: [inv, ...p.invoices] }));
+          addActivity(project.id, 'Invoice issued', `${num} diterbitkan sebesar ${money(amount)}.`);
+          finish('Invoice berhasil dibuat.');
+        })}
+      >
+        <label className="field">
+          <span>Nominal Invoice (Rp)<b> *</b></span>
+          <input
+            type="number"
+            value={form.amount ?? ''}
+            onChange={e => set('amount', e.target.value)}
+            required
+          />
+        </label>
+        <label className="field">
+          <span>Jatuh Tempo</span>
+          <input
+            type="date"
+            value={form.dueDate ?? ''}
+            onChange={e => set('dueDate', e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>Catatan Tagihan (Opsional)</span>
+          <textarea
+            rows="3"
+            value={form.description ?? ''}
+            onChange={e => set('description', e.target.value)}
+          />
+        </label>
+        {footer('Create invoice')}
+      </form>
+    );
+  }
+  if (modal.type === 'revise-invoice') {
+    const revisedAmountVal = form.amount ?? String(modal.invoice.amount ?? '');
+    const revisedDueDateVal = form.dueDate ?? modal.invoice.dueDate ?? '';
+    body = (
+      <form
+        className="billing-modal-form"
+        onSubmit={submit(() => {
+          if (!form.reason?.trim()) throw new Error('Alasan revisi wajib diisi.');
+          const amount = Number(revisedAmountVal);
+          if (!amount || amount <= 0) throw new Error('Nominal revisi harus lebih dari nol.');
+          const newId = uid('invoice');
+          const newInv = {
+            ...modal.invoice,
+            id: newId,
+            number: `${modal.invoice.number}-R${modal.invoice.revision + 1}`,
+            revision: modal.invoice.revision + 1,
+            amount,
+            dueDate: revisedDueDateVal || modal.invoice.dueDate,
+            issueDate: '2026-11-02',
+            status: 'Unpaid',
+            payments: modal.invoice.payments.filter(p => p.status === 'Approved').map((p, i) => ({ ...p, id: uid('payment'), receipt: `RCPT-RELINK-${i + 1}` })),
+            replacedBy: null,
+            reason: form.reason,
+            revisionOf: modal.invoice.id
+          };
+          const paid = newInv.payments.reduce((s, p) => s + p.approved, 0);
+          newInv.status = paid >= amount ? 'Paid' : paid > 0 ? 'Partially Paid' : 'Unpaid';
+          updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === modal.invoice.id ? { ...i, status: 'Cancelled', replacedBy: newId, reason: form.reason } : i).concat(newInv) }));
+          addActivity(project.id, 'Invoice revised', `${modal.invoice.number} diganti dengan ${newInv.number}. Reason: ${form.reason}`);
+          finish('Invoice direvisi. Histori invoice lama tetap dipertahankan.');
+        })}
+      >
+        <div className="payment-verify-summary">
+          <small>REPLACING {modal.invoice.number}</small>
+          <strong>{money(modal.invoice.amount)}</strong>
+          <span>Original due date · {dateFmt(modal.invoice.dueDate)}</span>
+        </div>
+        <label className="field">
+          <span>Nominal Revisi (Rp)<b> *</b></span>
+          <input
+            type="number"
+            value={revisedAmountVal}
+            onChange={e => set('amount', e.target.value)}
+            required
+          />
+        </label>
+        <label className="field">
+          <span>Jatuh Tempo Baru</span>
+          <input
+            type="date"
+            value={revisedDueDateVal}
+            onChange={e => set('dueDate', e.target.value)}
+          />
+        </label>
+        <div className="field">
+          <div className="field-label-row">
+            <span>Alasan Revisi<b> *</b></span>
+            <InfoHint text="Invoice lama diarsipkan sebagai Cancelled / Replaced dan pembayaran Approved tetap diteruskan tanpa hitung ganda." />
+          </div>
+          <textarea
+            rows="3"
+            value={form.reason ?? ''}
+            onChange={e => set('reason', e.target.value)}
+            required
+          />
+        </div>
+        {footer('Create revised invoice')}
+      </form>
+    );
+  }
 
   // MODAL NEW DAILY PROJECT LOG (3 SECTIONS WITH EXCEL WORKERS TABLE)
   if (modal.type === 'new-report') {
@@ -1798,7 +1983,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
       </form>
     );
   }
-  if (modal.type === 'invoice-detail' || modal.type === 'invoice-detail-admin') { const inv = modal.invoice; const paid = inv.payments.filter(p => p.status === 'Approved').reduce((s, p) => s + p.approved, 0); body = <div><div className="invoice-detail-summary"><small>{inv.number}</small><h2>{money(inv.amount)}</h2><StatusTag value={inv.status} /><p>Issue date {dateFmt(inv.issueDate)} · Due {dateFmt(inv.dueDate)}</p><ProgressBar value={inv.amount ? paid / inv.amount * 100 : 0} /><div className="detail-amounts"><span>Verified paid <strong>{money(paid)}</strong></span><span>Remaining <strong>{money(Math.max(0, inv.amount - paid))}</strong></span></div></div><h4 className="modal-subtitle">Payment history</h4>{inv.payments.map(p => <div className="payment-history-row" key={p.id}><div><strong>{money(p.approved || p.claimed)}</strong><small>{dateFmt(p.date)} · claimed {money(p.claimed)}</small>{p.reason && <small>Reason: {p.reason}</small>}{p.overpaymentAmount > 0 && <small>Overpayment {money(p.overpaymentAmount)} · {p.overpaymentDecision}</small>}</div><div><StatusTag value={p.status} />{p.receipt && <small className="receipt-ref">{p.receipt}</small>}</div></div>)}{!inv.payments.length && <EmptyState title="No payments yet" detail="Payment records will appear here." />}{modal.type === 'invoice-detail-admin' && inv.status !== 'Paid' && inv.status !== 'Cancelled' && <button className="btn btn-outline modal-wide-btn" onClick={() => setTimeout(() => { }, 1)}>Download invoice statement</button>}<div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>; }
+  if (modal.type === 'invoice-detail' || modal.type === 'invoice-detail-admin') { const inv = modal.invoice; const paid = inv.payments.filter(p => p.status === 'Approved').reduce((s, p) => s + p.approved, 0); body = <div className="invoice-detail-modal"><div className="invoice-detail-summary"><small>{inv.number}</small><h2>{money(inv.amount)}</h2><StatusTag value={inv.status} /><p>Issue date {dateFmt(inv.issueDate)} · Due {dateFmt(inv.dueDate)}</p><ProgressBar value={inv.amount ? paid / inv.amount * 100 : 0} /><div className="detail-amounts"><span>Verified paid <strong>{money(paid)}</strong></span><span>Remaining <strong>{money(Math.max(0, inv.amount - paid))}</strong></span></div></div><h4 className="modal-subtitle">Payment history</h4>{inv.payments.map(p => <div className="payment-history-row" key={p.id}><div><strong>{money(p.approved || p.claimed)}</strong><small>{dateFmt(p.date)} · claimed {money(p.claimed)}</small>{p.reason && <small>Reason: {p.reason}</small>}{p.overpaymentAmount > 0 && <small>Overpayment {money(p.overpaymentAmount)} · {p.overpaymentDecision}</small>}</div><div><StatusTag value={p.status} />{p.receipt && <small className="receipt-ref">{p.receipt}</small>}</div></div>)}{!inv.payments.length && <EmptyState title="No payments yet" detail="Payment records will appear here." />}{modal.type === 'invoice-detail-admin' && inv.status !== 'Paid' && inv.status !== 'Cancelled' && <button className="btn btn-outline modal-wide-btn" onClick={() => notify('Menyiapkan pernyataan invoice...')}>Download invoice statement</button>}<div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>; }
 
   if (modal.type === 'photo-lightbox') {
     body = (

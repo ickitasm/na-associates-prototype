@@ -963,9 +963,50 @@ function AdminBilling({projects,clients,updateProject,addActivity,setModal}) {
   const invoices=p?.invoices||[];
   const activeInvoices=invoices.filter(i=>i.status!=='Cancelled');
   const pending=activeInvoices.flatMap(i=>i.payments.map(pay=>({...pay,invoice:i}))).filter(x=>x.status==='Pending');
+  const verifiedTotal=activeInvoices.reduce((s,i)=>s+i.payments.filter(x=>x.status==='Approved').reduce((t,x)=>t+x.approved,0),0);
+  const outstandingTotal=activeInvoices.reduce((s,i)=>s+Math.max(0,i.amount-i.payments.filter(x=>x.status==='Approved').reduce((t,x)=>t+x.approved,0)),0);
   const today=new Date(); today.setHours(0,0,0,0);
   const holdCandidates=invoices.filter(i=>{const paid=i.payments.filter(x=>x.status==='Approved').reduce((s,x)=>s+x.approved,0);const daysLate=Math.floor((today-new Date(`${i.dueDate}T00:00:00`))/86400000);return i.status!=='Cancelled'&&i.status!=='Paid'&&paid<i.amount&&daysLate>=7&&!i.payments.some(x=>x.status==='Pending');});
-  return <><AdminPageHeader title="Billing & Payments" infoHint="Issue project invoices, verify or reject uploaded client payment proofs, track outstanding balances, and enforce H+7 overdue hold rules." action="Create invoice" onAction={()=>setModal({type:'new-invoice',project:p})}/><div className="admin-toolbar"><select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><span className="muted">{invoices.length} invoices</span></div><div className="admin-metrics billing-metrics"><Metric icon={FileText} label="Active invoices" value={invoices.filter(i=>i.status!=='Cancelled').length} note="Issued documents"/><Metric icon={Clock3} label="Pending proofs" value={pending.length} note="Require verification" accent={pending.length>0}/><Metric icon={Wallet} label="Verified payments" value={money(activeInvoices.reduce((s,i)=>s+i.payments.filter(x=>x.status==='Approved').reduce((t,x)=>t+x.approved,0),0))} note="Approved payment total"/><Metric icon={AlertCircle} label="Outstanding" value={money(invoices.filter(i=>i.status!=='Cancelled').reduce((s,i)=>s+Math.max(0,i.amount-i.payments.filter(x=>x.status==='Approved').reduce((t,x)=>t+x.approved,0)),0))} note="Remaining amount"/></div>{holdCandidates.length>0&&p?.status==='Active'&&<div className="admin-panel hold-recommendation"><div><strong><AlertCircle size={16}/> Hold recommendation · H+7</strong><p>{holdCandidates.map(i=>i.number).join(', ')} has remaining payment beyond seven days after due date. Pending verification pauses this clock.</p></div><button className="btn btn-small btn-dark" onClick={()=>{if(window.confirm('Confirm placing this project on hold? Existing portal access and payment uploads will remain available.')){updateProject(p.id,x=>({...x,status:'On Hold',holdReason:`Tagihan termin ${holdCandidates.map(i=>i.number).join(', ')} melewati batas waktu H+7.`}));addActivity(p.id,'Project placed on hold','H+7 payment recommendation confirmed by Admin.');}}}>Confirm hold</button></div>}<div className="admin-panel"><div className="admin-panel-head"><h3>Payment verification</h3><span className="subtle-tag">{pending.length} pending</span></div>{pending.map(pay=><div className="payment-review-row" key={pay.id}><div className="proof-placeholder"><FileImage size={22}/><small>PROOF</small></div><div className="payment-review-main"><strong>{pay.invoice.number}</strong><small>{dateFmt(pay.date)} · Claimed {money(pay.claimed)}</small><span>{pay.proof||'Payment proof uploaded'}</span></div><div className="payment-review-actions"><button className="btn btn-small btn-dark" onClick={()=>setModal({type:'verify-payment',project:p,invoice:pay.invoice,payment:pay})}><Check size={14}/> Review & verify</button><button className="btn btn-small btn-outline" onClick={()=>setModal({type:'reject-payment',project:p,invoice:pay.invoice,payment:pay})}>Reject</button></div></div>)}{!pending.length&&<EmptyState title="All caught up" detail="There are no payment proofs waiting for review."/>}</div><div className="admin-panel"><div className="admin-panel-head"><h3>Invoice register</h3></div>{invoices.map(i=><InvoiceAdminRow key={i.id} invoice={i} setModal={setModal} project={p} client={client} addActivity={addActivity}/>)}{!invoices.length&&<EmptyState title="No invoices" detail="Create an invoice for this project."/>}</div></>;
+  return <>
+    <AdminPageHeader title="Billing & Payments" infoHint="Issue project invoices, verify or reject uploaded client payment proofs, track outstanding balances, and enforce H+7 overdue hold rules." action="Create invoice" onAction={()=>setModal({type:'new-invoice',project:p})}/>
+    <div className="admin-toolbar">
+      <select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>
+      <span className="muted">{invoices.length} invoices</span>
+    </div>
+    <div className="admin-metrics billing-metrics">
+      <Metric className="staff-metric-card" icon={FileText} label="ACTIVE INVOICES" value={activeInvoices.length}/>
+      <Metric className="staff-metric-card" icon={Clock3} label="PENDING PROOFS" value={pending.length} accent={pending.length>0}/>
+      <Metric className="staff-metric-card" icon={Wallet} label="VERIFIED PAYMENTS" value={money(verifiedTotal)}/>
+      <Metric className="staff-metric-card" icon={AlertCircle} label="OUTSTANDING" value={money(outstandingTotal)}/>
+    </div>
+    {holdCandidates.length>0&&p?.status==='Active'&&<div className="admin-panel hold-recommendation"><div><strong><AlertCircle size={16}/> Hold recommendation · H+7</strong><p>{holdCandidates.map(i=>i.number).join(', ')} has remaining payment beyond seven days after due date. Pending verification pauses this clock.</p></div><button className="btn btn-small btn-dark" onClick={()=>{if(window.confirm('Confirm placing this project on hold? Existing portal access and payment uploads will remain available.')){updateProject(p.id,x=>({...x,status:'On Hold',holdReason:`Tagihan termin ${holdCandidates.map(i=>i.number).join(', ')} melewati batas waktu H+7.`}));addActivity(p.id,'Project placed on hold','H+7 payment recommendation confirmed by Admin.');}}}>Confirm hold</button></div>}
+    <div className="admin-panel billing-panel">
+      <div className="admin-panel-head">
+        <h3>Payment verification</h3>
+        <span className="subtle-tag">{pending.length} pending</span>
+      </div>
+      {pending.length>0 ? (
+        <div className="billing-review-scroll">
+          {pending.map(pay=><div className="payment-review-row" key={pay.id}><div className="proof-placeholder"><FileImage size={22}/><small>PROOF</small></div><div className="payment-review-main"><strong>{pay.invoice.number}</strong><small>{dateFmt(pay.date)} · Claimed {money(pay.claimed)}</small><span>{pay.proof||'Payment proof uploaded'}</span></div><div className="payment-review-actions"><button className="btn btn-small btn-dark" onClick={()=>setModal({type:'verify-payment',project:p,invoice:pay.invoice,payment:pay})}><Check size={14}/> Review & verify</button><button className="btn btn-small btn-outline" onClick={()=>setModal({type:'reject-payment',project:p,invoice:pay.invoice,payment:pay})}>Reject</button></div></div>)}
+        </div>
+      ) : (
+        <EmptyState title="All caught up" detail="There are no payment proofs waiting for review."/>
+      )}
+    </div>
+    <div className="admin-panel billing-panel">
+      <div className="admin-panel-head">
+        <h3>Invoice register</h3>
+        <span className="subtle-tag">{invoices.length} invoices</span>
+      </div>
+      {invoices.length>0 ? (
+        <div className="billing-register-scroll">
+          {invoices.map(i=><InvoiceAdminRow key={i.id} invoice={i} setModal={setModal} project={p} client={client} addActivity={addActivity}/>)}
+        </div>
+      ) : (
+        <EmptyState title="No invoices" detail="Create an invoice for this project."/>
+      )}
+    </div>
+  </>;
 }
 function InvoiceAdminRow({invoice,setModal,project,client,addActivity}) {
   const paid=invoice.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0);
@@ -979,16 +1020,15 @@ function InvoiceAdminRow({invoice,setModal,project,client,addActivity}) {
     <strong>{money(invoice.amount)}</strong>
     <span>{money(paid)} paid</span>
     <StatusTag value={invoice.status}/>
-    <div className="invoice-actions" style={{display:'flex',gap:'6px',alignItems:'center'}}>
+    <div className="invoice-actions">
       <a
         href={waLink}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn btn-small btn-whatsapp"
-        style={{padding:'4px 8px',fontSize:'9px',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:'4px'}}
+        className="btn btn-small btn-whatsapp billing-wa-btn"
         onClick={()=>addActivity(project.id,'WhatsApp notification triggered','Admin mengirim pengingat WhatsApp ke klien untuk invoice '+invoice.number)}
       >
-        <WhatsAppIcon size={12}/> WhatsApp
+        <WhatsAppIcon size={14}/> WhatsApp
       </a>
       <button className="icon-btn" title="Details" onClick={()=>setModal({type:'invoice-detail-admin',invoice,project})}><Eye size={16}/></button>
       {invoice.status!=='Paid'&&invoice.status!=='Cancelled'&&<button className="icon-btn" title="Revise invoice" onClick={()=>setModal({type:'revise-invoice',project,invoice})}><RotateCcw size={16}/></button>}

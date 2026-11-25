@@ -9311,5 +9311,492 @@ summary:focus:not(:focus-visible),
   }
 }
 
+/* ==========================================================================
+   Billing & Payments + Billing Modals Overhaul
+   ========================================================================== */
+
+/* Compact Dashboard-Style KPI Cards for AdminBilling */
+.admin-app .admin-metrics.billing-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.admin-app .admin-metrics.billing-metrics .staff-metric-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px;
+  min-width: 0;
+}
+
+.admin-app .admin-metrics.billing-metrics .staff-metric-card .metric-meta small {
+  font-size: 11.5px !important;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.admin-app .admin-metrics.billing-metrics .staff-metric-card > strong {
+  font-size: clamp(16px, 1.45vw, 22px) !important;
+  font-weight: 700;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1199px) {
+  .admin-app .admin-metrics.billing-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-app .admin-metrics.billing-metrics {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .admin-app .admin-metrics.billing-metrics .staff-metric-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 13px 14px;
+  }
+
+  .admin-app .admin-metrics.billing-metrics .staff-metric-card > strong {
+    font-size: 18px !important;
+  }
+}
+
+/* Bounded Vertical Scroll (~3-4 Rows) for Payment Verification & Invoice Register */
+.billing-review-scroll,
+.billing-register-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #c7cabf transparent;
+}
+
+.billing-review-scroll {
+  max-height: 295px;
+}
+
+.billing-register-scroll {
+  max-height: 310px;
+}
+
+.dark-mode .billing-review-scroll,
+.dark-mode .billing-register-scroll {
+  scrollbar-color: #3c453a transparent;
+}
+
+.billing-review-scroll::-webkit-scrollbar,
+.billing-register-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.billing-review-scroll::-webkit-scrollbar-thumb,
+.billing-register-scroll::-webkit-scrollbar-thumb {
+  background: #c7cabf;
+  border-radius: 999px;
+}
+
+.dark-mode .billing-review-scroll::-webkit-scrollbar-thumb,
+.dark-mode .billing-register-scroll::-webkit-scrollbar-thumb {
+  background: #3c453a;
+}
+
+@media (max-width: 640px) {
+  .billing-review-scroll {
+    max-height: 265px;
+  }
+
+  .billing-register-scroll {
+    max-height: 280px;
+  }
+}
+
+/* Enlarged Typography & Clean Controls in AdminBilling */
+.admin-app .billing-panel .admin-panel-head h3 {
+  font-size: 17px !important;
+  font-weight: 600 !important;
+}
+
+.admin-app .billing-panel .subtle-tag {
+  font-size: 12px !important;
+}
+
+.admin-app .payment-review-row {
+  padding: 13px 2px;
+  gap: 14px;
+}
+
+.admin-app .payment-review-row .proof-placeholder {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.admin-app .payment-review-main strong {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+
+.admin-app .payment-review-main small,
+.admin-app .payment-review-main span {
+  font-size: 13px !important;
+  line-height: 1.45;
+}
+
+.admin-app .payment-review-actions .btn {
+  font-size: 13px !important;
+  min-height: 36px;
+}
+
+.admin-app .invoice-admin-row {
+  padding: 14px 2px;
+}
+
+.admin-app .invoice-admin-row > div:first-child strong,
+.admin-app .invoice-admin-row > strong {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-app .invoice-admin-row > div:first-child small {
+  font-size: 13px !important;
+  line-height: 1.45;
+}
+
+.admin-app .invoice-admin-row > span:not(.status-tag) {
+  font-size: 13.5px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-app .invoice-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.admin-app .billing-wa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  min-height: 34px;
+  font-size: 12.5px !important;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.admin-app .hold-recommendation strong {
+  font-size: 14.5px !important;
+}
+
+.admin-app .hold-recommendation p {
+  font-size: 13.5px !important;
+  line-height: 1.55;
+}
+
+/* Proof Display Box & Inline Toggleable Proof Preview (Light + Dark Mode) */
+.proof-display-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #e1e2da;
+  border-radius: 5px;
+  background: #f8f7f3;
+}
+
+.proof-display-box .proof-placeholder {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1px solid #d9dbd2;
+  background: #ffffff;
+  color: #5b6656;
+  display: grid;
+  place-items: center;
+}
+
+.proof-display-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.proof-display-meta strong {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #242a22;
+  line-height: 1.35;
+}
+
+.proof-display-meta small {
+  font-size: 13px !important;
+  color: #6b7267;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proof-view-btn {
+  flex-shrink: 0;
+  min-height: 36px;
+  font-size: 13px !important;
+  white-space: nowrap;
+}
+
+.proof-preview-panel {
+  border: 1px solid #e1e2da;
+  border-radius: 5px;
+  background: #fbfaf8;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.proof-preview-image {
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 4px;
+  display: block;
+}
+
+.proof-preview-fallback {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: #5b6357;
+}
+
+.proof-preview-fallback strong {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  word-break: break-word;
+}
+
+.proof-preview-fallback span {
+  font-size: 13px !important;
+}
+
+.dark-mode .proof-display-box {
+  background: #1e231e;
+  border-color: #323a30;
+}
+
+.dark-mode .proof-display-box .proof-placeholder {
+  background: #262c25;
+  border-color: #3a4438;
+  color: #b7c3b0;
+}
+
+.dark-mode .proof-display-meta strong {
+  color: #f1f3ee;
+}
+
+.dark-mode .proof-display-meta small {
+  color: #a6afa1;
+}
+
+.dark-mode .proof-preview-panel {
+  background: #1a1e1a;
+  border-color: #323a30;
+}
+
+.dark-mode .proof-preview-fallback {
+  color: #c2cabd;
+}
+
+/* Enlarged Typography Inside Billing & Invoice Details Modals */
+.app-shell[data-role] .modal-card:has(.billing-modal-form, .invoice-detail-modal) .modal-header h2 {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  line-height: 1.25;
+}
+
+.app-shell[data-role] .modal-card .billing-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.app-shell[data-role] .modal-card .billing-modal-form .field > span,
+.app-shell[data-role] .modal-card .billing-modal-form .field-label-row,
+.app-shell[data-role] .modal-card .billing-modal-form .field-label-row > span {
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  line-height: 1.4;
+}
+
+.app-shell[data-role] .modal-card .billing-modal-form .field input:not([type="file"]),
+.app-shell[data-role] .modal-card .billing-modal-form .field select,
+.app-shell[data-role] .modal-card .billing-modal-form .field textarea {
+  font-size: 14px !important;
+  padding: 9px 12px;
+  line-height: 1.45;
+}
+
+.app-shell[data-role] .modal-card .billing-modal-form .field input:not([type="file"]),
+.app-shell[data-role] .modal-card .billing-modal-form .field select {
+  min-height: 40px;
+}
+
+.app-shell[data-role] .modal-card .billing-modal-form .upload-box strong {
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+}
+
+.app-shell[data-role] .modal-card .billing-modal-form .upload-box small,
+.app-shell[data-role] .modal-card .billing-modal-form .selected-file {
+  font-size: 13px !important;
+  letter-spacing: 0.01em !important;
+}
+
+.app-shell[data-role] .modal-card .billing-modal-form .overpayment-callout {
+  font-size: 13.5px !important;
+  line-height: 1.5;
+}
+
+.app-shell[data-role] .modal-card .payment-verify-summary {
+  padding: 16px 18px;
+  border-radius: 5px;
+  gap: 4px;
+}
+
+.app-shell[data-role] .modal-card .payment-verify-summary small {
+  font-size: 13px !important;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.app-shell[data-role] .modal-card .payment-verify-summary strong {
+  font-size: 23px !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+
+.app-shell[data-role] .modal-card .payment-verify-summary span {
+  font-size: 13.5px !important;
+}
+
+.app-shell[data-role] .modal-card .invoice-detail-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.app-shell[data-role] .modal-card .invoice-detail-summary {
+  padding: 18px 20px;
+  border-radius: 5px;
+}
+
+.app-shell[data-role] .modal-card .invoice-detail-summary > small {
+  font-size: 13px !important;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.app-shell[data-role] .modal-card .invoice-detail-summary h2 {
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.app-shell[data-role] .modal-card .invoice-detail-summary p {
+  font-size: 14px !important;
+  line-height: 1.5;
+}
+
+.app-shell[data-role] .modal-card .detail-amounts span,
+.app-shell[data-role] .modal-card .detail-amounts strong {
+  font-size: 14px !important;
+}
+
+.app-shell[data-role] .modal-card .detail-amounts strong {
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-role] .modal-card .invoice-detail-modal .modal-subtitle {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  margin: 4px 0 0;
+}
+
+.app-shell[data-role] .modal-card .payment-history-row {
+  padding: 12px 0;
+}
+
+.app-shell[data-role] .modal-card .payment-history-row strong {
+  font-size: 14.5px !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-shell[data-role] .modal-card .payment-history-row small {
+  font-size: 13px !important;
+  line-height: 1.45;
+}
+
+.app-shell[data-role] .modal-card .payment-history-row .receipt-ref {
+  font-size: 12.5px !important;
+}
+
+.app-shell[data-role] .modal-card .billing-modal-form .modal-actions .btn,
+.app-shell[data-role] .modal-card .invoice-detail-modal .modal-actions .btn,
+.app-shell[data-role] .modal-card .invoice-detail-modal .modal-wide-btn {
+  font-size: 14px !important;
+  min-height: 40px;
+}
+
+.app-shell.dark-mode[data-role] .modal-card .billing-modal-form .field > span,
+.app-shell.dark-mode[data-role] .modal-card .billing-modal-form .field-label-row,
+.app-shell.dark-mode[data-role] .modal-card .billing-modal-form .field-label-row > span {
+  color: #dfe4db;
+}
+
+@media (max-width: 780px) {
+  .app-shell[data-role] .modal-card:has(.billing-modal-form, .invoice-detail-modal) .modal-header h2 {
+    font-size: 19px !important;
+  }
+
+  .app-shell[data-role] .modal-card .billing-modal-form .field input:not([type="file"]),
+  .app-shell[data-role] .modal-card .billing-modal-form .field select,
+  .app-shell[data-role] .modal-card .billing-modal-form .field textarea {
+    font-size: 16px !important;
+  }
+
+  .admin-app .invoice-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
 
 
