@@ -6652,8 +6652,12 @@ body {
    ========================================================================== */
 
 .hero {
-  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 !important;
+  border-radius: 0;
   overflow: hidden;
+  overflow-x: hidden;
 }
 
 .hero-shade {
@@ -6665,9 +6669,11 @@ body {
   z-index: 2;
 }
 
-.hero-carousel {
+.hero-carousel-viewport {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
@@ -6675,7 +6681,7 @@ body {
 
 .hero-carousel-track {
   display: flex;
-  width: 400%;
+  width: 100%;
   height: 100%;
   transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
@@ -6686,38 +6692,40 @@ body {
 }
 
 .hero-carousel-track.is-slide-0 {
-  transform: translateX(0%);
+  transform: translate3d(0%, 0, 0);
 }
 
 .hero-carousel-track.is-slide-1 {
-  transform: translateX(-25%);
+  transform: translate3d(-100%, 0, 0);
 }
 
 .hero-carousel-track.is-slide-2 {
-  transform: translateX(-50%);
+  transform: translate3d(-200%, 0, 0);
 }
 
 .hero-carousel-track.is-slide-3 {
-  transform: translateX(-75%);
+  transform: translate3d(-300%, 0, 0);
 }
 
 .hero-carousel-slide {
-  flex: 0 0 25%;
-  width: 25%;
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 100%;
   height: 100%;
   overflow: hidden;
 }
 
+.hero-carousel-slide img,
 .hero-carousel-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 48%;
+  object-position: center center;
   display: block;
 }
 
 .hero-carousel-img.is-scaled {
-  transform: scale(1.06);
+  transform: scale(1.07);
 }
 
 .hero-carousel-dots {
@@ -6859,10 +6867,17 @@ body {
 }
 
 .public-main {
+  width: 100%;
+  margin: 0;
   padding-top: calc(72px + env(safe-area-inset-top));
 }
 
 .hero {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 !important;
+  border-radius: 0;
+  overflow: hidden;
   height: min(770px, calc(100vh - 72px));
   height: min(770px, calc(100dvh - 72px - env(safe-area-inset-top)));
 }
@@ -7005,6 +7020,17 @@ body {
 
   .public-main {
     padding-top: calc(68px + env(safe-area-inset-top));
+  }
+
+  .hero {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 !important;
+    border-radius: 0;
+    overflow: hidden;
+    height: auto;
+    min-height: min(560px, calc(100dvh - 68px - env(safe-area-inset-top)));
+    padding: 72px 0 64px;
   }
 
   .public-header-inner {
@@ -7227,23 +7253,72 @@ body {
   .brand-logo,
   .public-header .brand-logo,
   .public-footer .brand-logo {
-    height: 10.5px;
-    max-height: 10.5px;
-    width: auto;
-    max-width: min(44vw, 130px);
+    height: 10px !important;
+    max-height: 10px !important;
+    width: auto !important;
+    max-width: min(42vw, 120px);
     object-fit: contain;
     object-position: left center;
   }
 
   .admin-sidebar .brand-logo {
-    height: 12px;
-    max-height: 12px;
+    height: 11px !important;
+    max-height: 11px !important;
   }
 
   .public-header .portal-link {
     font-size: 12.5px !important;
   }
 }
+
+/* ==========================================================================
+   Suppress Momentary Blue Tap Highlight & Mouse-Click Focus Ring
+   ========================================================================== */
+
+html,
+body,
+a,
+button,
+[role="button"],
+input,
+select,
+textarea,
+summary,
+.brand,
+.nav-links a,
+.public-nav button,
+.public-drawer-item,
+.floating-nav-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a:focus:not(:focus-visible),
+button:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible),
+summary:focus:not(:focus-visible),
+.brand:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none;
+}
+
+.public-nav button.active:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: 0 1.5px 0 #272a27;
+}
+
+.dark-mode .public-nav button.active:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: 0 1.5px 0 #e6ebe0;
+}
+
+.brand:active,
+.public-nav button:active,
+.public-header .portal-link:active,
+.public-drawer-item:active {
+  outline: none !important;
+  background-color: transparent;
+}
+
 
 
 

@@ -263,7 +263,7 @@ function HomePage({ go, heroReady }) {
 
   return <>
     <section className="hero">
-      <div className="hero-carousel" aria-hidden="true">
+      <div className="hero-carousel-viewport" aria-hidden="true">
         <div
           className={`hero-carousel-track is-slide-${slideIdx} ${noTransition ? 'is-instant' : ''}`}
           onTransitionEnd={handleTrackTransitionEnd}
