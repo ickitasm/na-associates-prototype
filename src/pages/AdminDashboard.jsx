@@ -139,7 +139,7 @@ function AdminBilling({projects,clients,updateProject,addActivity,setModal}) {
 }
 function InvoiceAdminRow({invoice,setModal,project,client,addActivity}) {
   const paid=invoice.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0);
-  const phone = client?.phone || '+62895337060007';
+  const phone = client?.phone || '+6285174279328';
   const statusLabel = invoice.status === 'Paid' ? 'Sudah Dibayar — Terima Kasih Pembayarannya' : 'Belum Dibayar (Tenggat Termin)';
   const msg = encodeURIComponent(`Halo ${client?.name || 'Klien'}, informasi penagihan ${invoice.number} untuk proyek ${project.name}. Status: ${statusLabel}. Silakan periksa Portal Klien NA Associates.`);
   const waLink = `https://wa.me/${phone.replace(/[^0-9]/g,'')}?text=${msg}`;

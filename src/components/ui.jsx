@@ -49,12 +49,12 @@ export function PublicFooter({ go }) {
           <p>Arsitektur yang dibentuk oleh konteks, kejelasan, dan kehidupan sehari-hari.</p>
           <a
             className="footer-social-link"
-            href="https://instagram.com/naassociates.id"
+            href="https://instagram.com/naassociates.arch"
             target="_blank"
             rel="noopener noreferrer"
           >
             <Instagram size={16}/>
-            <span>@naassociates.id</span>
+            <span>@naassociates.arch</span>
           </a>
         </div>
         <div className="footer-links">
@@ -68,13 +68,13 @@ export function PublicFooter({ go }) {
             <small>TERHUBUNG</small>
             <button type="button" onClick={() => go('career')}>Career</button>
             <button type="button" onClick={() => go('contact')}>Contact</button>
-            <a href="https://instagram.com/naassociates.id" target="_blank" rel="noopener noreferrer">Instagram</a>
+            <a href="https://instagram.com/naassociates.arch" target="_blank" rel="noopener noreferrer">Instagram</a>
             <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Back to top ↑</button>
           </div>
           <div className="footer-contact-col">
             <small>KONTAK &amp; STUDIO</small>
             <a href="mailto:hello@naassociates.com"><Mail size={14}/><span>hello@naassociates.com</span></a>
-            <a href="https://wa.me/62895337060007" target="_blank" rel="noopener noreferrer"><Phone size={14}/><span>+62 895-3370-60007</span></a>
+            <a href="https://wa.me/6285174279328" target="_blank" rel="noopener noreferrer"><Phone size={14}/><span>+62 851-7427-9328</span></a>
             <span className="footer-contact-item"><MapPin size={14}/><span>Jakarta, Indonesia</span></span>
           </div>
         </div>

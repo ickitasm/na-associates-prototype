@@ -7592,11 +7592,49 @@ summary:focus:not(:focus-visible),
     grid-column: 1 / -1;
   }
 }
+/* ==========================================================================
+   Floating Quick-Nav Stack (Home + Single Alternating Scroll Arrow)
+   ========================================================================== */
 
+.public-floating-nav {
+  right: 18px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  gap: 10px;
+}
 
+.floating-nav-home.is-hidden {
+  height: 0;
+  min-height: 0;
+  margin-bottom: -10px;
+  border-width: 0;
+  padding: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  overflow: hidden;
+  box-shadow: none;
+}
 
+.floating-nav-home.is-visible,
+.floating-nav-scroll.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
 
+.floating-nav-btn:focus-visible {
+  outline: 2px solid #8a9483;
+  outline-offset: 2px;
+}
 
+@media (max-width: 480px) {
+  .public-floating-nav {
+    right: 18px;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    gap: 8px;
+  }
 
-
-
+  .floating-nav-home.is-hidden {
+    margin-bottom: -8px;
+  }
+}

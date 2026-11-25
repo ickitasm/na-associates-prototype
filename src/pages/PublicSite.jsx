@@ -35,21 +35,40 @@ const HERO_TRACK_FRAMES = [...HERO_SLIDES, { ...HERO_SLIDES[0], id: 'slide-1-clo
 
 function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMobileNav, heroReady = true }) {
   const [scrolled, setScrolled] = useState(false);
-  const [showBackToTop, setShowBackToTop] = useState(false);
-  const [showScrollDown, setShowScrollDown] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(false);
+  const [hasNextTarget, setHasNextTarget] = useState(true);
 
   const getHeaderOffset = () => {
     const header = document.querySelector('.public-header');
     return header ? header.getBoundingClientRect().height : 82;
   };
 
-  const getMainSections = () => Array.from(document.querySelectorAll('.public-main > section'));
+  const getScrollTargets = () => {
+    const rawTargets = page === 'project-detail'
+      ? [
+          ...document.querySelectorAll('.detail-hero, .project-facts, .project-story, .detail-gallery'),
+          document.querySelector('footer.public-footer'),
+        ]
+      : [
+          ...document.querySelectorAll('.public-main > section'),
+          document.querySelector('footer.public-footer'),
+        ];
 
-  const getNextSection = () => {
-    const sections = getMainSections();
-    if (!sections.length) return null;
+    const seen = new Set();
+    return rawTargets
+      .filter((el) => {
+        if (!el || seen.has(el) || el.offsetHeight <= 0) return false;
+        seen.add(el);
+        return true;
+      })
+      .sort((a, b) => (window.scrollY + a.getBoundingClientRect().top) - (window.scrollY + b.getBoundingClientRect().top));
+  };
+
+  const getNextScrollTarget = () => {
+    const targets = getScrollTargets();
+    if (!targets.length) return null;
     const offset = getHeaderOffset();
-    return sections.find((sec) => sec.getBoundingClientRect().top > offset + 28) || null;
+    return targets.find((el) => el.getBoundingClientRect().top > offset + 24) || null;
   };
 
   useEffect(() => { const fn = () => go('home'); window.addEventListener('na-home', fn); return () => window.removeEventListener('na-home', fn); }, []);
@@ -58,14 +77,10 @@ function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMob
     const updateScroll = () => {
       const y = window.scrollY;
       setScrolled(y > 10);
-      setShowBackToTop(y > 260);
-      const sections = getMainSections();
-      const offset = getHeaderOffset();
-      const lastSec = sections[sections.length - 1];
-      const atBottom = window.innerHeight + y >= document.documentElement.scrollHeight - 40;
-      const atLastSection = lastSec ? lastSec.getBoundingClientRect().top <= offset + 32 : true;
-      const hasNext = Boolean(sections.find((sec) => sec.getBoundingClientRect().top > offset + 28));
-      setShowScrollDown(hasNext && !atBottom && !atLastSection);
+      const atPageBottom = window.innerHeight + y >= document.documentElement.scrollHeight - 24;
+      const nextTarget = getNextScrollTarget();
+      setIsAtBottom(atPageBottom || !nextTarget);
+      setHasNextTarget(Boolean(nextTarget));
     };
     const raf = requestAnimationFrame(updateScroll);
     window.addEventListener('scroll', updateScroll, { passive: true });
@@ -96,11 +111,19 @@ function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMob
     };
   }, [mobileNav, setMobileNav]);
 
-  const scrollToNextSection = () => {
-    const nextSec = getNextSection();
-    if (!nextSec) return;
+  const handleFloatingScroll = () => {
+    const atPageBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 24;
+    const nextTarget = getNextScrollTarget();
+
+    if (atPageBottom || !nextTarget) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     const offset = getHeaderOffset();
-    const targetTop = Math.max(0, window.scrollY + nextSec.getBoundingClientRect().top - offset);
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const rawTop = window.scrollY + nextTarget.getBoundingClientRect().top - offset;
+    const targetTop = Math.max(0, Math.min(maxScroll, rawTop));
     window.scrollTo({ top: targetTop, behavior: 'smooth' });
   };
 
@@ -187,23 +210,21 @@ function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMob
     <div className="public-floating-nav" aria-label="Navigasi gulir cepat">
       <button
         type="button"
-        className={`floating-nav-btn floating-nav-up ${showBackToTop ? 'is-visible' : 'is-hidden'}`}
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        aria-label="Kembali ke atas"
-        aria-hidden={!showBackToTop}
-        tabIndex={showBackToTop ? 0 : -1}
+        className={`floating-nav-btn floating-nav-home ${page !== 'home' ? 'is-visible' : 'is-hidden'}`}
+        onClick={() => go('home')}
+        aria-label="Kembali ke beranda"
+        aria-hidden={page === 'home'}
+        tabIndex={page !== 'home' ? 0 : -1}
       >
-        <ArrowUp size={18}/>
+        <Home size={18}/>
       </button>
       <button
         type="button"
-        className={`floating-nav-btn floating-nav-down ${showScrollDown ? 'is-visible' : 'is-hidden'}`}
-        onClick={scrollToNextSection}
-        aria-label="Gulir ke bagian berikutnya"
-        aria-hidden={!showScrollDown}
-        tabIndex={showScrollDown ? 0 : -1}
+        className="floating-nav-btn floating-nav-scroll is-visible"
+        onClick={handleFloatingScroll}
+        aria-label={!isAtBottom && hasNextTarget ? 'Gulir ke bagian berikutnya' : 'Kembali ke atas'}
       >
-        <ArrowDown size={18}/>
+        {!isAtBottom && hasNextTarget ? <ArrowDown size={18}/> : <ArrowUp size={18}/>}
       </button>
     </div>
   </>;
@@ -398,6 +419,15 @@ function ProjectsPage({ go }) {
       </div>
       {!visible.length && <EmptyState title="Proyek tidak ditemukan" detail="Coba ubah kata kunci atau filter pencarian."/>}
     </section>
+    <section className="contact-band">
+      <div className="wrap contact-band-inner">
+        <div>
+          <div className="eyebrow light">DISKUSI PROYEK</div>
+          <h2>Tertarik merancang<br/><em>ruang serupa?</em></h2>
+        </div>
+        <button type="button" className="circle-arrow" onClick={() => go('contact')} aria-label="Hubungi NA Associates"><ArrowUpRight size={26}/></button>
+      </div>
+    </section>
   </>;
 }
 
@@ -449,8 +479,11 @@ function ServicesPage({ go }) {
     </section>
     <section className="contact-band">
       <div className="wrap contact-band-inner">
-        <h2>Mari wujudkan<br/><em>ruang yang bermakna.</em></h2>
-        <button className="circle-arrow" onClick={() => go('contact')} aria-label="Hubungi kami"><ArrowUpRight/></button>
+        <div>
+          <div className="eyebrow light">KONSULTASI LAYANAN</div>
+          <h2>Mari wujudkan<br/><em>ruang yang bermakna.</em></h2>
+        </div>
+        <button type="button" className="circle-arrow" onClick={() => go('contact')} aria-label="Hubungi NA Associates"><ArrowUpRight size={26}/></button>
       </div>
     </section>
   </>;
@@ -467,6 +500,15 @@ function AboutPage({ go }) {
         <p>Kami adalah biro arsitektur dan desain yang berfokus menciptakan ruang-ruang fungsional, relevan lintas waktu, dan terhubung erat dengan lingkungan sekitarnya.</p>
         <p>Proses kerja kami selalu bersifat kolaboratif: mendengarkan dengan saksama, menguji berbagai gagasan ruang, dan menyempurnakan setiap keputusan desain dengan presisi.</p>
         <button className="under-link" onClick={() => go('contact')}>Get in touch <ArrowUpRight size={15}/></button>
+      </div>
+    </section>
+    <section className="contact-band">
+      <div className="wrap contact-band-inner">
+        <div>
+          <div className="eyebrow light">MARI BERKOLABORASI</div>
+          <h2>Siap memulai dialog<br/><em>untuk ruang Anda?</em></h2>
+        </div>
+        <button type="button" className="circle-arrow" onClick={() => go('contact')} aria-label="Hubungi NA Associates"><ArrowUpRight size={26}/></button>
       </div>
     </section>
   </>;
@@ -495,13 +537,13 @@ function ContactPage() {
         </div>
         <Field label="Ceritakan singkat tentang proyek Anda" required textarea placeholder="Gambaran singkat lokasi, kebutuhan ruang, atau rencana proyek..."/>
         <button className="btn btn-dark" type="submit">Kirim pesan <ArrowUpRight size={16}/></button>
-        <a className="btn btn-whatsapp" href="https://wa.me/62895337060007?text=Halo%20NA%20Associates%2C%20saya%20tertarik%20untuk%20berkonsultasi%20mengenai%20proyek%20arsitektur." target="_blank" rel="noopener noreferrer"><WhatsAppIcon size={16}/> Hubungi via WhatsApp</a>
+        <a className="btn btn-whatsapp" href="https://wa.me/6285174279328?text=Halo%20NA%20Associates%2C%20saya%20tertarik%20untuk%20berkonsultasi%20mengenai%20proyek%20arsitektur." target="_blank" rel="noopener noreferrer"><WhatsAppIcon size={16}/> Hubungi via WhatsApp</a>
         {sent && <p className="form-success"><CheckCircle2 size={16}/> Pesan berhasil dikirim. Tim NA Associates akan segera menghubungi Anda.</p>}
       </form>
       <aside className="contact-aside">
         <div><small>EMAIL</small><strong>hello@naassociates.com</strong></div>
         <div><small>LOKASI</small><strong>Jakarta, Indonesia</strong></div>
-        <div><small>WHATSAPP</small><strong><a className="contact-wa-link" href="https://wa.me/62895337060007" target="_blank" rel="noopener noreferrer">+62 895-3370-60007 (0895337060007)</a></strong></div>
+        <div><small>WHATSAPP</small><strong><a className="contact-wa-link" href="https://wa.me/6285174279328" target="_blank" rel="noopener noreferrer">+62 851-7427-9328 (085174279328)</a></strong></div>
       </aside>
     </section>
   </>;
