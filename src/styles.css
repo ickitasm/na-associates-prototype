@@ -7802,4 +7802,535 @@ summary:focus:not(:focus-visible),
   color: #f4f6f0;
 }
 
+/* ==========================================================================
+   Client Archive Status Badge & Client Detail Modal Layout
+   ========================================================================== */
+
+.status-tag.tag-archived {
+  background: #eceee9;
+  color: #5d6459;
+}
+
+.dark-mode .status-tag.tag-archived {
+  background: #282e28;
+  color: #a9b2a4;
+}
+
+.client-detail-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.client-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  padding: 16px;
+  border: 1px solid #e4e6dd;
+  background: #f8f7f3;
+  border-radius: 4px;
+}
+
+.client-detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+}
+
+.client-detail-item small,
+.client-detail-projects > small {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #7b8276;
+}
+
+.client-detail-item strong {
+  font-size: 13.5px;
+  color: #262b23;
+  word-break: break-word;
+}
+
+.client-detail-projects {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.client-detail-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.client-detail-project-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid #e4e6dd;
+  background: #ffffff;
+  border-radius: 4px;
+}
+
+.client-detail-project-row > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.client-detail-project-row strong {
+  font-size: 13.5px;
+  color: #262b23;
+}
+
+.client-detail-project-row span {
+  font-size: 11px;
+  color: #7b8276;
+  font-variant-numeric: tabular-nums;
+}
+
+.client-detail-project-row small {
+  font-size: 12px;
+  color: #656c60;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.client-detail-empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed #d8dbd1;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #7b8276;
+}
+
+.dark-mode .client-detail-grid {
+  border-color: #323931;
+  background: #1d221d;
+}
+
+.dark-mode .client-detail-item small,
+.dark-mode .client-detail-projects > small,
+.dark-mode .client-detail-project-row span,
+.dark-mode .client-detail-empty {
+  color: #9aa396;
+}
+
+.dark-mode .client-detail-item strong,
+.dark-mode .client-detail-project-row strong {
+  color: #eff2eb;
+}
+
+.dark-mode .client-detail-project-row {
+  border-color: #323931;
+  background: #232823;
+}
+
+.dark-mode .client-detail-project-row small {
+  color: #bcc4b7;
+}
+
+.dark-mode .client-detail-empty {
+  border-color: #384037;
+}
+
+@media (max-width: 640px) {
+  .client-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .client-detail-project-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .client-detail-project-row small {
+    text-align: left;
+  }
+}
+
+/* ==========================================================================
+   Admin Output, Design & Legal Bounded Scrollbars & Row Actions
+   ========================================================================== */
+.admin-doc-scroll {
+  max-height: 295px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #b8b1a1 transparent;
+}
+
+.admin-doc-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-doc-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-doc-scroll::-webkit-scrollbar-thumb {
+  background: #b8b1a1;
+  border-radius: 999px;
+}
+
+.dark-mode .admin-doc-scroll {
+  scrollbar-color: #3d483b transparent;
+}
+
+.dark-mode .admin-doc-scroll::-webkit-scrollbar-thumb {
+  background: #3d483b;
+}
+
+.document-row.admin-doc-row .admin-doc-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+
+.admin-doc-icon-btn {
+  padding: 6px 8px;
+}
+
+.staff-delete-btn.is-confirming {
+  background: #faeded;
+  border-color: #cf8f8f;
+  font-weight: 700;
+}
+
+.dark-mode .staff-delete-btn.is-confirming {
+  background: #332020;
+  border-color: #844545;
+}
+
+@media (max-width: 780px) {
+  .document-row.admin-doc-row {
+    flex-wrap: wrap;
+  }
+
+  .document-row.admin-doc-row .admin-doc-meta {
+    flex: 1 1 calc(100% - 56px);
+  }
+
+  .document-row.admin-doc-row .admin-doc-actions {
+    width: 100%;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    padding-left: 51px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-doc-scroll {
+    max-height: 240px;
+  }
+
+  .document-row.admin-doc-row .admin-doc-actions {
+    padding-left: 0;
+  }
+}
+
+/* ==========================================================================
+   Compact Document Action Popover, Undo Toast & Project Cover Editor
+   ========================================================================== */
+.document-row.admin-doc-row .doc-row-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.doc-preview-btn,
+.doc-menu-trigger {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  display: inline-grid;
+  place-items: center;
+  color: #5f6759;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.doc-preview-btn:hover,
+.doc-menu-trigger:hover,
+.doc-menu-trigger[aria-expanded="true"] {
+  background: #eceee7;
+  color: #262c24;
+}
+
+.dark-mode .doc-preview-btn,
+.dark-mode .doc-menu-trigger {
+  color: #b4bdb0;
+}
+
+.dark-mode .doc-preview-btn:hover,
+.dark-mode .doc-menu-trigger:hover,
+.dark-mode .doc-menu-trigger[aria-expanded="true"] {
+  background: #2b3329;
+  color: #f1f4ee;
+}
+
+.doc-action-popover {
+  position: fixed;
+  top: var(--doc-menu-top, 0px);
+  left: var(--doc-menu-left, 0px);
+  width: 216px;
+  z-index: 90;
+  background: #fbfaf7;
+  border: 1px solid #d8dbd1;
+  border-radius: 6px;
+  box-shadow: 0 12px 30px rgba(24, 29, 24, 0.14);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dark-mode .doc-action-popover {
+  background: #1f241e;
+  border-color: #363e34;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45);
+}
+
+.doc-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #31382f;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.doc-menu-item:hover {
+  background: #eff1ea;
+  color: #1f241d;
+}
+
+.dark-mode .doc-menu-item {
+  color: #dfe4db;
+}
+
+.dark-mode .doc-menu-item:hover {
+  background: #2a3129;
+  color: #ffffff;
+}
+
+.doc-menu-item-danger {
+  color: #a63232;
+}
+
+.doc-menu-item-danger:hover {
+  background: #faeded;
+  color: #8f2525;
+}
+
+.dark-mode .doc-menu-item-danger {
+  color: #ee9d9d;
+}
+
+.dark-mode .doc-menu-item-danger:hover {
+  background: #362020;
+  color: #f7baba;
+}
+
+.doc-menu-divider {
+  border: 0;
+  border-top: 1px solid #e7e8e1;
+  margin: 4px 2px;
+}
+
+.dark-mode .doc-menu-divider {
+  border-top-color: #323931;
+}
+
+.doc-delete-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+}
+
+.doc-confirm-yes,
+.doc-confirm-cancel {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 8px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.doc-confirm-yes {
+  border: 1px solid #b83a3a;
+  background: #b83a3a;
+  color: #ffffff;
+}
+
+.doc-confirm-yes:hover {
+  background: #9f2d2d;
+  border-color: #9f2d2d;
+}
+
+.doc-confirm-cancel {
+  border: 1px solid #d5d7ce;
+  background: #f5f4ef;
+  color: #464e41;
+}
+
+.doc-confirm-cancel:hover {
+  background: #eaebe4;
+}
+
+.dark-mode .doc-confirm-cancel {
+  border-color: #3a4238;
+  background: #272d26;
+  color: #d6dcd2;
+}
+
+.dark-mode .doc-confirm-cancel:hover {
+  background: #313830;
+}
+
+.doc-undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 95;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px 10px 16px;
+  border-radius: 6px;
+  background: #242b23;
+  color: #f4f3ee;
+  border: 1px solid #3c463a;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.doc-undo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.doc-undo-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .doc-undo-toast {
+  background: #171b16;
+  border-color: #434f40;
+}
+
+.admin-project-card-photo .status-pill {
+  left: auto;
+  right: 15px;
+  top: 15px;
+}
+
+.project-cover-edit-btn {
+  position: absolute;
+  left: 15px;
+  top: 15px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(28, 33, 27, 0.78);
+  color: #f7f6f1;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.project-cover-edit-btn:hover {
+  background: rgba(28, 33, 27, 0.94);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.cover-preview-box {
+  width: 100%;
+  height: 196px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #d5d8cf;
+  background: #efeee8;
+  margin-bottom: 16px;
+}
+
+.cover-preview-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-preview-empty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 12.5px;
+  color: #7d8378;
+}
+
+.dark-mode .cover-preview-box {
+  border-color: #363e34;
+  background: #1d221d;
+}
+
+.dark-mode .cover-preview-empty {
+  color: #9ba396;
+}
+
 

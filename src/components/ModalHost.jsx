@@ -37,6 +37,10 @@ function LoginModalView({ db, setDb, close, notify, changeRole, enterClient, ent
       setError('Username klien tidak ditemukan. Pastikan akun klien telah dibuat oleh admin.');
       return;
     }
+    if (found.status === 'Archived') {
+      setError('Akun klien ini sedang diarsipkan. Hubungi admin NA Associates untuk mengaktifkan kembali.');
+      return;
+    }
     setDb(old => ({ ...old, currentClientId: found.id }));
     changeRole('client');
     close();
@@ -834,6 +838,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     login: 'Manage Project',
     'invite-admin': 'Invite an Admin',
     'create-project': 'Create a new project',
+    'edit-project-cover': 'Ubah Gambar Cover Proyek',
     'invite-client': 'Invite a client',
     'payment-upload': 'Upload payment proof',
     'verify-payment': 'Verify payment',
@@ -844,8 +849,9 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     'edit-report': 'Edit Draft daily log',
     'report-detail': modal.report?.title || 'Daily project log detail',
     'new-document': 'Upload project file',
-    'edit-document': 'Edit Draft project file',
+    'edit-document': isStaff ? 'Edit Draft project file' : 'Edit project file',
     'new-legal': 'Add legal document',
+    'edit-legal': 'Edit legal document',
     'new-material': 'Add material requirement',
     'edit-material': 'Edit Draft material requirement',
     'new-usage': 'Record material usage',
@@ -860,6 +866,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     'rollback-reason': 'Roll Back Month (Mundur Bulan)',
     'new-milestone': 'Add Milestone',
     'edit-milestone': 'Edit Milestone',
+    'client-detail': modal.title || 'Client Account Details',
     info: modal.title || 'Information'
   };
 
@@ -984,6 +991,55 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     );
   }
   if (modal.type === 'login') body = <LoginModalView db={db} setDb={setDb} close={close} notify={notify} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} enterStaff={enterStaff} />;
+  if (modal.type === 'edit-project-cover') {
+    const targetProject = modal.project || allProjects.find(x => x.id === modal.projectId) || selectedProject;
+    const previewCover = form.cover || targetProject?.cover;
+    body = (
+      <form
+        onSubmit={submit(() => {
+          if (!targetProject) throw new Error('Proyek tidak ditemukan.');
+          if (!form.cover) throw new Error('Pilih gambar cover baru terlebih dahulu.');
+          updateProject(targetProject.id, x => ({ ...x, cover: form.cover }));
+          addActivity(targetProject.id, 'Project cover updated', 'Gambar cover / thumbnail proyek diperbarui oleh Admin.');
+          finish('Gambar cover proyek berhasil diperbarui.');
+        })}
+      >
+        <div className="cover-preview-box">
+          {previewCover ? (
+            <img src={previewCover} alt={targetProject?.name || 'Cover preview'} />
+          ) : (
+            <div className="cover-preview-empty">Belum ada gambar cover</div>
+          )}
+        </div>
+        <div className="field">
+          <span>Pilih Gambar Cover Baru (PNG, JPG, WebP)</span>
+          <label className="upload-box">
+            <Upload size={18} />
+            <span>
+              <strong>{form.coverName ? `Cover terpilih: ${form.coverName}` : 'Pilih file gambar cover'}</strong>
+              <small>Gambar dikonversi secara lokal dan langsung diperbarui ke kartu proyek & Client Portal</small>
+            </span>
+            <input
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  set('coverName', file.name);
+                  const reader = new FileReader();
+                  reader.onload = evt => {
+                    set('cover', evt.target.result);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+          </label>
+        </div>
+        {footer('Simpan Cover', !form.cover)}
+      </form>
+    );
+  }
   if (modal.type === 'create-project') body = <form onSubmit={submit(() => { const id = uid('project'); const p = { id, code: form.code || `NA-${String(db.projects.length + 32).padStart(3, '0')}`, name: form.name, location: form.location, category: form.category || 'Residential', landArea: form.landArea || '—', buildingArea: form.buildingArea || '—', year: '2026', status: 'Active', progress: 0, clientId: form.clientId || null, cover: form.cover || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=85', startDate: form.startDate || '2026-11-02', targetDate: form.targetDate || '2027-11-02', nextMilestone: '—', nextMilestoneDate: null, nextPayment: null, milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: [{ id: uid('act'), date: nowLabel(), actor: 'Admin NA Associates', action: 'Project created', detail: `${form.name} dibuat.` }] }; setDb(old => ({ ...old, projects: [p, ...old.projects], clients: old.clients.map(c => c.id === form.clientId ? { ...c, projects: [...c.projects, id] } : c) })); finish('Project berhasil dibuat.'); })}><div className="form-grid">{input('Project name', 'name', 'e.g. Rumah Sore', 'text', true)}{input('Project code', 'code', 'e.g. NA-032')}{input('Location', 'location', 'City / area', 'text', true)}{select('Category', 'category', [['Residential', 'Residential'], ['Commercial', 'Commercial'], ['Common / Other', 'Common / Other']])}{input('Land area', 'landArea', 'e.g. 240 m²')}{input('Building area', 'buildingArea', 'e.g. 185 m²')}{select('Assign client', 'clientId', [['', 'Unassigned'], ...db.clients.map(c => [c.id, c.name])])}{input('Target completion', 'targetDate', '', 'date')}</div><div className="field"><span>Cover Image (Local File Upload)</span><label className="upload-box" style={{marginTop:'4px'}}><Upload size={18}/><span><strong>{form.coverName ? `Cover terpilih: ${form.coverName}` : 'Pilih file gambar cover (PNG, JPG, WebP)'}</strong><small>Gambar dikonversi menjadi preview lokal</small></span><input type="file" accept="image/png, image/jpeg, image/webp" onChange={e => { const file = e.target.files?.[0]; if (file) { set('coverName', file.name); const reader = new FileReader(); reader.onload = (evt) => { set('cover', evt.target.result); }; reader.readAsDataURL(file); } }}/></label>{form.cover && <div style={{marginTop:'8px',height:'110px',width:'100%',borderRadius:'4px',overflow:'hidden',border:'1px solid #d5d8cf'}}><img src={form.cover} alt="Cover preview" style={{width:'100%',height:'100%',objectFit:'cover'}}/></div>}</div>{footer('Create project')}</form>;
   if (modal.type === 'invite-admin') body = <form onSubmit={submit(() => { if (!form.name || !form.email) throw new Error('Name dan email wajib diisi.'); const admin = { id: uid('admin'), name: form.name, email: form.email, isPrimary: false, status: 'Invited' }; setDb(old => ({ ...old, admins: [...(old.admins || []), admin] })); finish('Undangan Admin berhasil dibuat.'); })}><div className="form-grid">{input('Admin name', 'name', 'Full name', 'text', true)}{input('Admin email', 'email', 'name@studio.com', 'email', true)}</div><div className="modal-footnote">Only the Primary Admin can create Admin invitations. All Admins share operational rights; only the Primary Admin can add other Admins.</div>{footer('Create Admin invitation')}</form>;
   if (modal.type === 'invite-client') body = <form onSubmit={submit(() => {
@@ -1007,15 +1063,95 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     }));
     finish(`Akun klien "${c.name}" (Username: ${c.username}) berhasil dibuat.`);
   })}><div className="form-grid">
-    {input('Username Klien (untuk login) *', 'username', 'e.g. aditya', 'text', true)}
-    {input('Nama Lengkap Klien *', 'name', 'Full name', 'text', true)}
+    {input('Username', 'username', 'e.g. aditya', 'text', true)}
+    {input('Nama Lengkap', 'name', 'Full name', 'text', true)}
     {input('Tanggal Pendaftaran', 'date', '', 'date')}
     {input('Nomor Telepon / WhatsApp', 'phone', '+62 812 ...')}
     {input('Email Klien', 'email', 'name@email.com', 'email')}
   </div>
   <div className="field"><span>Assign Project(s)</span><div className="check-list">{db.projects.map(p => <label key={p.id} className="check-item"><input type="checkbox" checked={(form.projects || []).includes(p.id)} onChange={e => set('projects', e.target.checked ? [...(form.projects || []), p.id] : (form.projects || []).filter(x => x !== p.id))} /><div className="check-label-content"><strong className="check-project-name">{p.name}</strong><span className="check-project-code">{p.code}</span></div></label>)}</div></div>
-  <div className="modal-footnote">Klien masuk menggunakan Username unik yang Anda daftarkan di atas (tanpa Google/password).</div>
   {footer('Buat Akun Klien')}</form>;
+  if (modal.type === 'client-detail') {
+    const client = (db.clients || []).find(c => c.id === modal.clientId);
+    if (!client) {
+      body = (
+        <div className="client-detail-modal">
+          <EmptyState title="Client not found" detail="Akun klien ini sudah tidak tersedia." />
+          <div className="modal-actions">
+            <button type="button" className="btn btn-dark" onClick={close}>Close</button>
+          </div>
+        </div>
+      );
+    } else {
+      const assignedProjects = (client.projects || [])
+        .map(pid => allProjects.find(p => p.id === pid))
+        .filter(Boolean);
+      const isArchived = client.status === 'Archived';
+      const toggleClientArchive = () => {
+        const nextStatus = isArchived ? 'Active' : 'Archived';
+        setDb(old => ({
+          ...old,
+          clients: (old.clients || []).map(c => (c.id === client.id ? { ...c, status: nextStatus } : c))
+        }));
+        finish(
+          isArchived
+            ? `Akun klien "${client.name}" berhasil diaktifkan kembali.`
+            : `Akun klien "${client.name}" berhasil diarsipkan.`
+        );
+      };
+
+      body = (
+        <div className="client-detail-modal">
+          <div className="client-detail-grid">
+            <div className="client-detail-item">
+              <small>NAMA LENGKAP</small>
+              <strong>{client.name || '—'}</strong>
+            </div>
+            <div className="client-detail-item">
+              <small>USERNAME</small>
+              <strong>{client.username || '—'}</strong>
+            </div>
+            <div className="client-detail-item">
+              <small>EMAIL</small>
+              <strong>{client.email || '—'}</strong>
+            </div>
+            <div className="client-detail-item">
+              <small>NOMOR TELEPON</small>
+              <strong>{client.phone || '—'}</strong>
+            </div>
+            <div className="client-detail-item">
+              <small>STATUS</small>
+              <div><StatusTag value={client.status || 'Active'} /></div>
+            </div>
+          </div>
+          <div className="client-detail-projects">
+            <small>ASSIGNED PROJECTS &amp; LOCATIONS</small>
+            {assignedProjects.length > 0 ? (
+              <div className="client-detail-project-list">
+                {assignedProjects.map(p => (
+                  <div className="client-detail-project-row" key={p.id}>
+                    <div>
+                      <strong>{p.name}</strong>
+                      <span>{p.code}</span>
+                    </div>
+                    <small>{p.location || '—'}</small>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="client-detail-empty">Belum ada proyek yang ditugaskan</p>
+            )}
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-outline" onClick={close}>Close</button>
+            <button type="button" className="btn btn-dark" onClick={toggleClientArchive}>
+              {isArchived ? 'Unarchive (Aktifkan Kembali)' : 'Archive Account'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+  }
   if (modal.type === 'payment-upload') body = <form onSubmit={submit(() => { const amount = Number(form.amount); if (!amount || amount <= 0) throw new Error('Masukkan nominal pembayaran yang valid.'); const invoice = project.invoices.find(i => i.id === form.invoiceId); if (!invoice) throw new Error('Pilih invoice.'); const fileName = form.proofName || 'payment-proof.jpg'; const pay = { id: uid('payment'), date: form.date || new Date().toISOString().slice(0, 10), claimed: amount, approved: 0, status: 'Pending', proof: fileName, receipt: null }; updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === invoice.id ? { ...i, status: 'Pending Verification', payments: [...i.payments, pay] } : i) })); addActivity(project.id, 'Uploaded payment proof', `Invoice ${invoice.number} · Claimed ${money(amount)} · File: ${fileName}`, db.clients.find(c => c.id === project.clientId)?.name || 'Client', { category: 'upload', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }); finish('Bukti pembayaran berhasil diunggah.'); })}><div className="modal-highlight"><Wallet size={18} /><div><strong>Upload payment proof</strong><small>{project.name} · {project.code}</small></div></div>{select('Invoice', 'invoiceId', project.invoices.filter(i => i.status !== 'Cancelled').map(i => [i.id, `${i.number} · ${money(i.amount)}`]))}{input('Payment date', 'date', '', 'date')}{input('Claimed payment amount (Rp)', 'amount', 'e.g. 4000000', 'number', true)}<label className="upload-box"><Upload size={18} /><span><strong>Choose payment proof</strong><small>JPG, PNG, or PDF format</small></span><input type="file" accept="image/*,.pdf" onChange={e => set('proofName', e.target.files?.[0]?.name || '')} /></label>{form.proofName && <small className="selected-file">Selected: {form.proofName}</small>}<div className="modal-footnote">Bukti pembayaran akan diverifikasi oleh tim administrasi studio.</div>{footer('Submit proof')}</form>;
   if (modal.type === 'verify-payment') {
     const previousPaid = modal.invoice.payments.filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0);
@@ -1178,7 +1314,7 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     const d = {
       id: uid('file'),
       name: form.name || 'Project document.pdf',
-      category: form.category || 'Drawing',
+      category: form.category || 'Rendering',
       date: form.date || '2026-11-02',
       type: form.type || 'PDF',
       visibility: isStaff ? 'Draft' : (form.visibility || 'Internal Only'),
@@ -1204,13 +1340,13 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
     finish(isStaff ? 'Draft dokumen berhasil diunggah untuk review Admin.' : 'Dokumen & file output berhasil diunggah.');
   })}>{input('Document / file name', 'name', 'e.g. Floor Plan — Rev 02.pdf', 'text', true)}
   <div className="form-grid">
-    {select('Category', 'category', [['Presentation', 'Presentation'], ['Rendering', 'Rendering'], ['Drawing', 'Drawing'], ['Report', 'Report'], ['Other', 'Other']])}
+    {select('Category', 'category', [['Rendering', 'Rendering'], ['Floor Plan', 'Floor Plan'], ['DED', 'DED'], ['3D Model', '3D Model'], ['Presentation', 'Presentation'], ['Report', 'Report'], ['Other', 'Other']])}
     {select('File type', 'type', [['PDF', 'PDF'], ['JPG', 'JPG'], ['PNG', 'PNG'], ['WEBP', 'WebP'], ['XLSX', 'XLSX']])}
     {input('Upload date', 'date', '', 'date')}
     {!isStaff && select('Visibility', 'visibility', [['Internal Only', 'Internal Only'], ['Published', 'Published to Client']])}
   </div>
   {isStaff && <div className="modal-footnote">File yang diunggah Staff otomatis tersimpan sebagai <strong>Draft</strong> untuk ditinjau Admin sebelum dipublikasikan ke klien.</div>}
-  {textarea('Description', 'description', 'Short description of this file output or design render.')}
+  {textarea('Description', 'description', 'Brief summary of drawing, render, or revision notes...')}
   <label className="upload-box"><Upload size={18} /><span><strong>Upload Direct File (Supabase Storage Ready)</strong><small>PDF, high-res render (JPG, PNG, WebP), or drawing</small></span><input type="file" onChange={e => { const fileObj = e.target.files?.[0]; if (fileObj) { set('name', fileObj.name); set('fileUrl', URL.createObjectURL(fileObj)); } }} /></label>{footer('Upload document')}</form>;
   if (modal.type === 'edit-document') {
     const existing = modal.file || {};
@@ -1218,38 +1354,81 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
       if (isStaff && existing.visibility !== 'Draft') throw new Error('Hanya dokumen berstatus Draft yang dapat diedit.');
       const nextName = (form.name ?? existing.name ?? '').trim();
       if (!nextName) throw new Error('Nama file wajib diisi.');
+      const nextVis = isStaff ? 'Draft' : (form.visibility ?? existing.visibility ?? 'Internal Only');
+      if (!isStaff && nextVis === 'Published' && existing.visibility !== 'Published' && project?.status === 'On Hold') {
+        if (!window.confirm('Proyek ini sedang berstatus On Hold. Tetap publikasikan file output ke Client Portal?')) return;
+      }
       const nextDoc = {
         ...existing,
         name: nextName,
-        category: form.category ?? existing.category ?? 'Drawing',
+        category: form.category ?? existing.category ?? 'Rendering',
         type: form.type ?? existing.type ?? 'PDF',
         date: form.date ?? existing.date ?? '2026-11-02',
         description: form.description ?? existing.description ?? '',
         url: form.fileUrl ?? existing.url,
-        visibility: isStaff ? 'Draft' : existing.visibility
+        visibility: nextVis
       };
       updateProject(project.id, p => ({ ...p, files: (p.files || []).map(f => f.id === existing.id ? nextDoc : f) }));
       addActivity(
         project.id,
-        'Draft file updated',
+        isStaff ? 'Draft file updated' : 'Project file updated',
         `File "${nextDoc.name}" (${nextDoc.category}) diperbarui.`,
         undefined,
         { crudType: 'UPDATE', module: 'Output & Design', visibility: nextDoc.visibility, ...(isStaff || nextDoc.visibility !== 'Published' ? { internal: true } : {}) }
       );
-      finish('Draft file berhasil diperbarui.');
+      if (!isStaff && nextDoc.visibility === 'Published' && existing.visibility !== 'Published') {
+        pushPublishedNotif(setDb, project.id, 'Output & Desain Dipublikasikan', `File "${nextDoc.name}" (${nextDoc.category}) untuk proyek ${project.name} telah dipublikasikan.`);
+      }
+      finish(isStaff ? 'Draft file berhasil diperbarui.' : 'File proyek berhasil diperbarui.');
     })}>
       <label className="field"><span>Document / file name <b>*</b></span><input type="text" value={form.name ?? existing.name ?? ''} onChange={e => set('name', e.target.value)} required /></label>
       <div className="form-grid">
-        <label className="field"><span>Category</span><select value={form.category ?? existing.category ?? 'Drawing'} onChange={e => set('category', e.target.value)}><option value="Presentation">Presentation</option><option value="Rendering">Rendering</option><option value="Drawing">Drawing</option><option value="Report">Report</option><option value="Other">Other</option></select></label>
+        <label className="field"><span>Category</span><select value={form.category ?? existing.category ?? 'Rendering'} onChange={e => set('category', e.target.value)}><option value="Rendering">Rendering</option><option value="Floor Plan">Floor Plan</option><option value="DED">DED</option><option value="3D Model">3D Model</option><option value="Presentation">Presentation</option><option value="Report">Report</option><option value="Other">Other</option></select></label>
         <label className="field"><span>File type</span><select value={form.type ?? existing.type ?? 'PDF'} onChange={e => set('type', e.target.value)}><option value="PDF">PDF</option><option value="JPG">JPG</option><option value="PNG">PNG</option><option value="WEBP">WebP</option><option value="XLSX">XLSX</option></select></label>
         <label className="field"><span>Upload date</span><input type="date" value={form.date ?? existing.date ?? '2026-11-02'} onChange={e => set('date', e.target.value)} /></label>
+        {!isStaff && <label className="field"><span>Visibility</span><select value={form.visibility ?? existing.visibility ?? 'Internal Only'} onChange={e => set('visibility', e.target.value)}><option value="Internal Only">Internal Only</option><option value="Published">Published to Client</option><option value="Draft">Draft</option></select></label>}
       </div>
       <label className="field"><span>Description</span><textarea rows="3" value={form.description ?? existing.description ?? ''} onChange={e => set('description', e.target.value)} /></label>
       <label className="upload-box"><Upload size={18} /><span><strong>Replace File (Optional)</strong><small>{form.name || existing.name || 'Choose a replacement file'}</small></span><input type="file" onChange={e => { const fileObj = e.target.files?.[0]; if (fileObj) { set('name', fileObj.name); set('fileUrl', URL.createObjectURL(fileObj)); } }} /></label>
-      {footer('Save draft changes')}
+      {footer(isStaff ? 'Save draft changes' : 'Save changes')}
     </form>;
   }
   if (modal.type === 'new-legal') body = <form onSubmit={submit(() => { const d = { id: uid('legal'), name: form.name, version: form.version || 'v1.0', date: form.date || '2026-11-02', visibility: form.visibility || 'Internal Only' }; updateProject(project.id, p => ({ ...p, legal: [d, ...p.legal] })); addActivity(project.id, 'Legal document added', d.name); if (!isStaff && d.visibility === 'Published') { pushPublishedNotif(setDb, project.id, 'Dokumen Legal Dipublikasikan', `Dokumen "${d.name}" (${d.version}) untuk proyek ${project.name} telah dipublikasikan.`); } finish('Legal document berhasil ditambahkan.'); })}>{input('Document name', 'name', 'e.g. Addendum 02', 'text', true)}<div className="form-grid">{input('Version', 'version', 'v1.0')}{input('Document date', 'date', '', 'date')}{select('Visibility', 'visibility', [['Internal Only', 'Internal Only'], ['Published', 'Published to Client']])}</div>{footer('Add legal document')}</form>;
+  if (modal.type === 'edit-legal') {
+    const existing = modal.legal || {};
+    body = <form onSubmit={submit(() => {
+      const nextName = (form.name ?? existing.name ?? '').trim();
+      if (!nextName) throw new Error('Nama dokumen legal wajib diisi.');
+      const nextVis = form.visibility ?? existing.visibility ?? 'Internal Only';
+      const nextLegal = {
+        ...existing,
+        name: nextName,
+        version: (form.version ?? existing.version ?? 'v1.0').trim() || 'v1.0',
+        date: form.date ?? existing.date ?? '2026-11-02',
+        visibility: nextVis
+      };
+      updateProject(project.id, p => ({ ...p, legal: (p.legal || []).map(item => item.id === existing.id ? nextLegal : item) }));
+      addActivity(
+        project.id,
+        'Legal document updated',
+        `Dokumen "${nextLegal.name}" (${nextLegal.version}) diperbarui.`,
+        undefined,
+        { crudType: 'UPDATE', module: 'Legal & Contracts', visibility: nextLegal.visibility, ...(nextLegal.visibility !== 'Published' ? { internal: true } : {}) }
+      );
+      if (!isStaff && nextLegal.visibility === 'Published' && existing.visibility !== 'Published') {
+        pushPublishedNotif(setDb, project.id, 'Dokumen Legal Dipublikasikan', `Dokumen "${nextLegal.name}" (${nextLegal.version}) untuk proyek ${project.name} telah dipublikasikan.`);
+      }
+      finish('Dokumen legal berhasil diperbarui.');
+    })}>
+      <label className="field"><span>Document name <b>*</b></span><input type="text" value={form.name ?? existing.name ?? ''} onChange={e => set('name', e.target.value)} required /></label>
+      <div className="form-grid">
+        <label className="field"><span>Version</span><input type="text" value={form.version ?? existing.version ?? 'v1.0'} onChange={e => set('version', e.target.value)} /></label>
+        <label className="field"><span>Document date</span><input type="date" value={form.date ?? existing.date ?? '2026-11-02'} onChange={e => set('date', e.target.value)} /></label>
+        <label className="field"><span>Visibility</span><select value={form.visibility ?? existing.visibility ?? 'Internal Only'} onChange={e => set('visibility', e.target.value)}><option value="Internal Only">Internal Only</option><option value="Published">Published to Client</option></select></label>
+      </div>
+      {footer('Save changes')}
+    </form>;
+  }
   if (modal.type === 'new-material') body = <form onSubmit={submit(() => { const s = { id: uid('material'), date: form.date || '2026-11-02', material: form.material, specification: form.specification || '', quantity: Number(form.quantity || 0), unit: form.unit || 'unit', status: 'Belum Dibeli', visibility: 'Draft', supplier: isStaff ? '' : (form.supplier || ''), unitCost: isStaff ? 0 : Number(form.unitCost || 0) }; updateProject(project.id, p => ({ ...p, shopping: [s, ...p.shopping] })); addActivity(project.id, 'Shopping item added', `${s.material} (${s.quantity} ${s.unit}) ditambahkan sebagai Draft.`, undefined, { crudType: 'CREATE', module: 'Shopping & Materials', visibility: 'Draft', internal: true }); finish('Material requirement berhasil ditambahkan.'); })}>{input('Material name', 'material', 'e.g. Besi beton Ø10', 'text', true)}{input('Specification', 'specification', 'Grade, size, brand, etc.')}<div className="form-grid">{input('Date needed', 'date', '', 'date')}{input('Quantity', 'quantity', 'e.g. 120', 'number')}{input('Unit', 'unit', 'e.g. batang')}{!isStaff && input('Internal unit cost (Rp)', 'unitCost', 'Optional', 'number')}</div>{!isStaff && input('Supplier (internal)', 'supplier', 'Supplier name')}<div className="modal-footnote">{isStaff ? 'New material requests are saved as Draft (quantities & specs only) for Admin procurement review.' : 'New shopping items are saved as Draft. Publish them from Shopping & Materials to show them to the Client.'}</div>{footer('Add material')}</form>;
   if (modal.type === 'edit-material') {
     const existing = modal.material || {};
@@ -1462,7 +1641,6 @@ function ModalHost({ modal, close, db, setDb, projects, selectedProject, updateP
       <section className={`modal-card ${isWide ? 'modal-card-wide' : ''} ${isCentered ? 'modal-card-centered' : ''}`}>
         <header className="modal-header">
           <div>
-            <div className="eyebrow">NA ASSOCIATES / PROJECT SPACE</div>
             <h2>{title}</h2>
           </div>
           <button className="icon-btn" onClick={close}>

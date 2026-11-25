@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Check,
+  ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Camera, Check,
   CheckCircle2, ChevronDown, ChevronRight, ChevronLeft, ClipboardList, Clock3, CreditCard,
-  Download, ExternalLink, FileCheck2, FileImage, FileText, FolderOpen, HardHat,
-  Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, Package, Plus,
-  RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Upload, User, UserPlus,
+  Download, Edit3, ExternalLink, EyeOff, FileCheck2, FileImage, FileText, FolderOpen, Globe, HardHat,
+  Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, MoreVertical, Package, Plus,
+  RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, Upload, User, UserPlus,
   Users, Wallet, X, Eye, Activity, AlertCircle, Sun, Moon
 } from 'lucide-react';
 import { Brand, ProgressBar, StatusTag, EmptyState, AdminPageHeader, Metric, ActivityTable, InfoHint, WhatsAppIcon } from '../components/ui';
@@ -137,8 +137,47 @@ function AdminDashboard({ db,setTab,setModal,setSelectedProjectId }) {
     </>
   );
 }
-function AdminProjects({ projects,clients,setSelectedProjectId,setTab,setModal }) { const [q,setQ]=useState(''); const [status,setStatus]=useState('All'); const filtered=projects.filter(p=>(status==='All'||p.status===status)&&`${p.name} ${p.code} ${p.location}`.toLowerCase().includes(q.toLowerCase())); return <><AdminPageHeader title="Projects" infoHint="Manage studio project details, client assignments, status filters, and overall completion progress." action="Create project" onAction={()=>setModal({type:'create-project'})}/><div className="admin-toolbar"><div className="search-field"><Search size={16}/><input placeholder="Search projects..." value={q} onChange={e=>setQ(e.target.value)}/></div><select value={status} onChange={e=>setStatus(e.target.value)}><option>All</option><option>Active</option><option>Completed</option><option>On Hold</option></select><span className="muted">{filtered.length} projects</span></div><div className="admin-project-cards">{filtered.map(p=><article className="admin-project-card" key={p.id}><div className="admin-project-card-photo"><img src={p.cover}/><span className={`status-pill ${p.status==='Completed'?'complete':''}`}>{p.status}</span></div><div className="admin-project-card-body"><div className="eyebrow">{p.code} · {p.category}</div><h3>{p.name}</h3><p><MapPin size={13}/>{p.location}</p><div className="admin-card-progress"><div><small>PROGRESS</small><strong>{p.progress}%</strong></div><ProgressBar value={p.progress}/></div><div className="admin-project-card-foot"><span>{clients.find(c=>c.id===p.clientId)?.name||'Unassigned'}</span><button className="under-link" onClick={()=>{setSelectedProjectId(p.id);setTab('operations');}}>Manage project <ArrowUpRight size={14}/></button></div></div></article>)}</div>{!filtered.length&&<EmptyState title="No matching projects" detail="Try a different search or filter."/>}</>; }
-function AdminClients({ clients,projects,setModal }) { const [q,setQ]=useState(''); const filtered=clients.filter(c=>`${c.name} ${c.email}`.toLowerCase().includes(q.toLowerCase())); return <><AdminPageHeader title="Clients & Accounts" infoHint="Manage invited client accounts, contact records, and project workspace access permissions." action="Invite client" onAction={()=>setModal({type:'invite-client'})}/><div className="admin-toolbar"><div className="search-field"><Search size={16}/><input placeholder="Search clients..." value={q} onChange={e=>setQ(e.target.value)}/></div><span className="muted">{filtered.length} client accounts</span></div><div className="admin-panel table-panel"><table className="data-table"><thead><tr><th>CLIENT</th><th>EMAIL</th><th>PHONE</th><th>ASSIGNED PROJECTS</th><th>STATUS</th><th></th></tr></thead><tbody>{filtered.map(c=><tr key={c.id}><td><div className="table-person"><span className="avatar">{c.name.split(' ').map(x=>x[0]).slice(0,2).join('')}</span><strong>{c.name}</strong></div></td><td>{c.email}</td><td>{c.phone||'—'}</td><td>{c.projects.map(id=>projects.find(p=>p.id===id)?.name).filter(Boolean).join(', ')||'—'}</td><td><StatusTag value={c.status}/></td><td><button className="icon-btn" onClick={()=>setModal({type:'info',title:c.name,body:`${c.email}\n${c.phone}\n\nProject access: ${c.projects.map(id=>projects.find(p=>p.id===id)?.name).join(', ')}`})}><MoreHorizontal size={17}/></button></td></tr>)}</tbody></table>{!filtered.length&&<EmptyState title="No clients found" detail="Invite your first client to get started."/>}</div></>; }
+function AdminProjects({ projects,clients,setSelectedProjectId,setTab,setModal }) { const [q,setQ]=useState(''); const [status,setStatus]=useState('All'); const filtered=projects.filter(p=>(status==='All'||p.status===status)&&`${p.name} ${p.code} ${p.location}`.toLowerCase().includes(q.toLowerCase())); return <><AdminPageHeader title="Projects" infoHint="Manage studio project details, client assignments, status filters, and overall completion progress." action="Create project" onAction={()=>setModal({type:'create-project'})}/><div className="admin-toolbar"><div className="search-field"><Search size={16}/><input placeholder="Search projects..." value={q} onChange={e=>setQ(e.target.value)}/></div><select value={status} onChange={e=>setStatus(e.target.value)}><option>All</option><option>Active</option><option>Completed</option><option>On Hold</option></select><span className="muted">{filtered.length} projects</span></div><div className="admin-project-cards">{filtered.map(p=><article className="admin-project-card" key={p.id}><div className="admin-project-card-photo"><img src={p.cover} alt={p.name}/><button type="button" className="project-cover-edit-btn" onClick={()=>setModal({type:'edit-project-cover',project:p})}><Camera size={13}/> Ubah Cover</button><span className={`status-pill ${p.status==='Completed'?'complete':''}`}>{p.status}</span></div><div className="admin-project-card-body"><div className="eyebrow">{p.code} · {p.category}</div><h3>{p.name}</h3><p><MapPin size={13}/>{p.location}</p><div className="admin-card-progress"><div><small>PROGRESS</small><strong>{p.progress}%</strong></div><ProgressBar value={p.progress}/></div><div className="admin-project-card-foot"><span>{clients.find(c=>c.id===p.clientId)?.name||'Unassigned'}</span><button className="under-link" onClick={()=>{setSelectedProjectId(p.id);setTab('operations');}}>Manage project <ArrowUpRight size={14}/></button></div></div></article>)}</div>{!filtered.length&&<EmptyState title="No matching projects" detail="Try a different search or filter."/>}</>; }
+function AdminClients({ clients,projects,setModal }) {
+  const [q,setQ]=useState('');
+  const [status,setStatus]=useState('All');
+  const filtered=clients.filter(c=>(status==='All'||c.status===status)&&`${c.name} ${c.username||''} ${c.email}`.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <>
+      <AdminPageHeader title="Clients & Accounts" infoHint="Manage invited client accounts, contact records, and project workspace access permissions." action="Invite client" onAction={()=>setModal({type:'invite-client'})}/>
+      <div className="admin-toolbar">
+        <div className="search-field">
+          <Search size={16}/>
+          <input placeholder="Search clients..." value={q} onChange={e=>setQ(e.target.value)}/>
+        </div>
+        <select value={status} onChange={e=>setStatus(e.target.value)} aria-label="Filter client status">
+          <option value="All">All</option>
+          <option value="Active">Active</option>
+          <option value="Archived">Archived</option>
+        </select>
+        <span className="muted">{filtered.length} client accounts</span>
+      </div>
+      <div className="admin-panel table-panel">
+        <table className="data-table">
+          <thead><tr><th>CLIENT</th><th>EMAIL</th><th>PHONE</th><th>ASSIGNED PROJECTS</th><th>STATUS</th><th></th></tr></thead>
+          <tbody>
+            {filtered.map(c=>(
+              <tr key={c.id}>
+                <td><div className="table-person"><span className="avatar">{c.name.split(' ').map(x=>x[0]).slice(0,2).join('')}</span><strong>{c.name}</strong></div></td>
+                <td>{c.email||'—'}</td>
+                <td>{c.phone||'—'}</td>
+                <td>{c.projects.map(id=>projects.find(p=>p.id===id)?.name).filter(Boolean).join(', ')||'—'}</td>
+                <td><StatusTag value={c.status}/></td>
+                <td><button type="button" className="icon-btn" aria-label={`Manage ${c.name}`} onClick={()=>setModal({type:'client-detail',clientId:c.id})}><MoreHorizontal size={17}/></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!filtered.length&&<EmptyState title="No clients found" detail="Try adjusting your search or status filter."/>}
+      </div>
+    </>
+  );
+}
 function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updateProject,addActivity,setModal,setDb }) {
   const p=projects.find(x=>x.id===selectedProjectId)||projects[0];
   const [filter,setFilter]=useState('All');
@@ -197,23 +236,205 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
   
   <div className="admin-panel"><div className="admin-panel-head"><h3>{p?.name} / Daily project logs</h3><span className="subtle-tag">{p?.code}</span></div><div className="log-list">{reports.filter(r=>filter==='All'||r.visibility===filter).map(r=><article className="log-card" key={r.id}><div className="log-card-date">{dateFmt(r.date)}<span>{r.category}</span></div><div className="log-card-main"><h4>{r.title}</h4><p>{r.description}</p><small>{r.photos||1} attachments{r.fieldNote?` · ${r.fieldNote}`:''} · {r.workers?.length||0} pekerja</small></div><div className="log-card-actions"><StatusTag value={r.visibility}/><button className="btn btn-small btn-dark" onClick={()=>setModal({type:'report-detail',report:r,project:p,isClient:false})}><Eye size={13}/> View log</button><button className="btn btn-small btn-outline" onClick={()=>{const nextVis=r.visibility==='Published'?'Draft':'Published';updateProject(p.id,x=>({...x,reports:x.reports.map(y=>y.id===r.id?{...y,visibility:nextVis}:y)}));addActivity(p.id,'Report visibility changed',`${r.title} diubah menjadi ${nextVis}.`);if(nextVis==='Published'){pushPublishedNotif(setDb,p.id,'Laporan Lapangan Dipublikasikan',`Daily Progress "${r.title}" untuk proyek ${p.name} telah dipublikasikan.`);}}}> {r.visibility==='Published'?'Unpublish':'Publish'} </button></div></article>)}{!reports.length&&<EmptyState title="No daily logs" detail="Create the first field report for this project."/>}</div></div><div className="admin-panel note-panel"><ShieldCheck size={19}/><div><strong>Client visibility rule</strong><p>Hanya laporan berstatus Published yang tampil di Client Portal. Attendance dan catatan internal tetap disembunyikan.</p></div></div></>;
 }
-function AdminDocuments({projects,updateProject,addActivity,setModal,setDb}) { 
-  const [pid,setPid]=useState(projects[0]?.id); 
-  const p=projects.find(x=>x.id===pid)||projects[0]; 
-  const docs=p?.files||[]; 
+function AdminDocuments({projects,updateProject,addActivity,setModal,setDb}) {
+  const [pid,setPid]=useState(projects[0]?.id);
+  const [statusFilter,setStatusFilter]=useState('All');
+  const [menuState,setMenuState]=useState(null);
+  const [undoState,setUndoState]=useState(null);
+  const popoverRef=useRef(null);
+  const p=projects.find(x=>x.id===pid)||projects[0];
+  const docs=(p?.files||[]).filter(d=>statusFilter==='All'||d.visibility===statusFilter);
+  const legalDocs=(p?.legal||[]).filter(d=>statusFilter==='All'||d.visibility===statusFilter);
+
+  useLayoutEffect(() => {
+    if (!menuState || !popoverRef.current) return;
+    popoverRef.current.style.setProperty('--doc-menu-top', `${menuState.top}px`);
+    popoverRef.current.style.setProperty('--doc-menu-left', `${menuState.left}px`);
+  }, [menuState]);
+
+  useEffect(() => {
+    if (!menuState) return;
+    const onMouseDown = (e) => {
+      if (popoverRef.current?.contains(e.target)) return;
+      if (e.target.closest?.('.doc-menu-trigger')) return;
+      setMenuState(null);
+    };
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setMenuState(null);
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [Boolean(menuState)]);
+
+  useEffect(() => {
+    if (!menuState?.confirmDelete) return;
+    const timer = setTimeout(() => {
+      setMenuState(prev => (prev ? { ...prev, confirmDelete: false } : null));
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [menuState?.confirmDelete, menuState?.item?.id, menuState?.collection]);
+
+  useEffect(() => {
+    if (!undoState) return;
+    const timer = setTimeout(() => {
+      setUndoState(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [undoState]);
+
+  const openMenu = (e, collection, item) => {
+    if (menuState?.collection === collection && menuState?.item?.id === item.id) {
+      setMenuState(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuW = 216;
+    const menuH = 192;
+    const left = Math.max(12, Math.min(rect.right - menuW, window.innerWidth - menuW - 12));
+    const placeAbove = rect.bottom + menuH > window.innerHeight - 12 && rect.top > menuH + 12;
+    const top = placeAbove ? Math.max(12, rect.top - menuH + 20) : Math.min(rect.bottom + 6, window.innerHeight - menuH - 12);
+    setMenuState({ collection, item, top, left, confirmDelete: false });
+  };
+
+  const toggleDocVisibility = (d) => {
+    const nextVis = d.visibility === 'Published' ? 'Internal Only' : 'Published';
+    if (nextVis === 'Published' && p?.status === 'On Hold') {
+      if (!window.confirm('Proyek ini sedang berstatus On Hold. Tetap publikasikan file output ke Client Portal?')) return;
+    }
+    updateProject(p.id, x => ({
+      ...x,
+      files: (x.files || []).map(y => y.id === d.id ? { ...y, visibility: nextVis } : y)
+    }));
+    addActivity(
+      p.id,
+      'File visibility changed',
+      `${d.name} visibility diperbarui menjadi ${nextVis}.`,
+      undefined,
+      { crudType: 'UPDATE', module: 'Output & Design', visibility: nextVis, ...(nextVis !== 'Published' ? { internal: true } : {}) }
+    );
+    if (nextVis === 'Published') {
+      pushPublishedNotif(setDb, p.id, 'Output & Desain Dipublikasikan', `File "${d.name}" (${d.category}) untuk proyek ${p.name} telah dipublikasikan.`);
+    }
+    setMenuState(null);
+  };
+
+  const toggleLegalVisibility = (d) => {
+    const nextVis = d.visibility === 'Published' ? 'Internal Only' : 'Published';
+    updateProject(p.id, x => ({
+      ...x,
+      legal: (x.legal || []).map(y => y.id === d.id ? { ...y, visibility: nextVis } : y)
+    }));
+    addActivity(
+      p.id,
+      'Legal visibility changed',
+      `${d.name} (${d.version}) visibility diperbarui menjadi ${nextVis}.`,
+      undefined,
+      { crudType: 'UPDATE', module: 'Legal & Contracts', visibility: nextVis, ...(nextVis !== 'Published' ? { internal: true } : {}) }
+    );
+    if (nextVis === 'Published') {
+      pushPublishedNotif(setDb, p.id, 'Dokumen Legal Dipublikasikan', `Dokumen "${d.name}" (${d.version}) untuk proyek ${p.name} telah dipublikasikan.`);
+    }
+    setMenuState(null);
+  };
+
+  const confirmRemoveItem = () => {
+    if (!menuState || !p) return;
+    const { collection, item } = menuState;
+    const list = p[collection] || [];
+    const originalIndex = list.findIndex(x => x.id === item.id);
+    updateProject(p.id, x => ({
+      ...x,
+      [collection]: (x[collection] || []).filter(y => y.id !== item.id)
+    }));
+    addActivity(
+      p.id,
+      collection === 'files' ? 'File deleted' : 'Legal document deleted',
+      collection === 'files'
+        ? `File "${item.name}" (${item.category}) dihapus dari proyek.`
+        : `Dokumen "${item.name}" (${item.version}) dihapus dari proyek.`,
+      undefined,
+      { crudType: 'DELETE', module: collection === 'files' ? 'Output & Design' : 'Legal & Contracts', internal: true }
+    );
+    setMenuState(null);
+    setUndoState({
+      projectId: p.id,
+      collection,
+      item,
+      index: originalIndex >= 0 ? originalIndex : 0
+    });
+  };
+
+  const handleUndoDelete = () => {
+    if (!undoState) return;
+    const { projectId, collection, item, index } = undoState;
+    updateProject(projectId, x => {
+      const current = (x[collection] || []).filter(y => y.id !== item.id);
+      const insertAt = Math.max(0, Math.min(index, current.length));
+      const restored = [...current.slice(0, insertAt), item, ...current.slice(insertAt)];
+      return { ...x, [collection]: restored };
+    });
+    addActivity(
+      projectId,
+      collection === 'files' ? 'File restored' : 'Legal document restored',
+      `Dokumen "${item.name}" dikembalikan dari Undo.`,
+      undefined,
+      { crudType: 'CREATE', module: collection === 'files' ? 'Output & Design' : 'Legal & Contracts', visibility: item.visibility, ...(item.visibility !== 'Published' ? { internal: true } : {}) }
+    );
+    setUndoState(null);
+  };
+
+  const handleEditFromMenu = () => {
+    if (!menuState) return;
+    const { collection, item } = menuState;
+    setMenuState(null);
+    if (collection === 'files') {
+      setModal({ type: 'edit-document', file: item, project: p });
+    } else {
+      setModal({ type: 'edit-legal', legal: item, project: p });
+    }
+  };
+
+  const handleToggleFromMenu = () => {
+    if (!menuState) return;
+    if (menuState.collection === 'files') {
+      toggleDocVisibility(menuState.item);
+    } else {
+      toggleLegalVisibility(menuState.item);
+    }
+  };
+
   return <>
     <AdminPageHeader title="Output, Design & Legal" infoHint="Upload and publish architectural renders, floor plans, DED drawings, and legal contracts or addenda to the Client Portal." action="Upload output / document" onAction={()=>setModal({type:'new-document',project:p})}/>
     <div className="admin-toolbar">
-      <select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>
-      <span className="muted">Design files, renders, and legal records</span>
+      <select value={pid} onChange={e=>{setPid(e.target.value);setMenuState(null);}}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>
+      <select value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setMenuState(null);}}>
+        <option value="All">All</option>
+        <option value="Draft">Draft</option>
+        <option value="Published">Published</option>
+        <option value="Internal Only">Internal Only</option>
+      </select>
     </div>
     <div className="admin-panel">
       <div className="admin-panel-head">
         <h3>{p?.name} / Project Output & Design Files</h3>
-        <button className="btn btn-outline btn-small" onClick={()=>setModal({type:'new-document',project:p})}><Plus size={14}/> Upload output / design</button>
       </div>
-      <div className="document-list admin-doc-list">
-        {docs.map(d=><div className="document-row" key={d.id}><span className="document-icon"><FileText size={19}/></span><div><strong>{d.name}</strong><small>{d.category} · {dateFmt(d.date)}</small></div><StatusTag value={d.visibility}/><button className="btn btn-small btn-outline" onClick={()=>{const nextVis=d.visibility==='Published'?'Internal Only':'Published';updateProject(p.id,x=>({...x,files:x.files.map(y=>y.id===d.id?{...y,visibility:nextVis}:y)}));addActivity(p.id,'File visibility changed',`${d.name} visibility diperbarui.`);if(nextVis==='Published'){pushPublishedNotif(setDb,p.id,'Output & Desain Dipublikasikan',`File "${d.name}" (${d.category}) untuk proyek ${p.name} telah dipublikasikan.`);}}}> {d.visibility==='Published'?'Make internal':'Publish'} </button></div>)}
+      <div className="document-list admin-doc-list admin-doc-scroll" onScroll={()=>{if(menuState) setMenuState(null);}}>
+        {docs.map(d=>{
+          const isOpen=menuState?.collection==='files'&&menuState?.item?.id===d.id;
+          return <div className="document-row admin-doc-row" key={d.id}>
+            <span className="document-icon"><FileText size={19}/></span>
+            <div className="admin-doc-meta"><strong>{d.name}</strong><small>{d.category} · {dateFmt(d.date)}</small></div>
+            <div className="doc-row-actions">
+              <StatusTag value={d.visibility}/>
+              <button type="button" className="icon-btn doc-preview-btn" title="Preview file" aria-label={`Preview ${d.name}`} onClick={()=>setModal({type:'file-preview',file:d})}><Eye size={15}/></button>
+              <button type="button" className="icon-btn doc-menu-trigger" aria-label="Document actions" aria-expanded={isOpen} onClick={e=>openMenu(e,'files',d)}><MoreVertical size={16}/></button>
+            </div>
+          </div>;
+        })}
         {!docs.length&&<EmptyState title="No output or design files" detail="Upload design renders or project output files to begin."/>}
       </div>
     </div>
@@ -222,9 +443,59 @@ function AdminDocuments({projects,updateProject,addActivity,setModal,setDb}) {
         <h3>Legal documents & Contracts</h3>
         <button className="btn btn-outline btn-small" onClick={()=>setModal({type:'new-legal',project:p})}><Plus size={14}/> Add legal document</button>
       </div>
-      {(p?.legal||[]).map(d=><div className="document-row" key={d.id}><span className="document-icon"><FileCheck2 size={19}/></span><div><strong>{d.name}</strong><small>{d.version} · {dateFmt(d.date)}</small></div><StatusTag value={d.visibility}/><button className="btn btn-small btn-outline" onClick={()=>{const nextVis=d.visibility==='Published'?'Internal Only':'Published';updateProject(p.id,x=>({...x,legal:x.legal.map(y=>y.id===d.id?{...y,visibility:nextVis}:y)}));if(nextVis==='Published'){pushPublishedNotif(setDb,p.id,'Dokumen Legal Dipublikasikan',`Dokumen "${d.name}" (${d.version}) untuk proyek ${p.name} telah dipublikasikan.`);}}}>{d.visibility==='Published'?'Make internal':'Publish'}</button></div>)}
+      <div className="document-list admin-doc-list admin-doc-scroll" onScroll={()=>{if(menuState) setMenuState(null);}}>
+        {legalDocs.map(d=>{
+          const isOpen=menuState?.collection==='legal'&&menuState?.item?.id===d.id;
+          return <div className="document-row admin-doc-row" key={d.id}>
+            <span className="document-icon"><FileCheck2 size={19}/></span>
+            <div className="admin-doc-meta"><strong>{d.name}</strong><small>{d.version} · {dateFmt(d.date)}</small></div>
+            <div className="doc-row-actions">
+              <StatusTag value={d.visibility}/>
+              <button type="button" className="icon-btn doc-menu-trigger" aria-label="Document actions" aria-expanded={isOpen} onClick={e=>openMenu(e,'legal',d)}><MoreVertical size={16}/></button>
+            </div>
+          </div>;
+        })}
+        {!legalDocs.length&&<EmptyState title="No legal documents" detail="Add contracts or addenda for this project."/>}
+      </div>
     </div>
-  </>; 
+    {menuState && (
+      <div className="doc-action-popover" ref={popoverRef} role="menu">
+        <button type="button" className="doc-menu-item" role="menuitem" onClick={handleToggleFromMenu}>
+          {menuState.item.visibility === 'Published' ? <EyeOff size={15}/> : <Globe size={15}/>}
+          <span>{menuState.item.visibility === 'Published' ? 'Make internal' : 'Publish'}</span>
+        </button>
+        <button type="button" className="doc-menu-item" role="menuitem" onClick={handleEditFromMenu}>
+          <Edit3 size={15}/>
+          <span>Edit / Update Revisi</span>
+        </button>
+        <hr className="doc-menu-divider"/>
+        {!menuState.confirmDelete ? (
+          <button
+            type="button"
+            className="doc-menu-item doc-menu-item-danger"
+            role="menuitem"
+            onClick={() => setMenuState(prev => (prev ? { ...prev, confirmDelete: true } : null))}
+          >
+            <Trash2 size={15}/>
+            <span>Hapus Dokumen</span>
+          </button>
+        ) : (
+          <div className="doc-delete-confirm-row">
+            <button type="button" className="doc-confirm-yes" onClick={confirmRemoveItem}>Ya, Hapus</button>
+            <button type="button" className="doc-confirm-cancel" onClick={() => setMenuState(prev => (prev ? { ...prev, confirmDelete: false } : null))}><X size={13}/> Batal</button>
+          </div>
+        )}
+      </div>
+    )}
+    {undoState && (
+      <div className="doc-undo-toast" role="status" aria-live="polite">
+        <span>Dokumen dihapus.</span>
+        <button type="button" className="doc-undo-btn" onClick={handleUndoDelete}>
+          <RotateCcw size={13}/> Urungkan
+        </button>
+      </div>
+    )}
+  </>;
 }
 function AdminMaterials({projects,updateProject,addActivity,setModal}) { const [pid,setPid]=useState(projects[0]?.id); const p=projects.find(x=>x.id===pid)||projects[0]; return <><AdminPageHeader title="Shopping & Materials" infoHint="Manage material procurement lists, internal unit cost estimates (hidden from Clients), publication visibility, and on-site material usage logs." action="Add material" onAction={()=>setModal({type:'new-material',project:p})}/><div className="admin-toolbar"><select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><span className="subtle-tag">{p?.code}</span></div><div className="admin-panel"><div className="admin-panel-head"><h3>Shopping list / Procurement</h3></div><div className="material-table">{(p?.shopping||[]).map(s=><div className="material-row" key={s.id}><div className="material-main"><strong>{s.material}</strong><small>{s.specification} · Need by {dateFmt(s.date)}</small></div><div>{s.quantity} {s.unit}</div><div className="material-cost"><small>INTERNAL ESTIMATE</small><strong>{money(s.unitCost*s.quantity)}</strong></div><select value={s.status} onChange={e=>updateProject(p.id,x=>({...x,shopping:x.shopping.map(y=>y.id===s.id?{...y,status:e.target.value}:y)}))}><option>Belum Dibeli</option><option>Dalam Proses</option><option>Sudah Dibeli</option></select><div className="material-publish"><StatusTag value={s.visibility}/><button className="btn btn-small btn-outline" onClick={()=>{updateProject(p.id,x=>({...x,shopping:x.shopping.map(y=>y.id===s.id?{...y,visibility:y.visibility==='Published'?'Draft':'Published'}:y)}));addActivity(p.id,'Shopping list visibility changed',`${s.material} visibility diperbarui.`);}}>{s.visibility==='Published'?'Unpublish':'Publish'}</button></div></div>)}{!p?.shopping?.length&&<EmptyState title="No materials yet" detail="Add requirements for this project."/>}</div></div><div className="admin-panel"><div className="admin-panel-head"><h3>Material usage</h3><button className="btn btn-outline btn-small" onClick={()=>setModal({type:'new-usage',project:p})}><Plus size={14}/> Record usage</button></div>{(p?.usage||[]).map(u=><div className="usage-row" key={u.id}><span><Package size={17}/></span><div><strong>{u.material}</strong><small>{dateFmt(u.date)} · {u.area}</small></div><strong>{u.quantity} {u.unit}</strong></div>)}{!p?.usage?.length&&<EmptyState title="No usage records" detail="Record material usage from daily site activity."/>}</div></>; }
 function AdminBilling({projects,clients,updateProject,addActivity,setModal}) {
