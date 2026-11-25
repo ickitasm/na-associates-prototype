@@ -8333,4 +8333,22 @@ summary:focus:not(:focus-visible),
   color: #9ba396;
 }
 
+/* ==========================================================================
+   Public PageIntro Minimalist Single-Word Eyebrow
+   ========================================================================== */
+.page-intro .eyebrow {
+  font-size: 10.5px !important;
+  font-weight: 600;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase;
+  opacity: 0.72;
+  margin-bottom: 10px;
+}
+
+.dark-mode .page-intro .eyebrow {
+  color: #c0c6bc !important;
+  opacity: 0.72;
+}
+
+
 
