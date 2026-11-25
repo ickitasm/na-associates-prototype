@@ -150,7 +150,22 @@ export function InvoiceClientCard({ invoice, setModal }) {
 export function MonthlyRecap({ invoices }) { const months = {}; invoices.filter(i=>i.status!=='Cancelled').forEach(i=>{const key=(i.issueDate||'').slice(0,7)||'Other'; if(!months[key]) months[key]={amount:0,paid:0,count:0}; months[key].amount+=i.amount; months[key].paid+=i.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0); months[key].count++;}); return <div className="recap-list">{Object.entries(months).sort((a,b)=>b[0].localeCompare(a[0])).map(([month,v])=><div className="recap-row" key={month}><div className="recap-month"><CalendarDays size={17}/><strong>{new Date(`${month}-01T00:00:00`).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</strong></div><div><small>INVOICES</small><strong>{v.count}</strong></div><div><small>INVOICED</small><strong>{money(v.amount)}</strong></div><div><small>VERIFIED PAID</small><strong>{money(v.paid)}</strong></div></div>)}{!Object.keys(months).length && <EmptyState title="No monthly records" detail="Monthly financial recap will appear here."/>}</div>; }
 export function StatusTag({ value }) { const cls = String(value||'').toLowerCase().replaceAll(' ','-'); return <span className={`status-tag tag-${cls}`}>{value}</span>; }
 export function EmptyState({ title, detail }) { return <div className="empty-state"><span><FolderOpen size={22}/></span><strong>{title}</strong><p>{detail}</p></div>; }
-export function AdminPageHeader({ eyebrow, title, description, action, onAction }) { return <div className="admin-page-header"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div>{action && <button className="btn btn-dark" onClick={onAction}><Plus size={16}/>{action}</button>}</div>; }
+export function AdminPageHeader({ title, infoHint, action, onAction }) {
+  return (
+    <div className="admin-page-header staff-page-header">
+      <div className="staff-heading-inline">
+        <h1>{title}</h1>
+        {infoHint && <InfoHint text={infoHint} />}
+      </div>
+      {action && (
+        <button type="button" className="btn btn-dark" onClick={onAction}>
+          <Plus size={16} />
+          {action}
+        </button>
+      )}
+    </div>
+  );
+}
 export function Metric({icon:Icon,label,value,note,accent,className=''}) {
   if (className.includes('staff-metric-card')) {
     return (
