@@ -315,47 +315,44 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
 
   return (
     <form onSubmit={handleSubmit} className="new-report-form">
-      {/* BAGIAN 1: Konteks Pembaruan Harian */}
       <div className="report-form-section">
         <div className="section-title-bar">
           <span className="section-badge">1</span>
-          <div>
-            <h4>Konteks Pembaruan Harian & Jurnal Lapangan</h4>
-            <p>Catatan operasional aktivitas pengerjaan fisik di lokasi proyek dan progres lapangan harian.</p>
+          <div className="section-title-heading">
+            <h4>Konteks Update</h4>
+            <InfoHint text="Catatan pengerjaan fisik dan progres harian di lokasi proyek." />
           </div>
         </div>
 
         <div className="form-grid">
           <label className="field">
-            <span>Tanggal Laporan *</span>
+            <span>Tanggal *</span>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} required />
           </label>
           <label className="field">
-            <span>Kategori Pekerjaan</span>
+            <span>Kategori</span>
             <select value={category} onChange={e => setCategory(e.target.value)}>
-              <option value="Struktur">Struktur (Pembesian / Cor / Balok)</option>
-              <option value="Masonry">Masonry (Bata Ringan / Plester / Aci)</option>
-              <option value="Finishing">Finishing & Pengecatan</option>
-              <option value="MEP">MEP (Plumbing & Kelistrikan)</option>
-              <option value="Pondasi">Pondasi & Galian Tanah</option>
-              <option value="General">General / Persiapan Lapangan</option>
+              <option value="Struktur">Struktur</option>
+              <option value="Masonry">Masonry</option>
+              <option value="Finishing">Finishing</option>
+              <option value="MEP">MEP</option>
+              <option value="Pondasi">Pondasi</option>
+              <option value="General">General</option>
             </select>
           </label>
           <label className="field">
-            <span>Judul Pembaruan *</span>
+            <span>Judul *</span>
             <input
               type="text"
-              placeholder="e.g. Pekerjaan balok lantai dua & persiapan cor"
               value={title}
               onChange={e => setTitle(e.target.value)}
               required
             />
           </label>
           <label className="field">
-            <span>Catatan Tugas Lapangan (Opsional)</span>
+            <span>Catatan Tugas (Opsional)</span>
             <input
               type="text"
-              placeholder="e.g. Zona as B-C selesai bekisting"
               value={fieldNote}
               onChange={e => setFieldNote(e.target.value)}
             />
@@ -363,10 +360,9 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
         </div>
 
         <label className="field">
-          <span>Deskripsi Pekerjaan Fisik Lapangan *</span>
+          <span>Deskripsi *</span>
           <textarea
             rows="3"
-            placeholder="Jelaskan secara ringkas dan runtut cakupan pekerjaan fisik yang diselesaikan hari ini..."
             value={description}
             onChange={e => setDescription(e.target.value)}
             required
@@ -374,36 +370,35 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
         </label>
 
         {isStaff ? (
-          <div className="modal-footnote" style={{ marginTop: '8px' }}>
-            Laporan yang dibuat oleh Staff otomatis disimpan sebagai <strong>Draft</strong> untuk ditinjau dan dipublikasikan oleh Admin.
+          <div className="modal-footnote">
+            Laporan Staff otomatis disimpan sebagai <strong>Draft</strong> untuk ditinjau Admin.
           </div>
         ) : (
           <label className="field">
-            <span>Visibilitas Publikasi</span>
+            <span>Visibilitas</span>
             <select value={visibility} onChange={e => setVisibility(e.target.value)}>
-              <option value="Published">Published — Tampilkan di Portal Klien (Client Viewable)</option>
-              <option value="Draft">Draft — Hanya Simpan Internal Studio (Admin Only)</option>
+              <option value="Published">Published (Tampil di Portal Klien)</option>
+              <option value="Draft">Draft (Internal Studio)</option>
             </select>
           </label>
         )}
       </div>
 
-      {/* BAGIAN 2: Tenaga Kerja Lapangan (Tukang / Kuli) */}
       <div className="report-form-section">
         <div className="section-title-bar">
           <span className="section-badge">2</span>
-          <div>
-            <h4>Daftar Tenaga Kerja Lapangan (Tukang & Kuli)</h4>
-            <p>Pembaruan presensi nama pekerja lapangan, status kehadiran, dan jenis pekerjaan dalam format spreadsheet terpadu.</p>
+          <div className="section-title-heading">
+            <h4>Tenaga Kerja</h4>
+            <InfoHint text="Presensi pekerja, kehadiran, dan tugas lapangan. Di Portal Klien hanya dirangkum menjadi total personil aktif tanpa nama atau status sakit/izin." />
           </div>
         </div>
 
         <div className="excel-table-container">
           <div className="excel-table-header">
             <div className="excel-col-num">#</div>
-            <div className="excel-col-name">Nama Pekerja / Kuli</div>
-            <div className="excel-col-status">Status Kehadiran</div>
-            <div className="excel-col-task">Jenis Pekerjaan / Tugas Lapangan</div>
+            <div className="excel-col-name">Nama Pekerja</div>
+            <div className="excel-col-status">Kehadiran</div>
+            <div className="excel-col-task">Tugas</div>
             <div className="excel-col-action">Aksi</div>
           </div>
           <div className="excel-table-body">
@@ -414,7 +409,6 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
                   <input
                     type="text"
                     className="excel-input"
-                    placeholder="Nama pekerja / tukang..."
                     value={w.name}
                     onChange={e => updateWorker(w.id, 'name', e.target.value)}
                     required
@@ -436,7 +430,6 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
                   <input
                     type="text"
                     className="excel-input"
-                    placeholder="Tugas pengerjaan fisik..."
                     value={w.task}
                     onChange={e => updateWorker(w.id, 'task', e.target.value)}
                   />
@@ -457,7 +450,7 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
 
           <div className="excel-table-footer">
             <button type="button" className="btn btn-small btn-outline btn-add-row" onClick={addWorker}>
-              <Plus size={14} /> Tambah Pekerja / Kuli
+              <Plus size={14} /> Tambah Pekerja
             </button>
             <div className="excel-summary-pills">
               <span className="summary-pill total">Total: {workers.length} Pekerja</span>
@@ -466,60 +459,46 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
             </div>
           </div>
         </div>
-
-        <div className="client-impact-notice">
-          <ShieldCheck size={18} />
-          <div>
-            <strong>Pertimbangan Dampak Klien:</strong>
-            <p>
-              Data absensi nama personal kuli dan status sakit/izin disimpan sebagai arsip operasional internal studio (Admin Only).
-              Di portal klien, data ini dirangkum menjadi total personil aktif dan bidang keahlian agar tampilan tetap profesional, rapi, dan tidak memicu kekhawatiran mikro klien.
-            </p>
-          </div>
-        </div>
       </div>
 
-      {/* BAGIAN 3: Alat / Perlengkapan, Catatan Tambahan & Foto */}
       <div className="report-form-section">
         <div className="section-title-bar">
           <span className="section-badge">3</span>
-          <div>
-            <h4>Alat / Perlengkapan, Catatan Tambahan & Foto Lapangan</h4>
-            <p>Logistik alat operasional, catatan pengawas lapangan, serta lampiran dokumentasi foto fisik.</p>
+          <div className="section-title-heading">
+            <h4>Alat, Catatan & Foto</h4>
+            <InfoHint text="Logistik alat operasional, catatan internal lapangan, serta lampiran foto dokumentasi." />
           </div>
         </div>
 
         <label className="field">
-          <span>Alat / Perlengkapan yang Digunakan</span>
+          <span>Alat / Perlengkapan</span>
           <input
             type="text"
-            placeholder="e.g. Molen beton 1 unit, Vibrator cor, Scaffolding 16 set, Bar bender"
             value={tools}
             onChange={e => setTools(e.target.value)}
           />
         </label>
 
-        <label className="field">
-          <span>
-            Catatan Tambahan / Internal Mandor{' '}
-            <small style={{ fontWeight: 400, color: '#889083' }}>(Admin Only — Tidak Ditampilkan ke Klien)</small>
-          </span>
+        <div className="field">
+          <div className="field-label-row">
+            <span>Catatan Internal</span>
+            <InfoHint text="Catatan pengawas lapangan (cuaca, material, K3). Hanya tampil untuk Admin & Staff, tidak ditampilkan ke klien." />
+          </div>
           <textarea
             rows="2"
-            placeholder="Catatan pengawas lapangan: kendala cuaca, kedatangan armada material cor, keselamatan kerja K3..."
             value={internalNotes}
             onChange={e => setInternalNotes(e.target.value)}
           />
-        </label>
+        </div>
 
         <label className="upload-box">
           <Upload size={18} />
           <span>
-            <strong>Upload Foto Dokumentasi Lapangan</strong>
+            <strong>Upload Foto Dokumentasi</strong>
             <small>
               {photoNames.length > 0
-                ? `${photoNames.length} foto terpilih (${photoNames.slice(0, 3).join(', ')}${photoNames.length > 3 ? '...' : ''})`
-                : 'Pilih file PNG, JPG, atau WebP dari kamera atau galeri'}
+                ? `${photoNames.length} foto terlampir`
+                : 'Unggah file PNG, JPG, atau WebP'}
             </small>
           </span>
           <input type="file" accept="image/png, image/jpeg, image/webp" multiple onChange={handlePhotoUpload} />
@@ -567,12 +546,13 @@ function NewReportModalView({ project, isStaff = false, setDb, close, updateProj
   );
 }
 
-function EditReportModalView({ report, project, isStaff = false, close, updateProject, addActivity, finish }) {
+function EditReportModalView({ report, project, isStaff = false, setDb, close, updateProject, addActivity, finish }) {
   const [date, setDate] = useState(report.date || '2026-11-02');
   const [category, setCategory] = useState(report.category || 'Struktur');
   const [title, setTitle] = useState(report.title || '');
   const [fieldNote, setFieldNote] = useState(report.fieldNote || '');
   const [description, setDescription] = useState(report.description || '');
+  const [visibility, setVisibility] = useState(isStaff ? 'Draft' : (report.visibility || 'Draft'));
   const [tools, setTools] = useState(report.tools || '');
   const [internalNotes, setInternalNotes] = useState(report.internalNotes || '');
   const [workers, setWorkers] = useState(report.workers || []);
@@ -587,6 +567,11 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
     setWorkers(prev => prev.map(w => w.id === id ? { ...w, [field]: val } : w));
   };
   const removeWorker = (id) => {
+    if (workers.length <= 1) {
+      setError('Minimal harus ada 1 data tenaga kerja lapangan.');
+      return;
+    }
+    setError('');
     setWorkers(prev => prev.filter(w => w.id !== id));
   };
 
@@ -612,10 +597,16 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError('');
     if (!title.trim()) {
       setError('Judul pembaruan wajib diisi.');
       return;
     }
+    if (!description.trim()) {
+      setError('Deskripsi pekerjaan lapangan wajib diisi.');
+      return;
+    }
+    const finalVisibility = isStaff ? 'Draft' : visibility;
     const resolvedPhotoCount = Math.max(photoUrls.length, photoNames.length, Number(report.photos || 0), 1);
     updateProject(project.id, p => ({
       ...p,
@@ -626,10 +617,10 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
         title: title.trim(),
         fieldNote: fieldNote.trim(),
         description: description.trim(),
-        visibility: isStaff ? 'Draft' : r.visibility,
+        visibility: finalVisibility,
         tools: tools.trim(),
         internalNotes: internalNotes.trim(),
-        workers,
+        workers: workers.filter(w => w.name.trim()),
         photoNames,
         photoUrls,
         photos: photoNames.length || photoUrls.length || resolvedPhotoCount
@@ -638,31 +629,95 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
     addActivity(
       project.id,
       'Daily log edited',
-      `Daily log "${title.trim()}" diperbarui.`,
+      `Daily log "${title.trim()}" diperbarui (${finalVisibility}).`,
       undefined,
       {
         crudType: 'UPDATE',
         module: 'Field Operations',
-        visibility: isStaff ? 'Draft' : report.visibility,
-        ...(isStaff || report.visibility !== 'Published' ? { internal: true } : {})
+        visibility: finalVisibility,
+        ...(isStaff || finalVisibility !== 'Published' ? { internal: true } : {})
       }
     );
+    if (!isStaff && finalVisibility === 'Published' && report.visibility !== 'Published') {
+      pushPublishedNotif(
+        setDb,
+        project.id,
+        'Laporan Lapangan Dipublikasikan',
+        `Daily Progress "${title.trim()}" untuk proyek ${project.name} telah dipublikasikan.`
+      );
+    }
     finish('Daily log berhasil diperbarui.');
   };
+
+  const hadirCount = workers.filter(w => w.attendance === 'Hadir').length;
+  const tidakHadirCount = workers.length - hadirCount;
 
   return (
     <form onSubmit={handleSubmit} className="new-report-form">
       <div className="report-form-section">
-        <div className="form-grid">
-          <label className="field"><span>Tanggal Laporan *</span><input type="date" value={date} onChange={e => setDate(e.target.value)} required /></label>
-          <label className="field"><span>Kategori</span><select value={category} onChange={e => setCategory(e.target.value)}><option value="Struktur">Struktur</option><option value="Masonry">Masonry</option><option value="Finishing">Finishing</option><option value="MEP">MEP</option><option value="Pondasi">Pondasi</option><option value="General">General</option></select></label>
-          <label className="field"><span>Judul Pembaruan *</span><input type="text" value={title} onChange={e => setTitle(e.target.value)} required /></label>
-          <label className="field"><span>Catatan Tugas Lapangan (Opsional)</span><input type="text" placeholder="e.g. Zona as B-C selesai bekisting" value={fieldNote} onChange={e => setFieldNote(e.target.value)} /></label>
+        <div className="section-title-bar">
+          <span className="section-badge">1</span>
+          <div className="section-title-heading">
+            <h4>Konteks Update</h4>
+            <InfoHint text="Catatan pengerjaan fisik dan progres harian di lokasi proyek." />
+          </div>
         </div>
-        <label className="field"><span>Deskripsi Pekerjaan *</span><textarea rows="3" value={description} onChange={e => setDescription(e.target.value)} required /></label>
+
+        <div className="form-grid">
+          <label className="field">
+            <span>Tanggal *</span>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} required />
+          </label>
+          <label className="field">
+            <span>Kategori</span>
+            <select value={category} onChange={e => setCategory(e.target.value)}>
+              <option value="Struktur">Struktur</option>
+              <option value="Masonry">Masonry</option>
+              <option value="Finishing">Finishing</option>
+              <option value="MEP">MEP</option>
+              <option value="Pondasi">Pondasi</option>
+              <option value="General">General</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Judul *</span>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} required />
+          </label>
+          <label className="field">
+            <span>Catatan Tugas (Opsional)</span>
+            <input type="text" value={fieldNote} onChange={e => setFieldNote(e.target.value)} />
+          </label>
+        </div>
+
+        <label className="field">
+          <span>Deskripsi *</span>
+          <textarea rows="3" value={description} onChange={e => setDescription(e.target.value)} required />
+        </label>
+
+        {isStaff ? (
+          <div className="modal-footnote">
+            Laporan Staff otomatis disimpan sebagai <strong>Draft</strong> untuk ditinjau Admin.
+          </div>
+        ) : (
+          <label className="field">
+            <span>Visibilitas</span>
+            <select value={visibility} onChange={e => setVisibility(e.target.value)}>
+              <option value="Published">Published (Tampil di Portal Klien)</option>
+              <option value="Draft">Draft (Internal Studio)</option>
+            </select>
+          </label>
+        )}
       </div>
+
       <div className="report-form-section">
-        <h4>Tenaga Kerja Lapangan</h4>
+        <div className="section-title-bar">
+          <span className="section-badge">2</span>
+          <div className="section-title-heading">
+            <h4>Tenaga Kerja</h4>
+            <InfoHint text="Presensi pekerja, kehadiran, dan tugas lapangan. Di Portal Klien hanya dirangkum menjadi total personil aktif tanpa nama atau status sakit/izin." />
+          </div>
+        </div>
+
         <div className="excel-table-container">
           <div className="excel-table-header">
             <div className="excel-col-num">#</div>
@@ -675,30 +730,68 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
             {workers.map((w, idx) => (
               <div className="excel-table-row" key={w.id || idx}>
                 <div className="excel-cell excel-cell-num">{idx + 1}</div>
-                <div className="excel-cell excel-cell-name"><input type="text" className="excel-input" value={w.name} onChange={e => updateWorker(w.id, 'name', e.target.value)} required /></div>
+                <div className="excel-cell excel-cell-name">
+                  <input type="text" className="excel-input" value={w.name} onChange={e => updateWorker(w.id, 'name', e.target.value)} required />
+                </div>
                 <div className="excel-cell excel-cell-status">
-                  <select className={`excel-select ${w.attendance === 'Hadir' ? 'status-hadir' : 'status-izin'}`} value={w.attendance} onChange={e => updateWorker(w.id, 'attendance', e.target.value)}>
-                    <option value="Hadir">Hadir</option><option value="Izin">Izin</option><option value="Sakit">Sakit</option><option value="Alpa">Alpa</option>
+                  <select className={`excel-select ${w.attendance === 'Hadir' ? 'status-hadir' : w.attendance === 'Alpa' ? 'status-alpa' : 'status-izin'}`} value={w.attendance} onChange={e => updateWorker(w.id, 'attendance', e.target.value)}>
+                    <option value="Hadir">Hadir</option>
+                    <option value="Izin">Izin</option>
+                    <option value="Sakit">Sakit</option>
+                    <option value="Alpa">Alpa</option>
                   </select>
                 </div>
-                <div className="excel-cell excel-cell-task"><input type="text" className="excel-input" value={w.task} onChange={e => updateWorker(w.id, 'task', e.target.value)} /></div>
-                <div className="excel-cell excel-cell-action"><button type="button" className="excel-btn-delete" onClick={() => removeWorker(w.id)}><Trash2 size={14}/></button></div>
+                <div className="excel-cell excel-cell-task">
+                  <input type="text" className="excel-input" value={w.task} onChange={e => updateWorker(w.id, 'task', e.target.value)} />
+                </div>
+                <div className="excel-cell excel-cell-action">
+                  <button type="button" className="excel-btn-delete" title="Hapus baris" onClick={() => removeWorker(w.id)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
           <div className="excel-table-footer">
-            <button type="button" className="btn btn-small btn-outline" onClick={addWorker}><Plus size={14}/> Tambah Pekerja</button>
+            <button type="button" className="btn btn-small btn-outline btn-add-row" onClick={addWorker}>
+              <Plus size={14} /> Tambah Pekerja
+            </button>
+            <div className="excel-summary-pills">
+              <span className="summary-pill total">Total: {workers.length} Pekerja</span>
+              <span className="summary-pill hadir">{hadirCount} Hadir</span>
+              {tidakHadirCount > 0 && <span className="summary-pill non-hadir">{tidakHadirCount} Izin / Sakit</span>}
+            </div>
           </div>
         </div>
       </div>
+
       <div className="report-form-section">
-        <label className="field"><span>Alat / Perlengkapan</span><input type="text" value={tools} onChange={e => setTools(e.target.value)} /></label>
-        <label className="field"><span>Catatan Internal</span><textarea rows="2" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} /></label>
+        <div className="section-title-bar">
+          <span className="section-badge">3</span>
+          <div className="section-title-heading">
+            <h4>Alat, Catatan & Foto</h4>
+            <InfoHint text="Logistik alat operasional, catatan internal lapangan, serta lampiran foto dokumentasi." />
+          </div>
+        </div>
+
+        <label className="field">
+          <span>Alat / Perlengkapan</span>
+          <input type="text" value={tools} onChange={e => setTools(e.target.value)} />
+        </label>
+
+        <div className="field">
+          <div className="field-label-row">
+            <span>Catatan Internal</span>
+            <InfoHint text="Catatan pengawas lapangan (cuaca, material, K3). Hanya tampil untuk Admin & Staff, tidak ditampilkan ke klien." />
+          </div>
+          <textarea rows="2" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} />
+        </div>
+
         <label className="upload-box">
           <Upload size={18} />
           <span>
-            <strong>Tambah / Ganti Foto Dokumentasi Lapangan</strong>
-            <small>{photoNames.length ? `${photoNames.length} foto terlampir` : 'Pilih file PNG, JPG, atau WebP'}</small>
+            <strong>Upload Foto Dokumentasi</strong>
+            <small>{photoNames.length ? `${photoNames.length} foto terlampir` : 'Unggah file PNG, JPG, atau WebP'}</small>
           </span>
           <input type="file" accept="image/png, image/jpeg, image/webp" multiple onChange={handlePhotoUpload} />
         </label>
@@ -725,10 +818,11 @@ function EditReportModalView({ report, project, isStaff = false, close, updatePr
           </div>
         )}
       </div>
-      {error && <div className="form-error"><AlertCircle size={15}/>{error}</div>}
+
+      {error && <div className="form-error"><AlertCircle size={15} />{error}</div>}
       <div className="modal-actions">
         <button type="button" className="btn btn-outline" onClick={close}>Cancel</button>
-        <button className="btn btn-dark" type="submit">Simpan Perubahan <ArrowRight size={15}/></button>
+        <button className="btn btn-dark" type="submit">Simpan Perubahan <ArrowRight size={15} /></button>
       </div>
     </form>
   );
@@ -762,6 +856,8 @@ function ReportDetailModalView({ report, project, isClient, isStaff = false, set
     close();
   };
 
+  const photoCount = photoUrls.length || report.photos || photoItems.length;
+
   return (
     <div className="report-detail-modal">
       <div className="report-detail-top">
@@ -774,17 +870,16 @@ function ReportDetailModalView({ report, project, isClient, isStaff = false, set
         <p className="report-detail-desc">{report.description}</p>
         {report.fieldNote && (
           <div className="report-detail-prog">
-            <span>Catatan Tugas Lapangan</span>
+            <span>Catatan Tugas</span>
             <strong>{report.fieldNote}</strong>
           </div>
         )}
       </div>
 
-      {/* Foto Dokumentasi Lapangan */}
       <div className="report-detail-block">
         <div className="report-detail-block-head">
           <Camera size={16} />
-          <strong>Dokumentasi Foto Lapangan ({photoUrls.length || report.photos || photoItems.length} Foto)</strong>
+          <strong>Foto Dokumentasi ({photoCount})</strong>
         </div>
         <div className="report-photos-grid">
           {photoItems.map((name, idx) => {
@@ -813,46 +908,43 @@ function ReportDetailModalView({ report, project, isClient, isStaff = false, set
         </div>
       </div>
 
-      {/* Tenaga Kerja Lapangan */}
       {isClient ? (
-        // TAMPILAN CLIENT (Rapi, aman, profesional, tanpa absensi personal kuli)
         <div className="report-detail-block">
           <div className="report-detail-block-head">
             <Users size={16} />
-            <strong>Alokasi Tenaga Kerja & Perlengkapan Lapangan</strong>
+            <strong>Tenaga Kerja & Perlengkapan</strong>
           </div>
           <div className="client-workforce-summary">
             <div className="client-workforce-stat">
-              <span>Personil Lapangan Bertugas</span>
+              <span>Personil Aktif</span>
               <strong>{hadirCount > 0 ? `${hadirCount} Personil Aktif` : `${workers.length} Pekerja`}</strong>
             </div>
             <div className="client-workforce-stat">
-              <span>Bidang Pengerjaan Utama</span>
+              <span>Bidang Pekerjaan</span>
               <p>{workers.map(w => w.task).filter(Boolean).slice(0, 3).join(' · ') || 'Pekerjaan konstruksi & struktur'}</p>
             </div>
           </div>
           {report.tools && (
             <div className="client-tools-info">
               <Wrench size={15} />
-              <span><strong>Peralatan Operasional di Lokasi:</strong> {report.tools}</span>
+              <span><strong>Alat / Perlengkapan:</strong> {report.tools}</span>
             </div>
           )}
         </div>
       ) : (
-        // TAMPILAN ADMIN (Full Excel Table, Tools & Internal Notes)
         <>
           <div className="report-detail-block">
             <div className="report-detail-block-head">
               <Users size={16} />
-              <strong>Presensi Tenaga Kerja Lapangan ({workers.length} Pekerja)</strong>
+              <strong>Tenaga Kerja ({workers.length})</strong>
             </div>
             {workers.length > 0 ? (
               <div className="excel-table-container read-only">
                 <div className="excel-table-header">
                   <div className="excel-col-num">#</div>
-                  <div className="excel-col-name">Nama Pekerja / Kuli</div>
-                  <div className="excel-col-status">Status Kehadiran</div>
-                  <div className="excel-col-task">Jenis Pekerjaan</div>
+                  <div className="excel-col-name">Nama Pekerja</div>
+                  <div className="excel-col-status">Kehadiran</div>
+                  <div className="excel-col-task">Tugas</div>
                 </div>
                 <div className="excel-table-body">
                   {workers.map((w, idx) => (
@@ -868,31 +960,32 @@ function ReportDetailModalView({ report, project, isClient, isStaff = false, set
                 </div>
               </div>
             ) : (
-              <p className="muted" style={{ padding: '8px 0' }}>Tidak ada data pekerja terlampir.</p>
+              <p className="muted report-empty-note">Tidak ada data pekerja terlampir.</p>
             )}
           </div>
 
           <div className="report-detail-block">
             <div className="report-detail-block-head">
               <Wrench size={16} />
-              <strong>Alat & Perlengkapan Operasional</strong>
+              <strong>Alat / Perlengkapan</strong>
             </div>
-            <p className="report-tools-text">{report.tools || 'Tidak ada alat berat/khusus dicatat.'}</p>
+            <p className="report-tools-text">{report.tools || 'Tidak ada alat khusus dicatat.'}</p>
           </div>
 
           {report.internalNotes && (
-            <div className="report-detail-block internal-notes-block">
+            <div className="report-detail-block">
               <div className="report-detail-block-head">
                 <ShieldCheck size={16} />
-                <strong>Catatan Internal Mandor / Pengawas (Admin Only)</strong>
+                <strong>Catatan Internal</strong>
+                <InfoHint text="Catatan lapangan dari Admin/Staff. Tidak ditampilkan ke klien." />
               </div>
-              <p>{report.internalNotes}</p>
+              <p className="report-tools-text">{report.internalNotes}</p>
             </div>
           )}
         </>
       )}
 
-      <div className="modal-actions" style={{ justifyContent: 'space-between', marginTop: '20px' }}>
+      <div className="modal-actions report-detail-actions">
         {!isClient && !isStaff ? (
           <button type="button" className="btn btn-outline" onClick={toggleVisibility}>
             {report.visibility === 'Published' ? 'Ubah ke Draft' : 'Publish ke Klien'}
@@ -966,7 +1059,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
     'new-invoice': 'Create invoice',
     'new-report': 'New daily project log',
     'edit-report': 'Edit Draft daily log',
-    'report-detail': modal.report?.title || 'Daily project log detail',
+    'report-detail': 'Detail Daily Log',
     'new-document': 'Upload project file',
     'edit-document': isStaff ? 'Edit Draft project file' : 'Edit project file',
     'new-legal': 'Add legal document',
@@ -983,6 +1076,8 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
     'client-notifications': 'Notifications',
     'hold-reason': 'Place Project on Hold',
     'rollback-reason': 'Roll Back Month',
+    'confirm-progress': 'Konfirmasi Perubahan Progres',
+    'confirm-complete': 'Tandai Proyek Selesai',
     'client-detail': modal.title || 'Client Account Details',
     info: modal.title || 'Information'
   };
@@ -996,6 +1091,58 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
   );
 
   let body = null;
+
+  if (modal.type === 'confirm-progress') {
+    const targetProject = modal?.project || allProjects.find(p => p.id === modal?.projectId) || selectedProject;
+    if (!targetProject) return null;
+    const currentProg = Number(targetProject.progress ?? 0);
+    const nextProg = Number(modal.nextProgress ?? currentProg);
+    body = (
+      <form onSubmit={submit(() => {
+        modal.onConfirm?.();
+        close();
+      })}>
+        <div className="client-detail-grid">
+          <div className="client-detail-item">
+            <small>PROYEK</small>
+            <strong>{targetProject.name}</strong>
+          </div>
+          <div className="client-detail-item">
+            <small>PERUBAHAN PROGRES</small>
+            <strong>{currentProg}% → {nextProg}%</strong>
+          </div>
+        </div>
+        <p className="modal-lead">
+          Klien akan menerima notifikasi pembaruan progres untuk proyek <strong>{targetProject.name}</strong>.
+          {nextProg === 100 && ' Karena target progres mencapai 100%, status proyek akan otomatis berubah menjadi Completed.'}
+        </p>
+        {footer('Konfirmasi Simpan')}
+      </form>
+    );
+  }
+
+  if (modal.type === 'confirm-complete') {
+    const targetProject = modal?.project || allProjects.find(p => p.id === modal?.projectId) || selectedProject;
+    if (!targetProject) return null;
+    body = (
+      <form onSubmit={submit(() => {
+        modal.onConfirm?.();
+        close();
+      })}>
+        <div className="modal-highlight">
+          <CheckCircle2 size={18} />
+          <div>
+            <strong>{targetProject.name}</strong>
+            <small>Status akan diubah menjadi Completed (100%)</small>
+          </div>
+        </div>
+        <p className="modal-lead">
+          Proyek <strong>{targetProject.name}</strong> akan ditandai sebagai <strong>Completed (100%)</strong>, status On Hold yang aktif (jika ada) akan dibersihkan, dan klien akan menerima notifikasi penyelesaian.
+        </p>
+        {footer('Ya, Tandai Completed')}
+      </form>
+    );
+  }
 
   if (modal.type === 'hold-reason') {
     const targetProject = modal?.project || allProjects.find(p => p.id === modal?.projectId) || selectedProject;
@@ -1391,6 +1538,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
         report={modal.report}
         project={project}
         isStaff={isStaff}
+        setDb={setDb}
         close={close}
         updateProject={updateProject}
         addActivity={addActivity}
@@ -1699,7 +1847,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
   if (modal.type === 'client-notifications') body = <ClientNotificationsModalView notifications={db.notifications || []} projects={modal.projects || (selectedProject ? [selectedProject] : [])} notify={notify} />;
   if (modal.type === 'info') body = <div><p className="modal-lead preserve-lines">{modal.body}</p><div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>;
 
-  const isWide = modal.type === 'new-report' || modal.type === 'report-detail';
+  const isWide = modal.type === 'new-report' || modal.type === 'edit-report' || modal.type === 'report-detail';
   const isCentered = modal.type === 'login';
 
   return (

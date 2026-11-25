@@ -24,7 +24,7 @@ function GlobeIcon(props) { return <ExternalLink {...props}/>; }
 function AdminShell({ db,setDb,projects,clients,selectedProject,selectedProjectId,setSelectedProjectId,tab,setTab,onLogout,onReset,onNotify,setModal,updateProject,addActivity,theme,toggleTheme }) {
   const [sidebarOpen,setSidebarOpen] = useState(false);
   const [sidebarCollapsed,setSidebarCollapsed] = useState(false);
-  return <div className={`admin-app ${sidebarCollapsed?'sidebar-collapsed':''}`}>{sidebarOpen && <div className="admin-nav-backdrop" onClick={()=>setSidebarOpen(false)} aria-hidden="true"/>}<aside className={`admin-sidebar ${sidebarOpen?'admin-sidebar-open':''}`}><div className="admin-brand" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><div><Brand inverse/><span className="admin-label">STUDIO MANAGEMENT</span></div><button className="icon-btn mobile-close-btn" onClick={()=>setSidebarOpen(false)} style={{color:'#e9ebe3'}} title="Tutup Menu"><X size={18}/></button></div><div className="admin-nav-title">WORKSPACE</div><nav className="admin-nav">{adminNav.map(([id,label,Icon])=><button key={id} onClick={()=>{setTab(id);setSidebarOpen(false);}} className={tab===id?'active':''}><Icon size={17}/><span>{label}</span>{id==='billing' && <i className="nav-count">{db.projects.reduce((s,p)=>s+p.invoices.reduce((t,i)=>t+i.payments.filter(x=>x.status==='Pending').length,0),0)||''}</i>}</button>)}</nav><div className="admin-sidebar-bottom"><div className="admin-profile"><span className="avatar">NA</span><div><strong>NA Associates</strong><small>Primary Admin</small></div><MoreHorizontal size={16}/></div><button className="admin-reset" onClick={onReset}><RotateCcw size={14}/> Reset workspace data</button><button className="admin-logout" onClick={onLogout}><ArrowLeft size={15}/> Back to public website</button></div></aside><main className="admin-main"><header className="admin-topbar"><div className="admin-top-left"><button className="icon-btn mobile-menu" onClick={()=>setSidebarOpen(v=>!v)}><Menu/></button><button className="icon-btn sidebar-collapse-btn" onClick={()=>setSidebarCollapsed(v=>!v)} title={sidebarCollapsed?'Buka Panel Admin':'Tutup Panel Admin'} aria-label="Toggle admin sidebar">{sidebarCollapsed?<ChevronRight size={18}/>:<ChevronLeft size={18}/>}</button><div className="breadcrumb">NA Associates <ChevronRight size={13}/> <strong>{adminNav.find(x=>x[0]===tab)?.[1]}</strong></div></div><div className="admin-top-actions"><button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title={theme==='dark'?'Switch to light mode':'Switch to night mode'} aria-label="Toggle theme">{theme==='dark'?<Sun size={17}/>:<Moon size={17}/>}</button><button className="icon-btn" onClick={()=>setTab('notifications')}><Bell size={18}/><i className="notification-dot"/></button><span className="avatar">NA</span></div></header><div className="admin-content">{tab==='dashboard' && <AdminDashboard db={db} setTab={setTab} setModal={setModal} setSelectedProjectId={setSelectedProjectId}/>} {tab==='projects' && <AdminProjects projects={projects} clients={clients} setSelectedProjectId={setSelectedProjectId} setTab={setTab} setModal={setModal}/>} {tab==='clients' && <AdminClients clients={clients} projects={projects} setModal={setModal}/>} {tab==='operations' && <AdminOperations projects={projects} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} updateProject={updateProject} addActivity={addActivity} setModal={setModal} setDb={setDb}/>} {tab==='documents' && <AdminDocuments projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal} setDb={setDb}/>} {tab==='materials' && <AdminMaterials projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>} {tab==='billing' && <AdminBilling projects={projects} clients={clients} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>} {tab==='notifications' && <AdminNotifications db={db} setDb={setDb}/>} {tab==='activity' && <AdminActivity projects={projects}/>} {tab==='content' && <AdminContent/>} {tab==='settings' && <AdminSettings onReset={onReset} admins={db.admins||[]} allowedAdminEmails={db.allowedAdminEmails||[]} allowedStaffEmails={db.allowedStaffEmails||[]} setDb={setDb} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/>}</div></main><button type="button" className={`mobile-admin-nav ${sidebarOpen?'is-open':''}`} onClick={()=>setSidebarOpen(v=>!v)} aria-expanded={sidebarOpen}><Menu size={17}/><span>{adminNav.find(x=>x[0]===tab)?.[1]||'Dashboard'}</span><ChevronDown size={16} className="mobile-nav-chevron"/></button></div>;
+  return <div className={`admin-app ${sidebarCollapsed?'sidebar-collapsed':''}`}>{sidebarOpen && <div className="admin-nav-backdrop" onClick={()=>setSidebarOpen(false)} aria-hidden="true"/>}<aside className={`admin-sidebar ${sidebarOpen?'admin-sidebar-open':''}`}><div className="admin-brand" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><div><Brand inverse/><span className="admin-label">STUDIO MANAGEMENT</span></div><button className="icon-btn mobile-close-btn" onClick={()=>setSidebarOpen(false)} style={{color:'#e9ebe3'}} title="Tutup Menu"><X size={18}/></button></div><div className="admin-nav-title">WORKSPACE</div><nav className="admin-nav">{adminNav.map(([id,label,Icon])=><button key={id} onClick={()=>{setTab(id);setSidebarOpen(false);}} className={tab===id?'active':''}><Icon size={17}/><span>{label}</span>{id==='billing' && <i className="nav-count">{db.projects.reduce((s,p)=>s+p.invoices.reduce((t,i)=>t+i.payments.filter(x=>x.status==='Pending').length,0),0)||''}</i>}</button>)}</nav><div className="admin-sidebar-bottom"><div className="admin-profile"><span className="avatar">NA</span><div><strong>NA Associates</strong><small>Primary Admin</small></div><MoreHorizontal size={16}/></div><button className="admin-reset" onClick={onReset}><RotateCcw size={14}/> Reset workspace data</button><button className="admin-logout" onClick={onLogout}><ArrowLeft size={15}/> Back to public website</button></div></aside><main className="admin-main"><header className="admin-topbar"><div className="admin-top-left"><button className="icon-btn mobile-menu" onClick={()=>setSidebarOpen(v=>!v)}><Menu/></button><button className="icon-btn sidebar-collapse-btn" onClick={()=>setSidebarCollapsed(v=>!v)} title={sidebarCollapsed?'Buka Panel Admin':'Tutup Panel Admin'} aria-label="Toggle admin sidebar">{sidebarCollapsed?<ChevronRight size={18}/>:<ChevronLeft size={18}/>}</button><div className="breadcrumb">NA Associates <ChevronRight size={13}/> <strong>{adminNav.find(x=>x[0]===tab)?.[1]}</strong></div></div><div className="admin-top-actions"><button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title={theme==='dark'?'Switch to light mode':'Switch to night mode'} aria-label="Toggle theme">{theme==='dark'?<Sun size={17}/>:<Moon size={17}/>}</button><button className="icon-btn" onClick={()=>setTab('notifications')}><Bell size={18}/><i className="notification-dot"/></button><span className="avatar">NA</span></div></header><div className="admin-content">{tab==='dashboard' && <AdminDashboard db={db} setTab={setTab} setModal={setModal} setSelectedProjectId={setSelectedProjectId}/>} {tab==='projects' && <AdminProjects projects={projects} clients={clients} setSelectedProjectId={setSelectedProjectId} setTab={setTab} setModal={setModal}/>} {tab==='clients' && <AdminClients clients={clients} projects={projects} setModal={setModal}/>} {tab==='operations' && <AdminOperations projects={projects} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} updateProject={updateProject} addActivity={addActivity} setModal={setModal} setDb={setDb} onNotify={onNotify}/>} {tab==='documents' && <AdminDocuments projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal} setDb={setDb}/>} {tab==='materials' && <AdminMaterials projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>} {tab==='billing' && <AdminBilling projects={projects} clients={clients} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>} {tab==='notifications' && <AdminNotifications db={db} setDb={setDb}/>} {tab==='activity' && <AdminActivity projects={projects}/>} {tab==='content' && <AdminContent/>} {tab==='settings' && <AdminSettings onReset={onReset} admins={db.admins||[]} allowedAdminEmails={db.allowedAdminEmails||[]} allowedStaffEmails={db.allowedStaffEmails||[]} setDb={setDb} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/>}</div></main><button type="button" className={`mobile-admin-nav ${sidebarOpen?'is-open':''}`} onClick={()=>setSidebarOpen(v=>!v)} aria-expanded={sidebarOpen}><Menu size={17}/><span>{adminNav.find(x=>x[0]===tab)?.[1]||'Dashboard'}</span><ChevronDown size={16} className="mobile-nav-chevron"/></button></div>;
 }
 
 function AdminDashboard({ db,setTab,setModal,setSelectedProjectId }) {
@@ -178,7 +178,7 @@ function AdminClients({ clients,projects,setModal }) {
     </>
   );
 }
-function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updateProject,addActivity,setModal,setDb }) {
+function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updateProject,addActivity,setModal,setDb,onNotify }) {
   const p=projects.find(x=>x.id===selectedProjectId)||projects[0];
   const [filter,setFilter]=useState('All');
   const [progressDraft,setProgressDraft]=useState(String(p?.progress??0));
@@ -254,38 +254,58 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
     if(!p||isOnHold) return;
     const parsed=Number(progressDraft);
     const clampedProgress=Number.isFinite(parsed)?Math.min(100,Math.max(0,Math.round(parsed))):0;
-    if(!window.confirm(`Simpan perubahan progres proyek ${p.name} menjadi ${clampedProgress}%?`)) return;
-    setProgressDraft(String(clampedProgress));
-    updateProject(p.id,x=>{
-      const nextStatus=x.status==='On Hold'
-        ?'On Hold'
-        :(clampedProgress>=100?'Completed':(x.status==='Completed'?'Active':x.status));
-      return {...x,progress:clampedProgress,status:nextStatus};
+    setModal({
+      type:'confirm-progress',
+      project:p,
+      nextProgress:clampedProgress,
+      onConfirm:()=>{
+        setProgressDraft(String(clampedProgress));
+        updateProject(p.id,x=>{
+          const nextStatus=x.status==='On Hold'
+            ?'On Hold'
+            :(clampedProgress>=100?'Completed':(x.status==='Completed'?'Active':x.status));
+          return {...x,progress:clampedProgress,status:nextStatus};
+        });
+        addActivity(
+          p.id,
+          'Project progress updated',
+          `Admin memperbarui progres proyek ${p.name} menjadi ${clampedProgress}%.`,
+          undefined,
+          {crudType:'UPDATE',module:'Field Operations'}
+        );
+        if(clampedProgress>=100){
+          pushPublishedNotif(setDb,p.id,'Proyek Selesai (100%)',`Progres proyek ${p.name} telah mencapai 100% dan ditandai selesai.`);
+        }else{
+          pushPublishedNotif(setDb,p.id,'Progres Proyek Diperbarui',`Progres proyek ${p.name} diperbarui menjadi ${clampedProgress}%.`);
+        }
+        onNotify?.(`Progres proyek ${p.name} berhasil disimpan (${clampedProgress}%).`);
+      }
     });
-    addActivity(p.id,'Project progress updated',`Admin memperbarui progres proyek ${p.name} menjadi ${clampedProgress}%.`);
-    if(clampedProgress>=100){
-      pushPublishedNotif(setDb,p.id,'Proyek Selesai (100%)',`Progres proyek ${p.name} telah mencapai 100% dan ditandai selesai.`);
-    }else{
-      pushPublishedNotif(setDb,p.id,'Progres Proyek Diperbarui',`Progres proyek ${p.name} diperbarui menjadi ${clampedProgress}%.`);
-    }
-  };
-
-  const completeAllMilestones=()=>{
-    if(!p) return;
-    updateProject(p.id,x=>({
-      ...x,
-      status:'Completed',
-      holdReason:'',
-      progress:100
-    }));
-    addActivity(p.id,'Project completed',`Admin menandai proyek ${p.name} selesai (100%).`);
-    pushPublishedNotif(setDb,p.id,'Proyek Selesai (100%)',`Proyek ${p.name} telah mencapai penyelesaian 100% (Completed).`);
   };
 
   const markProjectCompleted=()=>{
     if(!p) return;
-    if(!window.confirm(`Tandai proyek ${p.name} sebagai Completed (100%)? Status proyek akan berubah menjadi selesai dan klien akan menerima notifikasi.`)) return;
-    completeAllMilestones();
+    setModal({
+      type:'confirm-complete',
+      project:p,
+      onConfirm:()=>{
+        updateProject(p.id,x=>({
+          ...x,
+          status:'Completed',
+          holdReason:'',
+          progress:100
+        }));
+        addActivity(
+          p.id,
+          'Project completed',
+          `Admin menandai proyek ${p.name} selesai (100%).`,
+          undefined,
+          {crudType:'UPDATE',module:'Field Operations'}
+        );
+        pushPublishedNotif(setDb,p.id,'Proyek Selesai (100%)',`Proyek ${p.name} telah mencapai penyelesaian 100% (Completed).`);
+        onNotify?.(`Proyek ${p.name} berhasil ditandai Completed (100%).`);
+      }
+    });
   };
 
   const reactivateProject=()=>{
