@@ -77,6 +77,25 @@ function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMob
     };
   }, [page]);
 
+  useEffect(() => {
+    if (!mobileNav) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setMobileNav(false);
+    };
+    const onResize = () => {
+      if (window.innerWidth > 780) setMobileNav(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [mobileNav, setMobileNav]);
+
   const scrollToNextSection = () => {
     const nextSec = getNextSection();
     if (!nextSec) return;
@@ -90,20 +109,79 @@ function PublicShell({ page, setPage, go, onLogin, changeRole, mobileNav, setMob
     setMobileNav(false);
     onLogin();
   };
+  const navigateFromDrawer = (key) => {
+    setMobileNav(false);
+    go(key);
+  };
   return <>
     <header className={`public-header ${scrolled ? 'is-scrolled' : ''}`}>
       <div className="public-header-inner">
         <Brand/>
-        <nav className={`public-nav ${mobileNav ? 'nav-open' : ''}`}>
-          {links.map(([label, key]) => <button key={key} className={page === key ? 'active' : ''} onClick={() => go(key)}>{label}</button>)}
-          <button type="button" className="mobile-portal-link" onClick={openPortal}>Manage Project <ArrowUpRight size={15}/></button>
+        <nav className="public-nav" aria-label="Primary navigation">
+          {links.map(([label, key]) => <button key={key} type="button" className={page === key ? 'active' : ''} onClick={() => go(key)}>{label}</button>)}
         </nav>
         <div className="header-actions">
           <button type="button" className="text-link portal-link" onClick={openPortal}>Manage Project <ArrowUpRight size={15}/></button>
-          <button type="button" className="icon-btn mobile-menu" onClick={() => setMobileNav(v => !v)} aria-label="Open menu">{mobileNav ? <X/> : <Menu/>}</button>
+          <button
+            type="button"
+            className="icon-btn mobile-menu"
+            onClick={() => setMobileNav(v => !v)}
+            aria-label={mobileNav ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileNav}
+            aria-controls="public-mobile-nav"
+          >
+            {mobileNav ? <X size={22}/> : <Menu size={22}/>}
+          </button>
         </div>
       </div>
     </header>
+    <div
+      className={`public-drawer-backdrop ${mobileNav ? 'is-open' : ''}`}
+      onClick={() => setMobileNav(false)}
+      aria-hidden="true"
+    />
+    <nav
+      id="public-mobile-nav"
+      className={`public-mobile-drawer ${mobileNav ? 'is-open' : ''}`}
+      aria-label="Mobile navigation"
+      aria-hidden={!mobileNav}
+    >
+      <div className="public-drawer-head">
+        <span className="public-drawer-label">NAVIGATION</span>
+        <button
+          type="button"
+          className="icon-btn public-drawer-close"
+          onClick={() => setMobileNav(false)}
+          aria-label="Close navigation menu"
+          tabIndex={mobileNav ? 0 : -1}
+        >
+          <X size={20}/>
+        </button>
+      </div>
+      <div className="public-drawer-links">
+        {links.map(([label, key]) => (
+          <button
+            key={key}
+            type="button"
+            className={`public-drawer-item ${page === key ? 'active' : ''}`}
+            onClick={() => navigateFromDrawer(key)}
+            tabIndex={mobileNav ? 0 : -1}
+          >
+            <span>{label}</span>
+            <ChevronRight size={16}/>
+          </button>
+        ))}
+        <button
+          type="button"
+          className="public-drawer-item public-drawer-portal"
+          onClick={openPortal}
+          tabIndex={mobileNav ? 0 : -1}
+        >
+          <span>Manage Project</span>
+          <ArrowUpRight size={16}/>
+        </button>
+      </div>
+    </nav>
     <main className="public-main">{page === 'home' && <HomePage go={go} onLogin={onLogin} heroReady={heroReady}/>} {page === 'projects' && <ProjectsPage go={go}/>} {page === 'project-detail' && <ProjectDetailPage go={go}/>} {page === 'services' && <ServicesPage go={go}/>} {page === 'about' && <AboutPage go={go}/>} {page === 'career' && <CareerPage/>} {page === 'contact' && <ContactPage/>}</main>
     <PublicFooter go={go}/>
     <div className="public-floating-nav" aria-label="Navigasi gulir cepat">
