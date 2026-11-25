@@ -7,7 +7,7 @@ import {
   RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Upload, User, UserPlus,
   Users, Wallet, X, Eye, Activity, AlertCircle, AlertTriangle, Trash2, Camera, Wrench
 } from 'lucide-react';
-import { StatusTag, EmptyState, GoogleIcon, ProgressBar } from './ui';
+import { StatusTag, EmptyState, GoogleIcon, ProgressBar, InfoHint } from './ui';
 import { money, dateFmt, nowLabel, uid, createClientNotification, filterClientNotifications } from '../lib/utils';
 
 const pushPublishedNotif = (setDb, projectId, title, body) => {
@@ -982,7 +982,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
     'file-list': 'Project files',
     'client-notifications': 'Notifications',
     'hold-reason': 'Place Project on Hold',
-    'rollback-reason': 'Roll Back Month (Mundur Bulan)',
+    'rollback-reason': 'Roll Back Month',
     'client-detail': modal.title || 'Client Account Details',
     info: modal.title || 'Information'
   };
@@ -1012,16 +1012,17 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
         addActivity(targetProject.id, 'Project placed on hold', `Proyek ditahan (On Hold). Alasan: ${reason}`);
         finish('Proyek berhasil ditandai On Hold.');
       })}>
-        <div className="modal-highlight" style={{ background: '#f4eee4', color: '#8d7449' }}>
-          <AlertTriangle size={18} />
-          <div>
-            <strong>Tahan Operasional Proyek · {targetProject?.name || 'Proyek'}</strong>
-            <small>Klien akan melihat status On Hold beserta alasan penahanan di Portal Klien.</small>
-          </div>
-        </div>
-        {textarea('Hold Reason (Wajib diisi) *', 'holdReason', 'Mis. Menunggu pelunasan termin tertunggak atau evaluasi teknis desain lantai 2...')}
-        <div className="modal-footnote">
-          Selama status On Hold, pembaruan progres dan pembuatan daily log baru dikunci, sementara dokumen dan pembayaran tetap dapat diakses klien.
+        <div className="field">
+          <span className="field-label-row">
+            <span>Hold Reason <b>*</b></span>
+            <InfoHint text="Selama status On Hold, pembaruan progres dan pembuatan daily log baru dikunci, sementara dokumen dan pembayaran tetap dapat diakses klien." />
+          </span>
+          <textarea
+            rows="3"
+            placeholder="Mis. Menunggu pelunasan termin tertunggak atau evaluasi teknis desain lantai 2..."
+            value={form.holdReason ?? ''}
+            onChange={e => set('holdReason', e.target.value)}
+          />
         </div>
         {footer('Confirm Place on Hold')}
       </form>
@@ -1031,14 +1032,13 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
   if (modal.type === 'rollback-reason') {
     const targetProject = modal?.project || allProjects.find(p => p.id === modal?.projectId) || selectedProject;
     if (!targetProject) return null;
-    const paidInvoicesCount = (targetProject?.invoices || []).filter(inv => inv?.status === 'Paid').length;
     const currentProg = Number(targetProject?.progress || 0);
     const defaultRollbackProg = Math.max(0, currentProg - 10);
     const rollbackTargetValue = form.targetProgress ?? String(defaultRollbackProg);
     body = (
       <form onSubmit={submit(() => {
         const reason = (form.reason || '').trim();
-        if (!reason) throw new Error('Alasan Roll Back / Mundur Bulan wajib diisi.');
+        if (!reason) throw new Error('Alasan Roll Back wajib diisi.');
         const parsedTarget = Number(form.targetProgress ?? defaultRollbackProg);
         const clampedTarget = Number.isFinite(parsedTarget)
           ? Math.min(100, Math.max(0, Math.round(parsedTarget)))
@@ -1069,15 +1069,6 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
         );
         finish(`Project berhasil di-rollback ke ${clampedTarget}%. Status tetap Active untuk pekerjaan lanjutan.`);
       })}>
-        <div className="modal-highlight" style={{ background: '#f4eee4', color: '#8d7449' }}>
-          <RotateCcw size={18} />
-          <div>
-            <strong>Roll Back Month · {targetProject?.name || 'Proyek'}</strong>
-            <small>
-              Progres saat ini: {currentProg}% · {paidInvoicesCount} invoice Paid dipertahankan
-            </small>
-          </div>
-        </div>
         <label className="field">
           <span>Target Progress Setelah Roll Back (%)</span>
           <input
@@ -1089,9 +1080,17 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
             required
           />
         </label>
-        {textarea('Alasan Roll Back / Mundur Bulan *', 'reason', 'Mis. Progres lapangan belum memenuhi standar kualitas sehingga jadwal termin digeser...')}
-        <div className="modal-footnote">
-          Roll back akan menyesuaikan progres proyek ke target persentase yang dipilih, menjeda hitungan tagihan termin berikutnya, serta mempertahankan status proyek tetap Active dan invoice berstatus Sudah Dibayar (Paid).
+        <div className="field">
+          <span className="field-label-row">
+            <span>Roll Back Reason <b>*</b></span>
+            <InfoHint text="Roll back akan memundurkan persentase progres proyek, menjeda hitungan tagihan termin berikutnya, serta mempertahankan status proyek tetap Active dan invoice Paid." />
+          </span>
+          <textarea
+            rows="3"
+            placeholder="Mis. Progres lapangan belum memenuhi standar kualitas sehingga jadwal termin digeser..."
+            value={form.reason ?? ''}
+            onChange={e => set('reason', e.target.value)}
+          />
         </div>
         {footer('Konfirmasi Roll Back')}
       </form>

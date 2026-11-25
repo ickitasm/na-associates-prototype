@@ -8930,5 +8930,173 @@ summary:focus:not(:focus-visible),
   }
 }
 
+/* ==========================================================================
+   Admin Field Operations: Project Status Grid, Inline InfoHint & Bounded Log Scroll
+   ========================================================================== */
+.field-label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+}
+
+.project-control-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+}
+
+.project-status-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.project-status-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: #20251e;
+}
+
+.project-status-left .progress-inline-control {
+  margin-top: 0;
+}
+
+.project-status-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.project-status-actions .btn {
+  width: 100%;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.project-status-primary {
+  grid-column: 1 / -1;
+  justify-content: center;
+}
+
+.dark-mode .project-status-heading {
+  color: #f0f3ed;
+}
+
+.admin-weekly-daily-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #b8b1a1 transparent;
+}
+
+.admin-weekly-daily-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-weekly-daily-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-weekly-daily-scroll::-webkit-scrollbar-thumb {
+  background: #b8b1a1;
+  border-radius: 999px;
+}
+
+.admin-weekly-daily-scroll::-webkit-scrollbar-thumb:hover {
+  background: #968f80;
+}
+
+.dark-mode .admin-weekly-daily-scroll {
+  scrollbar-color: #3d483b transparent;
+}
+
+.dark-mode .admin-weekly-daily-scroll::-webkit-scrollbar-thumb {
+  background: #3d483b;
+}
+
+.dark-mode .admin-weekly-daily-scroll::-webkit-scrollbar-thumb:hover {
+  background: #536350;
+}
+
+.admin-log-row .log-card-main p {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.admin-log-row .log-card-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+.admin-log-row .log-card-actions .status-tag,
+.admin-view-log-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 780px) {
+  .admin-log-row .log-card-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .project-control-panel {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .project-control-panel > .project-status-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-weekly-daily-scroll {
+    max-height: 310px;
+  }
+
+  .admin-log-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .admin-log-row .log-card-actions {
+    grid-column: 1;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 420px) {
+  .project-status-actions,
+  .project-control-panel > .project-status-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 

@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Camera, Check,
   CheckCircle2, ChevronDown, ChevronRight, ChevronLeft, ClipboardList, Clock3, CreditCard,
-  Download, Edit3, ExternalLink, EyeOff, FileCheck2, FileImage, FileText, Folder, FolderOpen, Globe, HardHat,
+  Download, Edit3, ExternalLink, EyeOff, FileCheck2, FileImage, FileText, Globe, HardHat,
   Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, MoreVertical, Package, Plus,
   RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, Upload, User, UserPlus,
   Users, Wallet, X, Eye, Activity, AlertCircle, Sun, Moon
@@ -182,7 +182,7 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
   const p=projects.find(x=>x.id===selectedProjectId)||projects[0];
   const [filter,setFilter]=useState('All');
   const [progressDraft,setProgressDraft]=useState(String(p?.progress??0));
-  const [activeMonthKey,setActiveMonthKey]=useState('');
+  const [activeMonthIndex,setActiveMonthIndex]=useState(0);
   const [expandedWeeks,setExpandedWeeks]=useState({});
   const [menuState,setMenuState]=useState(null);
   const [undoState,setUndoState]=useState(null);
@@ -190,8 +190,9 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
 
   const reports=p?.reports||[];
   const filteredReports=reports.filter(r=>filter==='All'||r.visibility===filter);
-  const monthFolders=groupReportsByMonthAndWeek(filteredReports);
-  const selectedMonth=monthFolders.find(m=>m.key===activeMonthKey)||monthFolders[0]||null;
+  const monthBuckets=groupReportsByMonthAndWeek(filteredReports);
+  const safeMonthIndex=monthBuckets.length?Math.min(activeMonthIndex,monthBuckets.length-1):0;
+  const selectedMonth=monthBuckets[safeMonthIndex]||null;
   const isOnHold=p?.status==='On Hold';
 
   useEffect(()=>{
@@ -200,6 +201,7 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
 
   useEffect(()=>{
     setMenuState(null);
+    setActiveMonthIndex(0);
   },[p?.id,filter]);
 
   useLayoutEffect(()=>{
@@ -251,23 +253,24 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
     e.preventDefault();
     if(!p||isOnHold) return;
     const parsed=Number(progressDraft);
-    const nextProgress=Number.isFinite(parsed)?Math.min(100,Math.max(0,Math.round(parsed))):0;
-    setProgressDraft(String(nextProgress));
+    const clampedProgress=Number.isFinite(parsed)?Math.min(100,Math.max(0,Math.round(parsed))):0;
+    if(!window.confirm(`Simpan perubahan progres proyek ${p.name} menjadi ${clampedProgress}%?`)) return;
+    setProgressDraft(String(clampedProgress));
     updateProject(p.id,x=>{
       const nextStatus=x.status==='On Hold'
         ?'On Hold'
-        :(nextProgress>=100?'Completed':(x.status==='Completed'?'Active':x.status));
-      return {...x,progress:nextProgress,status:nextStatus};
+        :(clampedProgress>=100?'Completed':(x.status==='Completed'?'Active':x.status));
+      return {...x,progress:clampedProgress,status:nextStatus};
     });
-    addActivity(p.id,'Project progress updated',`Admin memperbarui progres proyek ${p.name} menjadi ${nextProgress}%.`);
-    if(nextProgress>=100){
+    addActivity(p.id,'Project progress updated',`Admin memperbarui progres proyek ${p.name} menjadi ${clampedProgress}%.`);
+    if(clampedProgress>=100){
       pushPublishedNotif(setDb,p.id,'Proyek Selesai (100%)',`Progres proyek ${p.name} telah mencapai 100% dan ditandai selesai.`);
     }else{
-      pushPublishedNotif(setDb,p.id,'Progres Proyek Diperbarui',`Progres proyek ${p.name} diperbarui menjadi ${nextProgress}%.`);
+      pushPublishedNotif(setDb,p.id,'Progres Proyek Diperbarui',`Progres proyek ${p.name} diperbarui menjadi ${clampedProgress}%.`);
     }
   };
 
-  const markProjectCompleted=()=>{
+  const completeAllMilestones=()=>{
     if(!p) return;
     updateProject(p.id,x=>({
       ...x,
@@ -277,6 +280,12 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
     }));
     addActivity(p.id,'Project completed',`Admin menandai proyek ${p.name} selesai (100%).`);
     pushPublishedNotif(setDb,p.id,'Proyek Selesai (100%)',`Proyek ${p.name} telah mencapai penyelesaian 100% (Completed).`);
+  };
+
+  const markProjectCompleted=()=>{
+    if(!p) return;
+    if(!window.confirm(`Tandai proyek ${p.name} sebagai Completed (100%)? Status proyek akan berubah menjadi selesai dan klien akan menerima notifikasi.`)) return;
+    completeAllMilestones();
   };
 
   const reactivateProject=()=>{
@@ -387,7 +396,7 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
         </div>
       )}
       <div className="admin-toolbar">
-        <select value={p?.id||''} onChange={e=>{setSelectedProjectId(e.target.value);setActiveMonthKey('');}}>
+        <select value={p?.id||''} onChange={e=>{setSelectedProjectId(e.target.value);setActiveMonthIndex(0);}}>
           {projects.map(x=><option value={x.id} key={x.id}>{x.name}</option>)}
         </select>
         <select value={filter} onChange={e=>setFilter(e.target.value)}>
@@ -399,17 +408,8 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
       </div>
 
       <div className="admin-panel project-control-panel">
-        <div>
-          <strong>Project status · {p?.status} ({p?.progress}%)</strong>
-          <p>
-            {p?.status==='On Hold'
-              ?'Operational progress updates are paused. Existing reports and project records remain available.'
-              :p?.status==='Ready to Resume'
-                ?'Payment conditions are cleared. Confirm to resume operational updates.'
-                :p?.status==='Completed'
-                  ?'Proyek ini telah ditandai selesai dengan progres 100%.'
-                  :'Project operations are active. Atur persentase progres keseluruhan secara langsung.'}
-          </p>
+        <div className="project-status-left">
+          <h3 className="project-status-heading">Project Status</h3>
           <form className="progress-inline-control" onSubmit={handleSaveProgress}>
             <label htmlFor="admin-progress-input">Project Progress (%)</label>
             <input
@@ -421,13 +421,13 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
               disabled={isOnHold}
               onChange={e=>setProgressDraft(e.target.value)}
             />
-            <button type="submit" className="btn btn-small btn-dark" disabled={isOnHold}>Simpan %</button>
+            <button type="submit" className="btn btn-small btn-dark" disabled={isOnHold}>Simpan</button>
           </form>
         </div>
-        <div className="admin-control-actions">
+        <div className="project-status-actions">
           {(p?.status==='Active'||p?.status==='On Hold') && (
             <>
-              <button type="button" className="btn btn-small btn-dark" onClick={markProjectCompleted}>
+              <button type="button" className="btn btn-small btn-dark project-status-primary" onClick={markProjectCompleted}>
                 <Check size={14}/> Mark as completed
               </button>
               {p?.status==='Active' && (
@@ -436,12 +436,12 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
                 </button>
               )}
               <button type="button" className="btn btn-small btn-outline" onClick={()=>setModal({type:'rollback-reason',project:p})}>
-                <RotateCcw size={14}/> Roll Back Month (Mundur Bulan)
+                <RotateCcw size={14}/> Roll Back Month
               </button>
             </>
           )}
           {p?.status==='Completed' && (
-            <button type="button" className="btn btn-small btn-outline" onClick={reactivateProject}>
+            <button type="button" className="btn btn-small btn-outline project-status-primary" onClick={reactivateProject}>
               <RotateCcw size={14}/> Reactivate project
             </button>
           )}
@@ -460,7 +460,7 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
           {p?.status==='Ready to Resume' && (
             <button
               type="button"
-              className="btn btn-small btn-dark"
+              className="btn btn-small btn-dark project-status-primary"
               onClick={()=>{
                 updateProject(p.id,x=>syncProjectFromMilestones({...x,status:'Active',holdReason:'',billingPaused:false}));
                 addActivity(p.id,'Project resumed','Admin confirmed project resume.');
@@ -478,27 +478,33 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
           <span className="subtle-tag">{p?.code}</span>
         </div>
 
-        {!monthFolders.length ? (
+        {!monthBuckets.length ? (
           <EmptyState
             title="No daily logs"
             detail={reports.length?'Tidak ada laporan yang cocok dengan filter status ini.':'Create the first field report for this project.'}
           />
         ) : (
           <>
-            <div className="period-folder-tabs" role="tablist" aria-label="Monthly field log folders">
-              {monthFolders.map(m=>(
-                <button
-                  key={m.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={m.key===selectedMonth?.key}
-                  className={`period-folder-tab ${m.key===selectedMonth?.key?'is-active':''}`}
-                  onClick={()=>{setActiveMonthKey(m.key);setMenuState(null);}}
-                >
-                  <FolderOpen size={14}/>
-                  <span>{m.label} ({m.count})</span>
-                </button>
-              ))}
+            <div className="client-month-stepper" role="group" aria-label="Navigasi bulan laporan">
+              <button
+                type="button"
+                className="client-month-nav-btn"
+                aria-label="Bulan sebelumnya"
+                disabled={safeMonthIndex>=monthBuckets.length-1}
+                onClick={()=>{setActiveMonthIndex(i=>Math.min(monthBuckets.length-1,i+1));setMenuState(null);}}
+              >
+                <ChevronLeft size={16}/>
+              </button>
+              <span className="client-month-label">{selectedMonth?.label}</span>
+              <button
+                type="button"
+                className="client-month-nav-btn"
+                aria-label="Bulan berikutnya"
+                disabled={safeMonthIndex<=0}
+                onClick={()=>{setActiveMonthIndex(i=>Math.max(0,i-1));setMenuState(null);}}
+              >
+                <ChevronRight size={16}/>
+              </button>
             </div>
 
             <div className="weekly-folder-list">
@@ -514,60 +520,78 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
                     >
                       <div className="weekly-folder-head-top">
                         <span className="weekly-folder-title">
-                          <Folder size={15}/>
                           <strong>Minggu {week.weekNumber}</strong>
                           <span>· {week.dateRange}</span>
                         </span>
                         <ChevronDown size={16} className="weekly-folder-chevron"/>
                       </div>
-                      <div className="weekly-folder-badges">
-                        <span className="weekly-summary-chip">{week.reportCount} Daily Logs</span>
-                        {week.categories.length>0 && (
-                          <span className="weekly-summary-chip">{week.categories.join(' · ')}</span>
-                        )}
-                        <span className="weekly-summary-chip"><Camera size={12}/> {week.totalPhotos} Foto</span>
-                        <span className="weekly-summary-chip"><Users size={12}/> {week.avgWorkers} Personil</span>
+                      <div className="weekly-stat-chips">
+                        <span
+                          className="weekly-stat-chip"
+                          title="Daily Reports"
+                          aria-label={`${week.reportCount} Daily Reports`}
+                        >
+                          <FileText size={13}/>
+                          <span>{week.reportCount}</span>
+                        </span>
+                        <span
+                          className="weekly-stat-chip"
+                          title="Foto Lapangan"
+                          aria-label={`${week.totalPhotos} Foto`}
+                        >
+                          <Camera size={13}/>
+                          <span>{week.totalPhotos}</span>
+                        </span>
+                        <span
+                          className="weekly-stat-chip"
+                          title="Personil Aktif"
+                          aria-label={`${week.avgWorkers} Personil`}
+                        >
+                          <Users size={13}/>
+                          <span>{week.avgWorkers}</span>
+                        </span>
                       </div>
-                      {week.highlights && <p className="weekly-folder-highlights">{week.highlights}</p>}
                     </button>
 
                     {open && (
                       <div className="weekly-folder-body">
-                        {week.reports.map(r=>{
-                          const photoCount=Array.isArray(r.photoUrls)&&r.photoUrls.length
-                            ?r.photoUrls.length
-                            :(Array.isArray(r.photoNames)&&r.photoNames.length?r.photoNames.length:Number(r.photos||1));
-                          const isOpen=menuState?.report?.id===r.id;
-                          return (
-                            <article className="log-card admin-log-row" key={r.id}>
-                              <div className="log-card-date">{dateFmt(r.date)}<span>{r.category}</span></div>
-                              <div className="log-card-main">
-                                <h4>{r.title}</h4>
-                                <p>{r.description}</p>
-                                <small>{photoCount} foto{r.fieldNote?` · ${r.fieldNote}`:''} · {r.workers?.length||0} pekerja</small>
-                              </div>
-                              <div className="log-card-actions">
-                                <StatusTag value={r.visibility}/>
-                                <button
-                                  type="button"
-                                  className="btn btn-small btn-dark"
-                                  onClick={()=>setModal({type:'report-detail',report:r,project:p,isClient:false})}
-                                >
-                                  <Eye size={13}/> View log
-                                </button>
-                                <button
-                                  type="button"
-                                  className="icon-btn doc-menu-trigger"
-                                  aria-label={`Actions for ${r.title}`}
-                                  aria-expanded={isOpen}
-                                  onClick={e=>openReportMenu(e,r)}
-                                >
-                                  <MoreVertical size={16}/>
-                                </button>
-                              </div>
-                            </article>
-                          );
-                        })}
+                        <div className="admin-weekly-daily-scroll">
+                          {week.reports.map(r=>{
+                            const photoCount=Array.isArray(r.photoUrls)&&r.photoUrls.length
+                              ?r.photoUrls.length
+                              :(Array.isArray(r.photoNames)&&r.photoNames.length?r.photoNames.length:Number(r.photos||1));
+                            const isOpen=menuState?.report?.id===r.id;
+                            return (
+                              <article className="log-card admin-log-row" key={r.id}>
+                                <div className="log-card-date">{dateFmt(r.date)}<span>{r.category}</span></div>
+                                <div className="log-card-main">
+                                  <h4>{r.title}</h4>
+                                  <p>{r.description}</p>
+                                  <small>{photoCount} foto{r.fieldNote?` · ${r.fieldNote}`:''} · {r.workers?.length||0} pekerja</small>
+                                </div>
+                                <div className="log-card-actions">
+                                  <StatusTag value={r.visibility}/>
+                                  <button
+                                    type="button"
+                                    className="btn btn-small btn-dark admin-view-log-btn"
+                                    onClick={()=>setModal({type:'report-detail',report:r,project:p,isClient:false})}
+                                  >
+                                    <Eye size={14}/> View log
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="icon-btn doc-menu-trigger"
+                                    aria-label={`Actions for ${r.title}`}
+                                    aria-expanded={isOpen}
+                                    onClick={e=>openReportMenu(e,r)}
+                                  >
+                                    <MoreVertical size={16}/>
+                                  </button>
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -647,14 +671,6 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
           </button>
         </div>
       )}
-
-      <div className="admin-panel note-panel">
-        <ShieldCheck size={19}/>
-        <div>
-          <strong>Client visibility rule</strong>
-          <p>Hanya laporan berstatus Published yang tampil di Client Portal. Attendance dan catatan internal tetap disembunyikan.</p>
-        </div>
-      </div>
     </>
   );
 }
