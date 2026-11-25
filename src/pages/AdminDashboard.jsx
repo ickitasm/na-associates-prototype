@@ -52,8 +52,11 @@ function AdminDashboard({ db,setTab,setModal,setSelectedProjectId }) {
       <div className="admin-dashboard-grid">
         <section className="admin-panel">
           <div className="admin-panel-head">
-            <h3>Project overview</h3>
-            <button type="button" className="under-link" onClick={()=>setTab('projects')}>All projects <ArrowUpRight size={14}/></button>
+            <h3>
+              <button type="button" className="panel-title-link" onClick={()=>setTab('projects')}>
+                Project overview <ArrowUpRight size={16}/>
+              </button>
+            </h3>
           </div>
           <div className="admin-project-list admin-project-scroll">
             {projects.map(p=>(
@@ -123,8 +126,11 @@ function AdminDashboard({ db,setTab,setModal,setSelectedProjectId }) {
       </div>
       <section className="admin-panel recent-panel">
         <div className="admin-panel-head">
-          <h3>Recent activity</h3>
-          <button type="button" className="under-link" onClick={()=>setTab('activity')}>View activity log <ArrowUpRight size={14}/></button>
+          <h3>
+            <button type="button" className="panel-title-link" onClick={()=>setTab('activity')}>
+              Recent activity <ArrowUpRight size={16}/>
+            </button>
+          </h3>
         </div>
         <ActivityTable projects={projects} limit={5}/>
       </section>

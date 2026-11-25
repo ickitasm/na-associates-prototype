@@ -245,10 +245,11 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
       <div className="admin-dashboard-grid">
         <section className="admin-panel">
           <div className="admin-panel-head">
-            <h3>Assigned project overview</h3>
-            <button className="under-link" onClick={() => setTab('operations')}>
-              Field operations <ArrowUpRight size={14} />
-            </button>
+            <h3>
+              <button type="button" className="panel-title-link" onClick={() => setTab('operations')}>
+                Assigned project overview <ArrowUpRight size={16} />
+              </button>
+            </h3>
           </div>
           <div className="admin-project-list">
             {projects.map((p) => (
@@ -345,10 +346,11 @@ function StaffDashboardOverview({ staffMember, projects, selectedProject, setSel
 
       <section className="admin-panel recent-panel">
         <div className="admin-panel-head">
-          <h3>Recent Field Activity</h3>
-          <button className="under-link" onClick={() => setTab('activity')}>
-            View activity log <ArrowUpRight size={14} />
-          </button>
+          <h3>
+            <button type="button" className="panel-title-link" onClick={() => setTab('activity')}>
+              Recent Field Activity <ArrowUpRight size={16} />
+            </button>
+          </h3>
         </div>
         <div className="staff-activity-scroll">
           <ActivityTable projects={scopedActivityProjects} limit={8} />

@@ -7741,3 +7741,65 @@ summary:focus:not(:focus-visible),
   flex-shrink: 0;
 }
 
+/* ==========================================================================
+   Clickable Panel Title Links (Admin & Staff Dashboard Overview)
+   ========================================================================== */
+
+.panel-title-link,
+.admin-app .admin-panel-head h3 .panel-title-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  padding: 0 0 1px;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.16s ease, border-color 0.16s ease;
+}
+
+.panel-title-link svg {
+  flex-shrink: 0;
+  color: #6b7365;
+  transition: transform 0.16s ease, color 0.16s ease;
+}
+
+.panel-title-link:hover,
+.admin-app .admin-panel-head h3 .panel-title-link:hover {
+  color: #1f241c;
+  border-bottom-color: rgba(31, 36, 28, 0.35);
+}
+
+.panel-title-link:hover svg {
+  color: #1f241c;
+  transform: translate(1px, -1px);
+}
+
+.panel-title-link:focus-visible {
+  outline: 2px solid #8a9483;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.dark-mode .panel-title-link svg {
+  color: #9ba494;
+}
+
+.dark-mode .panel-title-link:hover,
+.dark-mode .admin-app .admin-panel-head h3 .panel-title-link:hover {
+  color: #f4f6f0;
+  border-bottom-color: rgba(244, 246, 240, 0.4);
+}
+
+.dark-mode .panel-title-link:hover svg {
+  color: #f4f6f0;
+}
+
+
