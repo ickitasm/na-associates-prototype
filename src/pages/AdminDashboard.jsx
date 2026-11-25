@@ -958,6 +958,8 @@ function AdminDocuments({projects,updateProject,addActivity,setModal,setDb}) {
 function AdminMaterials({projects,updateProject,addActivity,setModal}) { const [pid,setPid]=useState(projects[0]?.id); const p=projects.find(x=>x.id===pid)||projects[0]; return <><AdminPageHeader title="Shopping & Materials" infoHint="Manage material procurement lists, internal unit cost estimates (hidden from Clients), publication visibility, and on-site material usage logs." action="Add material" onAction={()=>setModal({type:'new-material',project:p})}/><div className="admin-toolbar"><select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><span className="subtle-tag">{p?.code}</span></div><div className="admin-panel"><div className="admin-panel-head"><h3>Shopping list / Procurement</h3></div><div className="material-table">{(p?.shopping||[]).map(s=><div className="material-row" key={s.id}><div className="material-main"><strong>{s.material}</strong><small>{s.specification} · Need by {dateFmt(s.date)}</small></div><div>{s.quantity} {s.unit}</div><div className="material-cost"><small>INTERNAL ESTIMATE</small><strong>{money(s.unitCost*s.quantity)}</strong></div><select value={s.status} onChange={e=>updateProject(p.id,x=>({...x,shopping:x.shopping.map(y=>y.id===s.id?{...y,status:e.target.value}:y)}))}><option>Belum Dibeli</option><option>Dalam Proses</option><option>Sudah Dibeli</option></select><div className="material-publish"><StatusTag value={s.visibility}/><button className="btn btn-small btn-outline" onClick={()=>{updateProject(p.id,x=>({...x,shopping:x.shopping.map(y=>y.id===s.id?{...y,visibility:y.visibility==='Published'?'Draft':'Published'}:y)}));addActivity(p.id,'Shopping list visibility changed',`${s.material} visibility diperbarui.`);}}>{s.visibility==='Published'?'Unpublish':'Publish'}</button></div></div>)}{!p?.shopping?.length&&<EmptyState title="No materials yet" detail="Add requirements for this project."/>}</div></div><div className="admin-panel"><div className="admin-panel-head"><h3>Material usage</h3><button className="btn btn-outline btn-small" onClick={()=>setModal({type:'new-usage',project:p})}><Plus size={14}/> Record usage</button></div>{(p?.usage||[]).map(u=><div className="usage-row" key={u.id}><span><Package size={17}/></span><div><strong>{u.material}</strong><small>{dateFmt(u.date)} · {u.area}</small></div><strong>{u.quantity} {u.unit}</strong></div>)}{!p?.usage?.length&&<EmptyState title="No usage records" detail="Record material usage from daily site activity."/>}</div></>; }
 function AdminBilling({projects,clients,updateProject,addActivity,setModal}) {
   const [pid,setPid]=useState(projects[0]?.id);
+  const [invoiceMenuState,setInvoiceMenuState]=useState(null);
+  const popoverRef=useRef(null);
   const p=projects.find(x=>x.id===pid)||projects[0];
   const client=clients.find(c=>c.id===p?.clientId)||clients[0];
   const invoices=p?.invoices||[];
@@ -967,10 +969,50 @@ function AdminBilling({projects,clients,updateProject,addActivity,setModal}) {
   const outstandingTotal=activeInvoices.reduce((s,i)=>s+Math.max(0,i.amount-i.payments.filter(x=>x.status==='Approved').reduce((t,x)=>t+x.approved,0)),0);
   const today=new Date(); today.setHours(0,0,0,0);
   const holdCandidates=invoices.filter(i=>{const paid=i.payments.filter(x=>x.status==='Approved').reduce((s,x)=>s+x.approved,0);const daysLate=Math.floor((today-new Date(`${i.dueDate}T00:00:00`))/86400000);return i.status!=='Cancelled'&&i.status!=='Paid'&&paid<i.amount&&daysLate>=7&&!i.payments.some(x=>x.status==='Pending');});
+
+  useLayoutEffect(()=>{
+    if(!invoiceMenuState || !popoverRef.current) return;
+    popoverRef.current.style.setProperty('--doc-menu-top', `${invoiceMenuState.top}px`);
+    popoverRef.current.style.setProperty('--doc-menu-left', `${invoiceMenuState.left}px`);
+  }, [invoiceMenuState]);
+
+  useEffect(()=>{
+    if(!invoiceMenuState) return;
+    const onMouseDown=(e)=>{
+      if(popoverRef.current?.contains(e.target)) return;
+      if(e.target.closest?.('.doc-menu-trigger')) return;
+      setInvoiceMenuState(null);
+    };
+    const onKeyDown=(e)=>{
+      if(e.key==='Escape') setInvoiceMenuState(null);
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKeyDown);
+    return ()=>{
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [Boolean(invoiceMenuState)]);
+
+  const openInvoiceMenu=(e, invoice)=>{
+    if(invoiceMenuState?.invoice?.id===invoice.id){
+      setInvoiceMenuState(null);
+      return;
+    }
+    const rect=e.currentTarget.getBoundingClientRect();
+    const canRevise=invoice.status!=='Paid'&&invoice.status!=='Cancelled';
+    const menuW=216;
+    const menuH=canRevise?104:60;
+    const left=Math.max(12, Math.min(rect.right - menuW, window.innerWidth - menuW - 12));
+    const placeAbove=rect.bottom + menuH > window.innerHeight - 12 && rect.top > menuH + 12;
+    const top=placeAbove ? Math.max(12, rect.top - menuH - 6) : Math.min(rect.bottom + 6, window.innerHeight - menuH - 12);
+    setInvoiceMenuState({ invoice, top, left });
+  };
+
   return <>
     <AdminPageHeader title="Billing & Payments" infoHint="Issue project invoices, verify or reject uploaded client payment proofs, track outstanding balances, and enforce H+7 overdue hold rules." action="Create invoice" onAction={()=>setModal({type:'new-invoice',project:p})}/>
     <div className="admin-toolbar">
-      <select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>
+      <select value={pid} onChange={e=>{setPid(e.target.value);setInvoiceMenuState(null);}}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>
       <span className="muted">{invoices.length} invoices</span>
     </div>
     <div className="admin-metrics billing-metrics">
@@ -987,7 +1029,25 @@ function AdminBilling({projects,clients,updateProject,addActivity,setModal}) {
       </div>
       {pending.length>0 ? (
         <div className="billing-review-scroll">
-          {pending.map(pay=><div className="payment-review-row" key={pay.id}><div className="proof-placeholder"><FileImage size={22}/><small>PROOF</small></div><div className="payment-review-main"><strong>{pay.invoice.number}</strong><small>{dateFmt(pay.date)} · Claimed {money(pay.claimed)}</small><span>{pay.proof||'Payment proof uploaded'}</span></div><div className="payment-review-actions"><button className="btn btn-small btn-dark" onClick={()=>setModal({type:'verify-payment',project:p,invoice:pay.invoice,payment:pay})}><Check size={14}/> Review & verify</button><button className="btn btn-small btn-outline" onClick={()=>setModal({type:'reject-payment',project:p,invoice:pay.invoice,payment:pay})}>Reject</button></div></div>)}
+          {pending.map(pay=>{
+            const invPurpose = pay.invoice?.purpose || pay.invoice?.description || '';
+            return (
+              <div className="payment-review-row" key={pay.id}>
+                <div className="proof-placeholder"><FileImage size={22}/><small>PROOF</small></div>
+                <div className="payment-review-main">
+                  <strong>{pay.invoice.number}</strong>
+                  {invPurpose && <span className="invoice-purpose-text">Tagihan: {invPurpose}</span>}
+                  <small>{dateFmt(pay.date)} · Claimed {money(pay.claimed)}</small>
+                  {pay.purpose && <span className="payment-review-purpose">Keterangan: {pay.purpose}</span>}
+                  <span>{pay.proof||'Payment proof uploaded'}</span>
+                </div>
+                <div className="payment-review-actions">
+                  <button className="btn btn-small btn-dark" onClick={()=>setModal({type:'verify-payment',project:p,invoice:pay.invoice,payment:pay})}><Check size={14}/> Review & verify</button>
+                  <button className="btn btn-small btn-outline" onClick={()=>setModal({type:'reject-payment',project:p,invoice:pay.invoice,payment:pay})}>Reject</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <EmptyState title="All caught up" detail="There are no payment proofs waiting for review."/>
@@ -999,26 +1059,77 @@ function AdminBilling({projects,clients,updateProject,addActivity,setModal}) {
         <span className="subtle-tag">{invoices.length} invoices</span>
       </div>
       {invoices.length>0 ? (
-        <div className="billing-register-scroll">
-          {invoices.map(i=><InvoiceAdminRow key={i.id} invoice={i} setModal={setModal} project={p} client={client} addActivity={addActivity}/>)}
+        <div className="billing-register-scroll" onScroll={()=>{if(invoiceMenuState) setInvoiceMenuState(null);}}>
+          {invoices.map(i=>(
+            <InvoiceAdminRow
+              key={i.id}
+              invoice={i}
+              project={p}
+              client={client}
+              addActivity={addActivity}
+              isMenuOpen={invoiceMenuState?.invoice?.id===i.id}
+              onOpenMenu={e=>openInvoiceMenu(e, i)}
+            />
+          ))}
         </div>
       ) : (
         <EmptyState title="No invoices" detail="Create an invoice for this project."/>
       )}
     </div>
+    {invoiceMenuState && (
+      <div
+        className="doc-action-popover"
+        ref={popoverRef}
+        role="menu"
+        aria-label={`Actions for ${invoiceMenuState.invoice.number}`}
+      >
+        <button
+          type="button"
+          className="doc-menu-item"
+          role="menuitem"
+          onClick={()=>{
+            const inv=invoiceMenuState.invoice;
+            setInvoiceMenuState(null);
+            setModal({type:'invoice-detail-admin',invoice:inv,project:p});
+          }}
+        >
+          <Eye size={14}/>
+          <span>View details</span>
+        </button>
+        {invoiceMenuState.invoice.status!=='Paid'&&invoiceMenuState.invoice.status!=='Cancelled'&&(
+          <button
+            type="button"
+            className="doc-menu-item"
+            role="menuitem"
+            onClick={()=>{
+              const inv=invoiceMenuState.invoice;
+              setInvoiceMenuState(null);
+              setModal({type:'revise-invoice',project:p,invoice:inv});
+            }}
+          >
+            <RotateCcw size={14}/>
+            <span>Revise invoice</span>
+          </button>
+        )}
+      </div>
+    )}
   </>;
 }
-function InvoiceAdminRow({invoice,setModal,project,client,addActivity}) {
+function InvoiceAdminRow({invoice,project,client,addActivity,isMenuOpen,onOpenMenu}) {
   const paid=invoice.payments.filter(p=>p.status==='Approved').reduce((s,p)=>s+p.approved,0);
-  const phone = client?.phone || '+6285174279328';
   const statusLabel = invoice.status === 'Paid' ? 'Sudah Dibayar — Terima Kasih Pembayarannya' : 'Belum Dibayar (Tenggat Termin)';
   const msg = encodeURIComponent(`Halo ${client?.name || 'Klien'}, informasi penagihan ${invoice.number} untuk proyek ${project.name}. Status: ${statusLabel}. Silakan periksa Portal Klien NA Associates.`);
-  const waLink = `https://wa.me/${phone.replace(/[^0-9]/g,'')}?text=${msg}`;
+  const waLink = `https://wa.me/6289533706007?text=${msg}`;
+  const purposeText = invoice.purpose || invoice.description || '';
 
   return <div className="invoice-admin-row">
-    <div><strong>{invoice.number}</strong><small>Issued {dateFmt(invoice.issueDate)} · Due {dateFmt(invoice.dueDate)}</small></div>
-    <strong>{money(invoice.amount)}</strong>
-    <span>{money(paid)} paid</span>
+    <div className="invoice-admin-meta">
+      <strong>{invoice.number}</strong>
+      {purposeText && <span className="invoice-purpose-text">{purposeText}</span>}
+      <small>Issued {dateFmt(invoice.issueDate)} · Due {dateFmt(invoice.dueDate)}</small>
+    </div>
+    <strong className="invoice-admin-amount">{money(invoice.amount)}</strong>
+    <span className="invoice-admin-paid">{money(paid)} paid</span>
     <StatusTag value={invoice.status}/>
     <div className="invoice-actions">
       <a
@@ -1028,10 +1139,17 @@ function InvoiceAdminRow({invoice,setModal,project,client,addActivity}) {
         className="btn btn-small btn-whatsapp billing-wa-btn"
         onClick={()=>addActivity(project.id,'WhatsApp notification triggered','Admin mengirim pengingat WhatsApp ke klien untuk invoice '+invoice.number)}
       >
-        <WhatsAppIcon size={14}/> WhatsApp
+        <WhatsAppIcon size={13}/> WhatsApp
       </a>
-      <button className="icon-btn" title="Details" onClick={()=>setModal({type:'invoice-detail-admin',invoice,project})}><Eye size={16}/></button>
-      {invoice.status!=='Paid'&&invoice.status!=='Cancelled'&&<button className="icon-btn" title="Revise invoice" onClick={()=>setModal({type:'revise-invoice',project,invoice})}><RotateCcw size={16}/></button>}
+      <button
+        type="button"
+        className="icon-btn doc-menu-trigger"
+        aria-label="Invoice actions"
+        aria-expanded={Boolean(isMenuOpen)}
+        onClick={onOpenMenu}
+      >
+        <MoreVertical size={16}/>
+      </button>
     </div>
   </div>;
 }

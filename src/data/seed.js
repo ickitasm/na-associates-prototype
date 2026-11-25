@@ -21,7 +21,7 @@ export const seedData = {
       username: 'fajar.ramadhan',
       name: 'Fajar Ramadhan',
       email: 'fajar.ramadhan@example.com',
-      phone: '+62 812 3456 7890',
+      phone: '+62 895-3370-60007',
       date: '2026-02-01',
       projects: ['project-01', 'project-02'],
       status: 'Active'
@@ -31,7 +31,7 @@ export const seedData = {
       username: 'nadia.kusuma',
       name: 'Nadia Kusuma',
       email: 'nadia.kusuma@example.com',
-      phone: '+62 819 8765 4321',
+      phone: '+62 895-3370-60007',
       date: '2026-04-12',
       projects: ['project-03'],
       status: 'Active'
@@ -41,7 +41,7 @@ export const seedData = {
       username: 'citra_bintaro',
       name: 'Citra Lestari',
       email: 'citra@example.com',
-      phone: '+62 811 2233 4455',
+      phone: '+62 895-3370-60007',
       date: '2025-01-15',
       projects: ['project-04'],
       status: 'Active'

@@ -210,4 +210,54 @@ export const filterClientNotifications = (notifications = [], projects = []) => 
   });
 };
 
+const triggerTextFileDownload = (filename, content) => {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 
+export const downloadInvoiceSummary = (invoice, project) => {
+  if (!invoice) return;
+  const paid = (invoice.payments || []).filter(p => p.status === 'Approved').reduce((s, p) => s + Number(p.approved || 0), 0);
+  const remaining = Math.max(0, Number(invoice.amount || 0) - paid);
+  const baseName = String(invoice.documentFile || invoice.number || 'invoice').replace(/\.[^/.]+$/, '');
+  const lines = [
+    'NA ASSOCIATES — OFFICIAL INVOICE SUMMARY',
+    '========================================',
+    `Invoice Number : ${invoice.number}`,
+    `Project        : ${project?.name || '—'}${project?.code ? ` (${project.code})` : ''}`,
+    `Purpose        : ${invoice.purpose || invoice.description || '—'}`,
+    `Issue Date     : ${dateFmt(invoice.issueDate)}`,
+    `Due Date       : ${dateFmt(invoice.dueDate)}`,
+    `Status         : ${invoice.status}`,
+    `Total Amount   : ${money(invoice.amount)}`,
+    `Verified Paid  : ${money(paid)}`,
+    `Remaining      : ${money(remaining)}`,
+    `Reference File : ${invoice.documentFile || '—'}`
+  ];
+  triggerTextFileDownload(`${baseName}.txt`, lines.join('\n'));
+};
+
+export const downloadReceiptSummary = (payment, invoice, project) => {
+  if (!payment) return;
+  const baseName = String(payment.receiptFile || payment.receipt || `kwitansi-${invoice?.number || 'studio'}`).replace(/\.[^/.]+$/, '');
+  const lines = [
+    'NA ASSOCIATES — OFFICIAL PAYMENT RECEIPT',
+    '========================================',
+    `Receipt Ref    : ${payment.receipt || '—'}`,
+    `Invoice Number : ${invoice?.number || '—'}`,
+    `Project        : ${project?.name || '—'}${project?.code ? ` (${project.code})` : ''}`,
+    `Invoice Purpose: ${invoice?.purpose || invoice?.description || '—'}`,
+    `Payment Purpose: ${payment.purpose || '—'}`,
+    `Payment Date   : ${dateFmt(payment.date)}`,
+    `Approved Amount: ${money(payment.approved || payment.claimed)}`,
+    `Verified By    : ${payment.verifiedBy || 'Admin NA Associates'}`
+  ];
+  triggerTextFileDownload(`${baseName}.txt`, lines.join('\n'));
+};

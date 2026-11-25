@@ -74,7 +74,7 @@ export function PublicFooter({ go }) {
           <div className="footer-contact-col">
             <small>KONTAK &amp; STUDIO</small>
             <a href="mailto:hello@naassociates.com"><Mail size={14}/><span>hello@naassociates.com</span></a>
-            <a href="https://wa.me/6285174279328" target="_blank" rel="noopener noreferrer"><Phone size={14}/><span>+62 851-7427-9328</span></a>
+            <a href="https://wa.me/6289533706007" target="_blank" rel="noopener noreferrer"><Phone size={14}/><span>+62 895-3370-60007</span></a>
             <span className="footer-contact-item"><MapPin size={14}/><span>Jakarta, Indonesia</span></span>
           </div>
         </div>
@@ -119,11 +119,12 @@ export function FileTile({ file, onOpen }) {
     </div>
   );
 }
-export function InvoiceClientCard({ invoice, setModal }) {
+export function InvoiceClientCard({ invoice, project, setModal }) {
   const paid = invoice.payments.filter(p => p.status === 'Approved').reduce((s, p) => s + p.approved, 0);
   const remaining = Math.max(0, invoice.amount - paid);
   const pending = invoice.payments.filter(p => p.status === 'Pending').reduce((s, p) => s + p.claimed, 0);
   const paidPct = invoice.amount ? Math.min(100, Math.round((paid / invoice.amount) * 100)) : 0;
+  const purposeText = invoice.purpose || invoice.description || '';
   return (
     <article className="invoice-card">
       <div className="invoice-card-top">
@@ -131,6 +132,7 @@ export function InvoiceClientCard({ invoice, setModal }) {
           <small>{invoice.number}</small>
           <StatusTag value={invoice.status}/>
         </div>
+        {purposeText && <p className="invoice-purpose-text">{purposeText}</p>}
         <div className="invoice-card-amount">
           <strong>{money(invoice.amount)}</strong>
         </div>
@@ -142,7 +144,7 @@ export function InvoiceClientCard({ invoice, setModal }) {
       {pending > 0 && <div className="pending-inline"><Clock3 size={14}/> {money(pending)} menunggu verifikasi</div>}
       <div className="invoice-card-bottom">
         <span>Due date · {dateFmt(invoice.dueDate)}</span>
-        <button className="under-link" onClick={() => setModal({ type: 'invoice-detail', invoice })}>View details <ArrowUpRight size={14}/></button>
+        <button className="under-link" onClick={() => setModal({ type: 'invoice-detail', invoice, project })}>View details <ArrowUpRight size={14}/></button>
       </div>
     </article>
   );

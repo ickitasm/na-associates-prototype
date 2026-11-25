@@ -599,7 +599,7 @@ function ClientWorkspace({ db, client, project, notifications = [], onBack, onLo
           </div>
           {activeInvoices.length ? (
             <div className="invoice-list">
-              {activeInvoices.map(inv=><InvoiceClientCard key={inv.id} invoice={inv} setModal={setModal}/>)}
+              {activeInvoices.map(inv=><InvoiceClientCard key={inv.id} invoice={inv} project={project} setModal={setModal}/>)}
             </div>
           ) : (
             <EmptyState title="No invoices yet" detail="Invoices issued by the studio will appear here."/>
@@ -667,7 +667,7 @@ function ClientWorkspace({ db, client, project, notifications = [], onBack, onLo
           <Brand/>
           <span>Need assistance? Contact the NA Associates team.</span>
           <a
-            href={`https://wa.me/6285174279328?text=${encodeURIComponent(`Halo tim NA Associates, saya ${client?.name || 'Klien'} ingin berkonsultasi mengenai proyek ${project.name} (${project.code}).`)}`}
+            href={`https://wa.me/6289533706007?text=${encodeURIComponent(`Halo tim NA Associates, saya ${client?.name || 'Klien'} ingin berkonsultasi mengenai proyek ${project.name} (${project.code}).`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="under-link"

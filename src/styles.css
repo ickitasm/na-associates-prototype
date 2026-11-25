@@ -4349,10 +4349,12 @@ body {
   }
 
   .toast {
+    top: calc(72px + env(safe-area-inset-top));
+    bottom: auto;
     left: 16px;
     right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom));
     max-width: none;
+    pointer-events: auto;
   }
 
   /* Prevent iOS Safari Input Auto-Zoom (placed AFTER .client-app, admin & staff modal rules) */
@@ -9375,9 +9377,13 @@ summary:focus:not(:focus-visible),
 /* Bounded Vertical Scroll (~3-4 Rows) for Payment Verification & Invoice Register */
 .billing-review-scroll,
 .billing-register-scroll {
+  width: 100%;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   padding-right: 4px;
+  box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: #c7cabf transparent;
 }
@@ -9631,7 +9637,7 @@ summary:focus:not(:focus-visible),
 }
 
 /* Enlarged Typography Inside Billing & Invoice Details Modals */
-.app-shell[data-role] .modal-card:has(.billing-modal-form, .invoice-detail-modal) .modal-header h2 {
+.app-shell[data-role] .modal-card:has(.billing-modal-form, .invoice-detail-modal, .auto-invoice-sheet-wrap) .modal-header h2 {
   font-size: 20px !important;
   font-weight: 600 !important;
   line-height: 1.25;
@@ -9770,7 +9776,8 @@ summary:focus:not(:focus-visible),
 
 .app-shell[data-role] .modal-card .billing-modal-form .modal-actions .btn,
 .app-shell[data-role] .modal-card .invoice-detail-modal .modal-actions .btn,
-.app-shell[data-role] .modal-card .invoice-detail-modal .modal-wide-btn {
+.app-shell[data-role] .modal-card .invoice-detail-modal .modal-wide-btn,
+.app-shell[data-role] .modal-card .auto-invoice-sheet-wrap .modal-actions .btn {
   font-size: 14px !important;
   min-height: 40px;
 }
@@ -9782,7 +9789,7 @@ summary:focus:not(:focus-visible),
 }
 
 @media (max-width: 780px) {
-  .app-shell[data-role] .modal-card:has(.billing-modal-form, .invoice-detail-modal) .modal-header h2 {
+  .app-shell[data-role] .modal-card:has(.billing-modal-form, .invoice-detail-modal, .auto-invoice-sheet-wrap) .modal-header h2 {
     font-size: 19px !important;
   }
 
@@ -9797,6 +9804,498 @@ summary:focus:not(:focus-visible),
     justify-content: flex-end;
   }
 }
+
+/* ==========================================================================
+   Invoice Purpose, Dual Invoice Options, Receipt Downloads & Auto-Invoice View
+   ========================================================================== */
+
+.invoice-purpose-text {
+  display: block;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #3f483d;
+  overflow-wrap: anywhere;
+}
+
+.admin-app .invoice-admin-row .invoice-purpose-text,
+.admin-app .payment-review-main .invoice-purpose-text,
+.admin-app .payment-review-main .payment-review-purpose {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px !important;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #3f483d;
+}
+
+.admin-app .payment-review-main .payment-review-purpose {
+  color: #2f382d;
+}
+
+.app-shell[data-role] .modal-card .invoice-detail-summary .invoice-purpose-text {
+  margin: 6px 0 8px;
+  font-size: 14.5px !important;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #3b4439;
+}
+
+.app-shell[data-role] .modal-card .payment-verify-summary .invoice-purpose-text,
+.app-shell[data-role] .modal-card .payment-verify-summary .payment-review-purpose {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px !important;
+  line-height: 1.45;
+  color: #3f483d;
+}
+
+.dark-mode .invoice-purpose-text,
+.dark-mode.admin-app .invoice-admin-row .invoice-purpose-text,
+.dark-mode.admin-app .payment-review-main .invoice-purpose-text,
+.dark-mode.admin-app .payment-review-main .payment-review-purpose,
+.app-shell.dark-mode[data-role] .modal-card .invoice-detail-summary .invoice-purpose-text,
+.app-shell.dark-mode[data-role] .modal-card .payment-verify-summary .invoice-purpose-text,
+.app-shell.dark-mode[data-role] .modal-card .payment-verify-summary .payment-review-purpose {
+  color: #cfd6ca;
+}
+
+.invoice-doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.invoice-doc-actions .btn,
+.invoice-doc-actions a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.invoice-card .invoice-doc-actions .btn,
+.invoice-card .invoice-doc-actions a.btn {
+  font-size: 12.5px;
+  min-height: 34px;
+  padding: 6px 12px;
+}
+
+.invoice-detail-modal .invoice-doc-actions .btn,
+.invoice-detail-modal .invoice-doc-actions a.btn {
+  font-size: 13.5px !important;
+  min-height: 38px;
+  padding: 8px 14px;
+}
+
+.invoice-doc-missing-note {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #747c70;
+  font-style: italic;
+}
+
+.dark-mode .invoice-doc-missing-note {
+  color: #9ba596;
+}
+
+.payment-history-row > div:last-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.payment-history-receipt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 12px !important;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Read-Only Auto-Generated Studio Invoice Sheet */
+.auto-invoice-sheet-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auto-invoice-sheet {
+  background: #fcfcf9;
+  border: 1px solid #d6d9cf;
+  border-radius: 6px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.auto-invoice-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e1e4db;
+}
+
+.auto-invoice-header small {
+  display: block;
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: #6b7367;
+}
+
+.auto-invoice-brand {
+  display: block;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #1f261d;
+}
+
+.auto-invoice-stamp {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.auto-invoice-stamp.is-paid {
+  color: #2f6b3d;
+  background: rgba(47, 107, 61, 0.09);
+}
+
+.auto-invoice-stamp.is-partial {
+  color: #8f6019;
+  background: rgba(143, 96, 25, 0.1);
+}
+
+.auto-invoice-stamp.is-unpaid {
+  color: #8f332c;
+  background: rgba(143, 51, 44, 0.09);
+}
+
+.auto-invoice-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.auto-invoice-meta-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.auto-invoice-meta-grid small {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #70786b;
+}
+
+.auto-invoice-meta-grid strong {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #20271e;
+  overflow-wrap: anywhere;
+}
+
+.auto-invoice-amounts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid #e1e4db;
+}
+
+.auto-invoice-amount-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: #4b5448;
+}
+
+.auto-invoice-amount-row strong {
+  font-size: 14.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #1f261d;
+}
+
+.auto-invoice-amount-row.is-total {
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px dashed #d6d9cf;
+  font-weight: 600;
+  color: #1f261d;
+}
+
+.auto-invoice-amount-row.is-total strong {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.dark-mode .auto-invoice-sheet {
+  background: #1d221c;
+  border-color: #323a30;
+}
+
+.dark-mode .auto-invoice-header {
+  border-bottom-color: #2f372d;
+}
+
+.dark-mode .auto-invoice-brand {
+  color: #f0f3ed;
+}
+
+.dark-mode .auto-invoice-header small,
+.dark-mode .auto-invoice-meta-grid small {
+  color: #a2ab9d;
+}
+
+.dark-mode .auto-invoice-meta-grid strong {
+  color: #edf0ea;
+}
+
+.dark-mode .auto-invoice-stamp.is-paid {
+  color: #7cc98d;
+  background: rgba(124, 201, 141, 0.14);
+}
+
+.dark-mode .auto-invoice-stamp.is-partial {
+  color: #e4b566;
+  background: rgba(228, 181, 102, 0.14);
+}
+
+.dark-mode .auto-invoice-stamp.is-unpaid {
+  color: #e58a83;
+  background: rgba(229, 138, 131, 0.14);
+}
+
+.dark-mode .auto-invoice-amounts {
+  border-top-color: #2f372d;
+}
+
+.dark-mode .auto-invoice-amount-row {
+  color: #c6cec1;
+}
+
+.dark-mode .auto-invoice-amount-row strong,
+.dark-mode .auto-invoice-amount-row.is-total {
+  color: #f1f4ee;
+}
+
+.dark-mode .auto-invoice-amount-row.is-total {
+  border-top-color: #3a4438;
+}
+
+@media (max-width: 640px) {
+  .auto-invoice-sheet {
+    padding: 16px;
+  }
+
+  .auto-invoice-meta-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .invoice-doc-actions .btn,
+  .invoice-doc-actions a.btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* ==========================================================================
+   Global Toast Interaction & Uniform Top-Anchored Mobile Toasts (All Roles)
+   ========================================================================== */
+
+.toast {
+  cursor: pointer;
+  pointer-events: auto;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.toast-message {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toast-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.78;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.toast-close-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+@media (max-width: 780px) {
+  .app-shell[data-role] .toast {
+    top: calc(72px + env(safe-area-inset-top));
+    bottom: auto;
+    left: 16px;
+    right: 16px;
+    max-width: none;
+    pointer-events: auto;
+  }
+
+  .app-shell[data-role] .doc-undo-toast {
+    top: calc(72px + env(safe-area-inset-top));
+    bottom: auto;
+    left: 16px;
+    right: 16px;
+    transform: none;
+    justify-content: space-between;
+    max-width: none;
+    z-index: 125;
+    pointer-events: auto;
+  }
+}
+
+/* ==========================================================================
+   Admin Invoice Row Spacing & 2-Control Actions (WhatsApp + 3-Dot Trigger)
+   ========================================================================== */
+
+.admin-app .billing-panel {
+  min-width: 0;
+}
+
+.admin-app .invoice-admin-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(115px, 0.85fr) minmax(130px, 0.9fr) 132px auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 0;
+  box-sizing: border-box;
+}
+
+.admin-app .invoice-admin-row > div:first-child,
+.admin-app .invoice-admin-meta {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.admin-app .invoice-admin-row > strong,
+.admin-app .invoice-admin-amount {
+  min-width: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-app .invoice-admin-row > span:not(.status-tag),
+.admin-app .invoice-admin-paid {
+  min-width: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-app .invoice-admin-row > .status-tag {
+  justify-self: start;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.admin-app .invoice-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: nowrap;
+  justify-self: end;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .admin-app .invoice-admin-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 8px;
+    padding: 14px 0;
+  }
+
+  .admin-app .invoice-admin-row > div:first-child,
+  .admin-app .invoice-admin-meta {
+    grid-column: 1 / 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .admin-app .invoice-admin-row > strong,
+  .admin-app .invoice-admin-amount {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    align-self: start;
+  }
+
+  .admin-app .invoice-admin-row > span:not(.status-tag),
+  .admin-app .invoice-admin-paid {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+  }
+
+  .admin-app .invoice-admin-row > .status-tag {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+    align-self: center;
+  }
+
+  .admin-app .invoice-actions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: end;
+    width: auto;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-top: 2px;
+  }
+}
+
+
+
+
 
 
 

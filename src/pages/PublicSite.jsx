@@ -537,13 +537,13 @@ function ContactPage() {
         </div>
         <Field label="Ceritakan singkat tentang proyek Anda" required textarea placeholder="Gambaran singkat lokasi, kebutuhan ruang, atau rencana proyek..."/>
         <button className="btn btn-dark" type="submit">Kirim pesan <ArrowUpRight size={16}/></button>
-        <a className="btn btn-whatsapp" href="https://wa.me/6285174279328?text=Halo%20NA%20Associates%2C%20saya%20tertarik%20untuk%20berkonsultasi%20mengenai%20proyek%20arsitektur." target="_blank" rel="noopener noreferrer"><WhatsAppIcon size={16}/> Hubungi via WhatsApp</a>
+        <a className="btn btn-whatsapp" href="https://wa.me/6289533706007?text=Halo%20NA%20Associates%2C%20saya%20tertarik%20untuk%20berkonsultasi%20mengenai%20proyek%20arsitektur." target="_blank" rel="noopener noreferrer"><WhatsAppIcon size={16}/> Hubungi via WhatsApp</a>
         {sent && <p className="form-success"><CheckCircle2 size={16}/> Pesan berhasil dikirim. Tim NA Associates akan segera menghubungi Anda.</p>}
       </form>
       <aside className="contact-aside">
         <div><small>EMAIL</small><strong>hello@naassociates.com</strong></div>
         <div><small>LOKASI</small><strong>Jakarta, Indonesia</strong></div>
-        <div><small>WHATSAPP</small><strong><a className="contact-wa-link" href="https://wa.me/6285174279328" target="_blank" rel="noopener noreferrer">+62 851-7427-9328 (085174279328)</a></strong></div>
+        <div><small>WHATSAPP</small><strong><a className="contact-wa-link" href="https://wa.me/6289533706007" target="_blank" rel="noopener noreferrer">+62 895-3370-60007 (0895337060007)</a></strong></div>
       </aside>
     </section>
   </>;

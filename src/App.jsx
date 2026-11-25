@@ -6,7 +6,7 @@ import { StaffShell } from './pages/StaffDashboard';
 import { ModalHost } from './components/ModalHost';
 import { STORE_KEY, loadDB, uid, nowLabel } from './lib/utils';
 import { seedData } from './data/seed';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, X } from 'lucide-react';
 import vectorLogo from './public/Vector.svg';
 
 function IntroSplash({ leaving }) {
@@ -78,7 +78,7 @@ function App() {
   useEffect(() => { localStorage.setItem(STORE_KEY, JSON.stringify(db)); }, [db]);
   useEffect(() => { const path = routePath(role,page,selectedProjectId,adminTab,staffTab); if (window.location.pathname !== path) window.history.pushState({}, '', path); }, [role,page,selectedProjectId,adminTab,staffTab]);
   useEffect(() => { const onPopState = () => { const next = resolveAppPath(window.location.pathname); setRole(next.role); setPage(next.page || 'home'); setAdminTab(next.adminTab || 'dashboard'); setStaffTab(next.staffTab || 'dashboard'); if (next.projectId) setSelectedProjectId(next.projectId); }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState); }, []);
-  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 3200); return () => clearTimeout(t); }, [toast]);
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 1800); return () => clearTimeout(t); }, [toast]);
   useEffect(() => { const goHome = () => { setRole('guest'); setPage('home'); setMobileNav(false); }; window.addEventListener('na-home', goHome); return () => window.removeEventListener('na-home', goHome); }, []);
 
   const client = db.clients.find(c => c.id === db.currentClientId) || db.clients[0];
@@ -140,7 +140,28 @@ function App() {
     {role === 'admin' && <AdminShell db={db} setDb={setDb} projects={db.projects} clients={db.clients} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={adminTab} setTab={setAdminTab} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} theme={theme} toggleTheme={toggleTheme} />}
     {role === 'staff' && <StaffShell db={db} setDb={setDb} staffMember={staffMember} projects={staffProjects} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={staffTab} setTab={setStaffTab} onLogout={() => changeRole('guest')} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} theme={theme} toggleTheme={toggleTheme} />}
     {modal && <ModalHost modal={modal} setModal={setModal} close={() => setModal(null)} db={db} setDb={setDb} projects={role === 'staff' ? staffProjects : db.projects} selectedProject={selectedProject} updateProject={updateProject} addActivity={addActivity} notify={notify} role={role} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} enterStaff={enterStaff} theme={theme} />}
-    {toast && <div className="toast"><CheckCircle2 size={17}/>{toast}</div>}
+    {toast && (
+      <div
+        className="toast"
+        role="status"
+        aria-live="polite"
+        onClick={() => setToast('')}
+      >
+        <CheckCircle2 size={17}/>
+        <span className="toast-message">{toast}</span>
+        <button
+          type="button"
+          className="toast-close-btn"
+          aria-label="Tutup notifikasi"
+          onClick={(e) => {
+            e.stopPropagation();
+            setToast('');
+          }}
+        >
+          <X size={15}/>
+        </button>
+      </div>
+    )}
   </div>;
 }
 

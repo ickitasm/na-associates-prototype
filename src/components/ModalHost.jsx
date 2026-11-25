@@ -8,7 +8,7 @@ import {
   Users, Wallet, X, Eye, Activity, AlertCircle, AlertTriangle, Trash2, Camera, Wrench
 } from 'lucide-react';
 import { StatusTag, EmptyState, GoogleIcon, ProgressBar, InfoHint } from './ui';
-import { money, dateFmt, nowLabel, uid, createClientNotification, filterClientNotifications } from '../lib/utils';
+import { money, dateFmt, nowLabel, uid, createClientNotification, filterClientNotifications, downloadInvoiceSummary, downloadReceiptSummary } from '../lib/utils';
 
 const pushPublishedNotif = (setDb, projectId, title, body) => {
   setDb?.(old => ({
@@ -1071,6 +1071,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
     'confirm-delete-draft': 'Delete Draft item',
     'invoice-detail': 'Invoice details',
     'invoice-detail-admin': 'Invoice details',
+    'auto-invoice-preview': 'Invoice Otomatis',
     'file-preview': 'File preview',
     'file-list': 'Project files',
     'client-notifications': 'Notifications',
@@ -1405,7 +1406,99 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
       );
     }
   }
-  if (modal.type === 'payment-upload') body = <form className="billing-modal-form" onSubmit={submit(() => { const amount = Number(form.amount); if (!amount || amount <= 0) throw new Error('Masukkan nominal pembayaran yang valid.'); const invoice = project.invoices.find(i => i.id === form.invoiceId); if (!invoice) throw new Error('Pilih invoice.'); const fileName = form.proofName || 'payment-proof.jpg'; const pay = { id: uid('payment'), date: form.date || new Date().toISOString().slice(0, 10), claimed: amount, approved: 0, status: 'Pending', proof: fileName, proofUrl: form.proofUrl || '', receipt: null }; updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === invoice.id ? { ...i, status: 'Pending Verification', payments: [...i.payments, pay] } : i) })); addActivity(project.id, 'Uploaded payment proof', `Invoice ${invoice.number} · Claimed ${money(amount)} · File: ${fileName}`, db.clients.find(c => c.id === project.clientId)?.name || 'Client', { category: 'upload', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }); finish('Bukti pembayaran berhasil diunggah.'); })}><div className="modal-highlight"><Wallet size={18} /><div><strong>Upload payment proof</strong><small>{project.name} · {project.code}</small></div></div>{select('Invoice', 'invoiceId', project.invoices.filter(i => i.status !== 'Cancelled').map(i => [i.id, `${i.number} · ${money(i.amount)}`]))}{input('Payment date', 'date', '', 'date')}{input('Claimed payment amount (Rp)', 'amount', 'e.g. 4000000', 'number', true)}<label className="upload-box"><Upload size={18} /><span><strong>Choose payment proof</strong><small>JPG, PNG, or PDF format</small></span><input type="file" accept="image/*,.pdf" onChange={e => { const f = e.target.files?.[0]; if (f) { set('proofName', f.name); set('proofUrl', URL.createObjectURL(f)); } }} /></label>{form.proofName && <small className="selected-file">Selected: {form.proofName}</small>}<div className="modal-footnote">Bukti pembayaran akan diverifikasi oleh tim administrasi studio.</div>{footer('Submit proof')}</form>;
+  if (modal.type === 'payment-upload') {
+    const activeInvoices = (project?.invoices || []).filter(i => i.status !== 'Cancelled');
+    const selectedInvId = form.invoiceId ?? activeInvoices[0]?.id ?? '';
+    body = (
+      <form
+        className="billing-modal-form"
+        onSubmit={submit(() => {
+          const amount = Number(form.amount);
+          if (!amount || amount <= 0) throw new Error('Masukkan nominal pembayaran yang valid.');
+          const invoice = project.invoices.find(i => i.id === selectedInvId);
+          if (!invoice) throw new Error('Pilih invoice.');
+          const fileName = form.proofName || 'payment-proof.jpg';
+          const purpose = (form.purpose || '').trim();
+          const pay = {
+            id: uid('payment'),
+            date: form.date || new Date().toISOString().slice(0, 10),
+            claimed: amount,
+            approved: 0,
+            status: 'Pending',
+            purpose,
+            proof: fileName,
+            proofUrl: form.proofUrl || '',
+            receipt: null
+          };
+          updateProject(project.id, p => ({
+            ...p,
+            invoices: p.invoices.map(i => (i.id === invoice.id ? { ...i, status: 'Pending Verification', payments: [...i.payments, pay] } : i))
+          }));
+          addActivity(
+            project.id,
+            'Uploaded payment proof',
+            `Invoice ${invoice.number} · Claimed ${money(amount)}${purpose ? ` · Purpose: ${purpose}` : ''} · File: ${fileName}`,
+            db.clients.find(c => c.id === project.clientId)?.name || 'Client',
+            { category: 'upload', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }
+          );
+          finish('Bukti pembayaran berhasil diunggah.');
+        })}
+      >
+        <div className="modal-highlight">
+          <Wallet size={18} />
+          <div>
+            <strong>Upload payment proof</strong>
+            <small>{project.name} · {project.code}</small>
+          </div>
+        </div>
+        <label className="field">
+          <span>Invoice</span>
+          <select value={selectedInvId} onChange={e => set('invoiceId', e.target.value)}>
+            {activeInvoices.map(i => (
+              <option key={i.id} value={i.id}>
+                {i.number}{i.purpose ? ` — ${i.purpose}` : ''} · {money(i.amount)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span>Payment date</span>
+          <input type="date" value={form.date ?? ''} onChange={e => set('date', e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Claimed payment amount (Rp)<b> *</b></span>
+          <input type="number" value={form.amount ?? ''} onChange={e => set('amount', e.target.value)} required />
+        </label>
+        <label className="field">
+          <span>Purpose / Keterangan Pembayaran</span>
+          <input type="text" value={form.purpose ?? ''} onChange={e => set('purpose', e.target.value)} />
+        </label>
+        <label className="upload-box">
+          <Upload size={18} />
+          <span>
+            <strong>Choose payment proof</strong>
+            <small>JPG, PNG, or PDF format</small>
+          </span>
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) {
+                set('proofName', f.name);
+                const reader = new FileReader();
+                reader.onload = evt => set('proofUrl', evt.target?.result || '');
+                reader.readAsDataURL(f);
+              }
+            }}
+          />
+        </label>
+        {form.proofName && <small className="selected-file">Selected: {form.proofName}</small>}
+        <div className="modal-footnote">Bukti pembayaran akan diverifikasi oleh tim administrasi studio.</div>
+        {footer('Submit proof')}
+      </form>
+    );
+  }
   if (modal.type === 'verify-payment') {
     const previousPaid = modal.invoice.payments.filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0);
     const remainingBefore = Math.max(0, modal.invoice.amount - previousPaid);
@@ -1413,6 +1506,8 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
     const excess = Math.max(0, Number(approvedVal || 0) - remainingBefore);
     const proofName = modal.payment.proof || 'bukti-transfer-bank.jpg';
     const isPdfProof = proofName.toLowerCase().endsWith('.pdf');
+    const invoicePurpose = modal.invoice.purpose || modal.invoice.description || '';
+    const paymentPurpose = modal.payment.purpose || '';
     body = (
       <form
         className="billing-modal-form"
@@ -1434,7 +1529,9 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
                 reason,
                 overpaymentAmount: Math.max(0, approved - remainingBefore),
                 overpaymentDecision: excess > 0 ? form.overpaymentDecision : null,
-                receipt: form.receiptName || modal.payment.proof || `RCPT-${project.code}-${i.payments.indexOf(x) + 1}`
+                receipt: form.receiptName || modal.payment.proof || `RCPT-${project.code}-${i.payments.indexOf(x) + 1}`,
+                receiptFile: form.receiptName || '',
+                receiptUrl: form.receiptUrl || ''
               } : x);
               const paid = payments.filter(x => x.status === 'Approved').reduce((s, x) => s + x.approved, 0);
               const pending = payments.some(x => x.status === 'Pending');
@@ -1461,8 +1558,10 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
       >
         <div className="payment-verify-summary">
           <small>{modal.invoice.number}</small>
+          {invoicePurpose && <span className="invoice-purpose-text">Tujuan Tagihan: {invoicePurpose}</span>}
           <strong>{money(modal.payment.claimed)}</strong>
           <span>Claimed by client · {dateFmt(modal.payment.date)}</span>
+          {paymentPurpose && <span className="payment-review-purpose">Keterangan Pembayaran: {paymentPurpose}</span>}
         </div>
 
         <div className="proof-display-box">
@@ -1514,10 +1613,15 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
           </span>
           <input
             type="file"
-            accept="image/*,.pdf"
+            accept="application/pdf,image/png,image/jpeg,image/webp"
             onChange={e => {
               const f = e.target.files?.[0];
-              if (f) set('receiptName', f.name);
+              if (f) {
+                set('receiptName', f.name);
+                const reader = new FileReader();
+                reader.onload = evt => set('receiptUrl', evt.target?.result || '');
+                reader.readAsDataURL(f);
+              }
             }}
           />
         </label>
@@ -1549,6 +1653,8 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
     );
   }
   if (modal.type === 'reject-payment') {
+    const invoicePurpose = modal.invoice.purpose || modal.invoice.description || '';
+    const paymentPurpose = modal.payment.purpose || '';
     body = (
       <form
         className="billing-modal-form"
@@ -1569,7 +1675,9 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
       >
         <div className="payment-verify-summary">
           <small>{modal.invoice.number}</small>
+          {invoicePurpose && <span className="invoice-purpose-text">Tujuan Tagihan: {invoicePurpose}</span>}
           <strong>{money(modal.payment.claimed)}</strong>
+          {paymentPurpose && <span className="payment-review-purpose">Keterangan Pembayaran: {paymentPurpose}</span>}
           <span>{modal.payment.proof || 'Payment proof'}</span>
         </div>
         <div className="field">
@@ -1595,13 +1703,39 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
         onSubmit={submit(() => {
           const amount = Number(form.amount);
           if (!amount || amount <= 0) throw new Error('Nominal invoice harus lebih dari nol.');
+          const purpose = (form.purpose || '').trim();
+          if (!purpose) throw new Error('Purpose / Tujuan Tagihan wajib diisi.');
           const num = `INV-${project.code}-${String(project.invoices.length + 1).padStart(3, '0')}`;
-          const inv = { id: uid('invoice'), number: num, revision: 0, amount, dueDate: form.dueDate || '2026-12-10', issueDate: '2026-11-02', status: 'Unpaid', payments: [], replacedBy: null, reason: '', note: (form.description || '').trim() };
+          const inv = {
+            id: uid('invoice'),
+            number: num,
+            revision: 0,
+            purpose,
+            amount,
+            dueDate: form.dueDate || '2026-12-10',
+            issueDate: '2026-11-02',
+            status: 'Unpaid',
+            documentFile: form.documentFile || '',
+            documentUrl: form.documentUrl || '',
+            payments: [],
+            replacedBy: null,
+            reason: '',
+            note: (form.description || '').trim()
+          };
           updateProject(project.id, p => ({ ...p, invoices: [inv, ...p.invoices] }));
-          addActivity(project.id, 'Invoice issued', `${num} diterbitkan sebesar ${money(amount)}.`);
+          addActivity(project.id, 'Invoice issued', `${num} (${purpose}) diterbitkan sebesar ${money(amount)}.`);
           finish('Invoice berhasil dibuat.');
         })}
       >
+        <label className="field">
+          <span>Purpose / Tujuan Tagihan<b> *</b></span>
+          <input
+            type="text"
+            value={form.purpose ?? ''}
+            onChange={e => set('purpose', e.target.value)}
+            required
+          />
+        </label>
         <label className="field">
           <span>Nominal Invoice (Rp)<b> *</b></span>
           <input
@@ -1627,11 +1761,32 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
             onChange={e => set('description', e.target.value)}
           />
         </label>
+        <label className="upload-box">
+          <Upload size={18} />
+          <span>
+            <strong>Upload File Invoice Resmi (PDF / JPG / PNG — Opsional)</strong>
+            <small>{form.documentFile ? `File terpilih: ${form.documentFile}` : 'Jika diunggah, klien dapat mengunduh file invoice ini langsung'}</small>
+          </span>
+          <input
+            type="file"
+            accept="application/pdf,image/png,image/jpeg,image/webp"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) {
+                set('documentFile', f.name);
+                const reader = new FileReader();
+                reader.onload = evt => set('documentUrl', evt.target?.result || '');
+                reader.readAsDataURL(f);
+              }
+            }}
+          />
+        </label>
         {footer('Create invoice')}
       </form>
     );
   }
   if (modal.type === 'revise-invoice') {
+    const revisedPurposeVal = form.purpose ?? modal.invoice.purpose ?? modal.invoice.description ?? '';
     const revisedAmountVal = form.amount ?? String(modal.invoice.amount ?? '');
     const revisedDueDateVal = form.dueDate ?? modal.invoice.dueDate ?? '';
     body = (
@@ -1639,6 +1794,8 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
         className="billing-modal-form"
         onSubmit={submit(() => {
           if (!form.reason?.trim()) throw new Error('Alasan revisi wajib diisi.');
+          const purpose = revisedPurposeVal.trim();
+          if (!purpose) throw new Error('Purpose / Tujuan Tagihan wajib diisi.');
           const amount = Number(revisedAmountVal);
           if (!amount || amount <= 0) throw new Error('Nominal revisi harus lebih dari nol.');
           const newId = uid('invoice');
@@ -1647,10 +1804,13 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
             id: newId,
             number: `${modal.invoice.number}-R${modal.invoice.revision + 1}`,
             revision: modal.invoice.revision + 1,
+            purpose,
             amount,
             dueDate: revisedDueDateVal || modal.invoice.dueDate,
             issueDate: '2026-11-02',
             status: 'Unpaid',
+            documentFile: form.documentFile || '',
+            documentUrl: form.documentUrl || '',
             payments: modal.invoice.payments.filter(p => p.status === 'Approved').map((p, i) => ({ ...p, id: uid('payment'), receipt: `RCPT-RELINK-${i + 1}` })),
             replacedBy: null,
             reason: form.reason,
@@ -1659,15 +1819,27 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
           const paid = newInv.payments.reduce((s, p) => s + p.approved, 0);
           newInv.status = paid >= amount ? 'Paid' : paid > 0 ? 'Partially Paid' : 'Unpaid';
           updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === modal.invoice.id ? { ...i, status: 'Cancelled', replacedBy: newId, reason: form.reason } : i).concat(newInv) }));
-          addActivity(project.id, 'Invoice revised', `${modal.invoice.number} diganti dengan ${newInv.number}. Reason: ${form.reason}`);
+          addActivity(project.id, 'Invoice revised', `${modal.invoice.number} diganti dengan ${newInv.number} (${purpose}). Reason: ${form.reason}`);
           finish('Invoice direvisi. Histori invoice lama tetap dipertahankan.');
         })}
       >
         <div className="payment-verify-summary">
           <small>REPLACING {modal.invoice.number}</small>
+          {(modal.invoice.purpose || modal.invoice.description) && (
+            <span className="invoice-purpose-text">{modal.invoice.purpose || modal.invoice.description}</span>
+          )}
           <strong>{money(modal.invoice.amount)}</strong>
           <span>Original due date · {dateFmt(modal.invoice.dueDate)}</span>
         </div>
+        <label className="field">
+          <span>Purpose / Tujuan Tagihan<b> *</b></span>
+          <input
+            type="text"
+            value={revisedPurposeVal}
+            onChange={e => set('purpose', e.target.value)}
+            required
+          />
+        </label>
         <label className="field">
           <span>Nominal Revisi (Rp)<b> *</b></span>
           <input
@@ -1697,6 +1869,26 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
             required
           />
         </div>
+        <label className="upload-box">
+          <Upload size={18} />
+          <span>
+            <strong>Upload File Invoice Resmi (PDF / JPG / PNG — Opsional)</strong>
+            <small>{form.documentFile ? `File terpilih: ${form.documentFile}` : 'Unggah file invoice revisi resmi untuk klien'}</small>
+          </span>
+          <input
+            type="file"
+            accept="application/pdf,image/png,image/jpeg,image/webp"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) {
+                set('documentFile', f.name);
+                const reader = new FileReader();
+                reader.onload = evt => set('documentUrl', evt.target?.result || '');
+                reader.readAsDataURL(f);
+              }
+            }}
+          />
+        </label>
         {footer('Create revised invoice')}
       </form>
     );
@@ -1983,7 +2175,171 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
       </form>
     );
   }
-  if (modal.type === 'invoice-detail' || modal.type === 'invoice-detail-admin') { const inv = modal.invoice; const paid = inv.payments.filter(p => p.status === 'Approved').reduce((s, p) => s + p.approved, 0); body = <div className="invoice-detail-modal"><div className="invoice-detail-summary"><small>{inv.number}</small><h2>{money(inv.amount)}</h2><StatusTag value={inv.status} /><p>Issue date {dateFmt(inv.issueDate)} · Due {dateFmt(inv.dueDate)}</p><ProgressBar value={inv.amount ? paid / inv.amount * 100 : 0} /><div className="detail-amounts"><span>Verified paid <strong>{money(paid)}</strong></span><span>Remaining <strong>{money(Math.max(0, inv.amount - paid))}</strong></span></div></div><h4 className="modal-subtitle">Payment history</h4>{inv.payments.map(p => <div className="payment-history-row" key={p.id}><div><strong>{money(p.approved || p.claimed)}</strong><small>{dateFmt(p.date)} · claimed {money(p.claimed)}</small>{p.reason && <small>Reason: {p.reason}</small>}{p.overpaymentAmount > 0 && <small>Overpayment {money(p.overpaymentAmount)} · {p.overpaymentDecision}</small>}</div><div><StatusTag value={p.status} />{p.receipt && <small className="receipt-ref">{p.receipt}</small>}</div></div>)}{!inv.payments.length && <EmptyState title="No payments yet" detail="Payment records will appear here." />}{modal.type === 'invoice-detail-admin' && inv.status !== 'Paid' && inv.status !== 'Cancelled' && <button className="btn btn-outline modal-wide-btn" onClick={() => notify('Menyiapkan pernyataan invoice...')}>Download invoice statement</button>}<div className="modal-actions"><button className="btn btn-dark" onClick={close}>Close</button></div></div>; }
+  if (modal.type === 'invoice-detail' || modal.type === 'invoice-detail-admin') {
+    const inv = modal.invoice;
+    const paid = inv.payments.filter(p => p.status === 'Approved').reduce((s, p) => s + p.approved, 0);
+    const invPurpose = inv.purpose || inv.description || '';
+    body = (
+      <div className="invoice-detail-modal">
+        <div className="invoice-detail-summary">
+          <small>{inv.number}</small>
+          {invPurpose && <p className="invoice-purpose-text">{invPurpose}</p>}
+          <h2>{money(inv.amount)}</h2>
+          <StatusTag value={inv.status} />
+          <p>Issue date {dateFmt(inv.issueDate)} · Due {dateFmt(inv.dueDate)}</p>
+          <ProgressBar value={inv.amount ? paid / inv.amount * 100 : 0} />
+          <div className="detail-amounts">
+            <span>Verified paid <strong>{money(paid)}</strong></span>
+            <span>Remaining <strong>{money(Math.max(0, inv.amount - paid))}</strong></span>
+          </div>
+        </div>
+        <div className="invoice-doc-actions">
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => setModal({ type: 'auto-invoice-preview', invoice: inv, project })}
+          >
+            <Eye size={15} /> Lihat Invoice Otomatis
+          </button>
+          {inv.documentUrl ? (
+            <a
+              href={inv.documentUrl}
+              download={inv.documentFile || `${inv.number}.pdf`}
+              className="btn btn-dark"
+            >
+              <Download size={15} /> Unduh Invoice
+            </a>
+          ) : inv.documentFile ? (
+            <button
+              type="button"
+              className="btn btn-dark"
+              onClick={() => downloadInvoiceSummary(inv, project)}
+            >
+              <Download size={15} /> Unduh Invoice
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-dark"
+              onClick={() => notify('File invoice resmi belum diunggah Admin. Gunakan Lihat Invoice Otomatis.')}
+            >
+              <Download size={15} /> Unduh Invoice
+            </button>
+          )}
+        </div>
+        <h4 className="modal-subtitle">Payment history</h4>
+        {inv.payments.map(p => (
+          <div className="payment-history-row" key={p.id}>
+            <div>
+              <strong>{money(p.approved || p.claimed)}</strong>
+              <small>{dateFmt(p.date)} · claimed {money(p.claimed)}</small>
+              {p.purpose && <small>Keterangan: {p.purpose}</small>}
+              {p.reason && <small>Reason: {p.reason}</small>}
+              {p.overpaymentAmount > 0 && <small>Overpayment {money(p.overpaymentAmount)} · {p.overpaymentDecision}</small>}
+            </div>
+            <div>
+              <StatusTag value={p.status} />
+              {p.receipt && <small className="receipt-ref">{p.receipt}</small>}
+              {p.status === 'Approved' && (p.receiptUrl || p.receiptFile) && (
+                p.receiptUrl ? (
+                  <a
+                    href={p.receiptUrl}
+                    download={p.receiptFile || `${p.receipt || 'Kwitansi'}.pdf`}
+                    className="btn btn-small btn-outline payment-history-receipt-btn"
+                  >
+                    <Download size={13} /> Unduh Kwitansi
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-small btn-outline payment-history-receipt-btn"
+                    onClick={() => downloadReceiptSummary(p, inv, project)}
+                  >
+                    <Download size={13} /> Unduh Kwitansi
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        ))}
+        {!inv.payments.length && <EmptyState title="No payments yet" detail="Payment records will appear here." />}
+        <div className="modal-actions">
+          <button className="btn btn-dark" onClick={close}>Close</button>
+        </div>
+      </div>
+    );
+  }
+  if (modal.type === 'auto-invoice-preview') {
+    const inv = modal.invoice;
+    const targetProject = modal.project || project;
+    const invClient = (db.clients || []).find(c => c.id === targetProject?.clientId);
+    const paid = (inv?.payments || []).filter(p => p.status === 'Approved').reduce((s, p) => s + Number(p.approved || 0), 0);
+    const remaining = Math.max(0, Number(inv?.amount || 0) - paid);
+    const statusStamp = String(inv?.status || 'Unpaid').toUpperCase();
+    const stampVariant = inv?.status === 'Paid'
+      ? 'is-paid'
+      : inv?.status === 'Partially Paid'
+        ? 'is-partial'
+        : 'is-unpaid';
+    body = (
+      <div className="auto-invoice-sheet-wrap">
+        <article className="auto-invoice-sheet">
+          <header className="auto-invoice-header">
+            <div>
+              <span className="auto-invoice-brand">NA ASSOCIATES</span>
+              <small>Architecture &amp; Design Studio · Jakarta</small>
+            </div>
+            <span className={`auto-invoice-stamp ${stampVariant}`}>{statusStamp}</span>
+          </header>
+
+          <div className="auto-invoice-meta-grid">
+            <div>
+              <small>NOMOR INVOICE</small>
+              <strong>{inv?.number || '—'}</strong>
+            </div>
+            <div>
+              <small>PROYEK</small>
+              <strong>{targetProject?.name || '—'}{targetProject?.code ? ` (${targetProject.code})` : ''}</strong>
+            </div>
+            <div>
+              <small>KLIEN</small>
+              <strong>{invClient?.name || 'Klien NA Associates'}</strong>
+            </div>
+            <div>
+              <small>TUJUAN TAGIHAN</small>
+              <strong>{inv?.purpose || inv?.description || 'Tagihan termin proyek'}</strong>
+            </div>
+            <div>
+              <small>TANGGAL TERBIT</small>
+              <strong>{dateFmt(inv?.issueDate)}</strong>
+            </div>
+            <div>
+              <small>JATUH TEMPO</small>
+              <strong>{dateFmt(inv?.dueDate)}</strong>
+            </div>
+          </div>
+
+          <div className="auto-invoice-amounts">
+            <div className="auto-invoice-amount-row">
+              <span>Total Tagihan</span>
+              <strong>{money(inv?.amount)}</strong>
+            </div>
+            <div className="auto-invoice-amount-row">
+              <span>Pembayaran Terverifikasi</span>
+              <strong>{money(paid)}</strong>
+            </div>
+            <div className="auto-invoice-amount-row is-total">
+              <span>Sisa Tagihan</span>
+              <strong>{money(remaining)}</strong>
+            </div>
+          </div>
+        </article>
+        <div className="modal-actions">
+          <button type="button" className="btn btn-dark" onClick={close}>Tutup</button>
+        </div>
+      </div>
+    );
+  }
 
   if (modal.type === 'photo-lightbox') {
     body = (
