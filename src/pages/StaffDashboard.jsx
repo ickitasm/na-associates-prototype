@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Activity, AlertCircle, ArrowLeft, ArrowUpRight, Bell, Building2,
+  Activity, AlertCircle, ArrowUpRight, Bell, Building2,
   ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Edit3, Eye, FileText, HardHat,
-  LayoutDashboard, MapPin, Moon, Menu, MoreHorizontal, Package, Plus,
-  Sun, Trash2, Upload, X
+  LayoutDashboard, LogOut, MapPin, Moon, Menu, MoreHorizontal, Package, Plus,
+  RotateCcw, Sun, Trash2, Upload, X
 } from 'lucide-react';
 import { Brand, ProgressBar, StatusTag, EmptyState, Metric, ActivityTable, InfoHint, getActivityCrudType } from '../components/ui';
 import { dateFmt, getTimeGreeting } from '../lib/utils';
@@ -49,6 +49,7 @@ function StaffShell({
   tab,
   setTab,
   onLogout,
+  onReset,
   setModal,
   updateProject,
   addActivity,
@@ -57,6 +58,26 @@ function StaffShell({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const handlePointerDown = (e) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setAccountMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [accountMenuOpen]);
 
   const initials = (staffMember?.name || 'ST')
     .split(' ')
@@ -116,9 +137,6 @@ function StaffShell({
             </div>
             <MoreHorizontal size={16} />
           </div>
-          <button className="admin-logout" onClick={onLogout}>
-            <ArrowLeft size={15} /> Back to public website
-          </button>
         </div>
       </aside>
 
@@ -154,7 +172,55 @@ function StaffShell({
               <Bell size={18} />
               {unreadCount > 0 && <i className="notification-dot" />}
             </button>
-            <span className="avatar">{initials || 'ST'}</span>
+            <div className="account-menu-wrap" ref={accountMenuRef}>
+              <button
+                type="button"
+                className={`avatar-menu-trigger ${accountMenuOpen ? 'is-open' : ''}`}
+                onClick={() => setAccountMenuOpen((v) => !v)}
+                aria-expanded={accountMenuOpen}
+                aria-haspopup="menu"
+                aria-label="Staff account menu"
+              >
+                <span className="avatar">{initials || 'ST'}</span>
+              </button>
+              {accountMenuOpen && (
+                <div className="account-dropdown" role="menu">
+                  <div className="account-dropdown-head">
+                    <span className="avatar">{initials || 'ST'}</span>
+                    <div>
+                      <strong>{staffMember?.name || 'Staff NA Associates'}</strong>
+                      <small>{staffMember?.email || staffMember?.roleTitle || 'Field Architect / Staff'}</small>
+                    </div>
+                  </div>
+                  <div className="account-dropdown-actions">
+                    <button
+                      type="button"
+                      className="account-dropdown-item"
+                      role="menuitem"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        onReset?.();
+                      }}
+                    >
+                      <RotateCcw size={14} />
+                      <span>Reset workspace data</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="account-signout-btn"
+                      role="menuitem"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        onLogout();
+                      }}
+                    >
+                      <LogOut size={14} />
+                      <span>Sign out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

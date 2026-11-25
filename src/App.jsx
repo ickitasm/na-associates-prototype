@@ -99,7 +99,34 @@ function App() {
   const enterAdmin = () => { setRole('admin'); setAdminTab('dashboard'); setMobileNav(false); };
   const enterStaff = () => { setRole('staff'); setStaffTab('dashboard'); if (staffProjects[0]) setSelectedProjectId(staffProjects[0].id); setMobileNav(false); };
   const openWorkspace = (id) => { setSelectedProjectId(id); setRole('client'); setPage('workspace'); setWorkspaceSection('overview'); setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 20); };
+  const addStudioActivity = (action, detail, actor = role === 'admin' ? 'Admin NA Associates' : role === 'staff' ? `${staffMember?.name || 'Staff NA Associates'} (Staff)` : client?.name || 'Guest', meta = {}) => {
+    const isoStamp = meta.date || new Date().toISOString().slice(0, 16).replace('T', ' ');
+    setDb(old => ({
+      ...old,
+      studioActivity: [
+        {
+          id: uid('sact'),
+          date: isoStamp,
+          actor,
+          action,
+          detail,
+          projectId: 'studio',
+          projectName: meta.projectName || 'Studio Global',
+          ...(meta.category ? { category: meta.category } : {}),
+          ...(meta.visibility ? { visibility: meta.visibility } : {}),
+          ...(meta.crudType ? { crudType: meta.crudType } : {}),
+          ...(meta.module ? { module: meta.module } : {}),
+          ...(meta.internal ? { internal: true } : {})
+        },
+        ...(old.studioActivity || [])
+      ]
+    }));
+  };
   const addActivity = (projectId, action, detail, actor = role === 'admin' ? 'Admin NA Associates' : role === 'staff' ? `${staffMember?.name || 'Staff NA Associates'} (Staff)` : client?.name || 'Guest', meta = {}) => {
+    if (!projectId || projectId === 'studio') {
+      addStudioActivity(action, detail, actor, meta);
+      return;
+    }
     const isoStamp = meta.date || new Date().toISOString().slice(0, 16).replace('T', ' ');
     setDb(old => ({
       ...old,
@@ -137,9 +164,9 @@ function App() {
     {splashState !== 'done' && <IntroSplash leaving={splashState === 'leaving'} />}
     {role === 'guest' && <PublicShell page={page} setPage={setPage} go={goPublic} onLogin={() => setModal({ type: 'login' })} role={role} changeRole={changeRole} mobileNav={mobileNav} setMobileNav={setMobileNav} heroReady={heroReady} />}
     {role === 'client' && <ClientShell db={db} client={client} projects={clientProjects} selectedProject={selectedProject} page={clientPage} setPage={setPage} onOpen={openWorkspace} onBack={() => setPage('my-projects')} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} workspaceSection={workspaceSection} setWorkspaceSection={setWorkspaceSection} mobileNav={mobileNav} setMobileNav={setMobileNav} theme={theme} toggleTheme={toggleTheme} />}
-    {role === 'admin' && <AdminShell db={db} setDb={setDb} projects={db.projects} clients={db.clients} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={adminTab} setTab={setAdminTab} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} theme={theme} toggleTheme={toggleTheme} />}
-    {role === 'staff' && <StaffShell db={db} setDb={setDb} staffMember={staffMember} projects={staffProjects} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={staffTab} setTab={setStaffTab} onLogout={() => changeRole('guest')} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} theme={theme} toggleTheme={toggleTheme} />}
-    {modal && <ModalHost modal={modal} setModal={setModal} close={() => setModal(null)} db={db} setDb={setDb} projects={role === 'staff' ? staffProjects : db.projects} selectedProject={selectedProject} updateProject={updateProject} addActivity={addActivity} notify={notify} role={role} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} enterStaff={enterStaff} theme={theme} />}
+    {role === 'admin' && <AdminShell db={db} setDb={setDb} projects={db.projects} clients={db.clients} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={adminTab} setTab={setAdminTab} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} addStudioActivity={addStudioActivity} theme={theme} toggleTheme={toggleTheme} />}
+    {role === 'staff' && <StaffShell db={db} setDb={setDb} staffMember={staffMember} projects={staffProjects} selectedProject={selectedProject} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} tab={staffTab} setTab={setStaffTab} onLogout={() => changeRole('guest')} onReset={resetDemo} onNotify={notify} setModal={setModal} updateProject={updateProject} addActivity={addActivity} theme={theme} toggleTheme={toggleTheme} />}
+    {modal && <ModalHost modal={modal} setModal={setModal} close={() => setModal(null)} db={db} setDb={setDb} projects={role === 'staff' ? staffProjects : db.projects} selectedProject={selectedProject} updateProject={updateProject} addActivity={addActivity} addStudioActivity={addStudioActivity} notify={notify} role={role} changeRole={changeRole} enterClient={enterClient} enterAdmin={enterAdmin} enterStaff={enterStaff} theme={theme} />}
     {toast && (
       <div
         className="toast"

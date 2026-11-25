@@ -10,7 +10,7 @@ export const seedData = {
       name: 'Raka Pratama',
       roleTitle: 'Field Architect / Staff',
       email: 'raka.staff@na-associates.id',
-      assignedProjects: ['project-01', 'project-02', 'project-03'],
+      assignedProjects: ['project-01', 'project-02', 'project-03', 'project-05'],
       status: 'Active'
     }
   ],
@@ -44,6 +44,16 @@ export const seedData = {
       phone: '+62 895-3370-60007',
       date: '2025-01-15',
       projects: ['project-04'],
+      status: 'Active'
+    },
+    {
+      id: 'client-04',
+      username: 'bima.santoso',
+      name: 'Bima Santoso',
+      email: 'bima.santoso@example.com',
+      phone: '+62 812-8890-4412',
+      date: '2026-11-01',
+      projects: ['project-05'],
       status: 'Active'
     }
   ],
@@ -827,6 +837,344 @@ export const seedData = {
       ],
       activity: [
         { id: 'actb1', date: '2025-12-15 14:00', actor: 'Admin NA Associates', action: 'Project completed', detail: 'Bintaro Courtyard Villa selesai dan diserahterimakan.', visibility: 'Published' }
+      ]
+    },
+    {
+      id: 'project-05',
+      code: 'NA-035',
+      name: 'ATELIER SENOPATI MIXED-USE',
+      location: 'Senopati, Jakarta Selatan',
+      category: 'Commercial',
+      landArea: '320 m²',
+      buildingArea: '540 m²',
+      year: '2026',
+      status: 'Active',
+      progress: 48,
+      clientId: 'client-04',
+      cover: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85',
+      startDate: '2026-07-10',
+      targetDate: '2027-04-30',
+      nextMilestone: 'Pekerjaan Fasad Kisi Terakota & MEP Lt. 2',
+      nextMilestoneDate: '2026-12-05',
+      nextPayment: '2026-11-12',
+      milestones: [
+        { id: 'ms1', title: 'Concept & Zoning', date: '2026-08-02', status: 'Completed', progress: 100 },
+        { id: 'ms2', title: 'DED Arsitektur & Struktur', date: '2026-09-10', status: 'Completed', progress: 100 },
+        { id: 'ms3', title: 'Pondasi Bore Pile & Struktur Lt. 1', date: '2026-10-22', status: 'Completed', progress: 100 },
+        { id: 'ms4', title: 'Struktur Lt. 2 & Dinding Bata Ekspos', date: '2026-12-05', status: 'In Progress', progress: 55 },
+        { id: 'ms5', title: 'Fasad Terakota & Kaca Low-E', date: '2027-02-15', status: 'Upcoming', progress: 0 },
+        { id: 'ms6', title: 'Interior Fit-Out & Handover', date: '2027-04-30', status: 'Upcoming', progress: 0 }
+      ],
+      files: [
+        {
+          id: 'fs1',
+          name: 'Fasad Depan — Daylight Architectural Render.jpg',
+          category: 'Rendering',
+          date: '2026-10-28',
+          type: 'JPG',
+          visibility: 'Published',
+          description: 'Visualisasi fasad komersial Senopati dengan kisi terakota dan bukaan kaca Low-E.',
+          url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85'
+        },
+        {
+          id: 'fs2',
+          name: 'DED Potongan Melintang & Detail Tangga Baja.pdf',
+          category: 'DED',
+          date: '2026-10-16',
+          type: 'PDF',
+          visibility: 'Published',
+          description: 'Gambar kerja potongan melintang massa bangunan dan sambungan tangga baja ekspos.'
+        },
+        {
+          id: 'fs3',
+          name: 'Draft Denah Plafon & Titik Lampu Lt. 2.pdf',
+          category: 'Floor Plan',
+          date: '2026-11-18',
+          type: 'PDF',
+          visibility: 'Draft',
+          description: 'Draft gambar kerja rencana plafon akustik dan titik armature lampu lantai dua (diunggah Raka Pratama).'
+        },
+        {
+          id: 'fs4',
+          name: 'Catatan Audit Struktur & Deviasi Lapangan.pdf',
+          category: 'DED',
+          date: '2026-11-14',
+          type: 'PDF',
+          visibility: 'Internal Only',
+          description: 'Catatan teknis internal pengecekan deviasi as kolom lantai 2 sebelum publikasi ke klien.'
+        }
+      ],
+      reports: [
+        {
+          id: 'rs1',
+          date: '2026-11-15',
+          category: 'Struktur',
+          title: 'Pemasangan Dinding Bata Ekspos Terakota Lt. 1',
+          fieldNote: 'Dinding area lobi komersial terpasang 90%',
+          description: 'Pemasangan bata ekspos terakota dengan pola ikatan flemish bond serta penguatan kolom praktis per 3 meter.',
+          visibility: 'Published',
+          photos: 3,
+          photoNames: ['bata-ekspos-lobi.jpg', 'kolom-praktis-lt1.jpg', 'cek-verticality.jpg'],
+          workers: [
+            { id: 'ws1', name: 'Pak Ridwan', attendance: 'Hadir', task: 'Pemasangan bata ekspos & kerapian siar' },
+            { id: 'ws2', name: 'Pak Tono', attendance: 'Hadir', task: 'Pengecoran kolom praktis & benang lot' },
+            { id: 'ws3', name: 'Pak Dedi', attendance: 'Hadir', task: 'Pengadukan mortar instan & distribusi material' }
+          ],
+          tools: 'Laser cross-line, Benang ukur, Sekop siar khusus bata ekspos, Scaffolding 16 set',
+          internalNotes: 'Sample warna bata ekspos sudah disetujui prinsipal studio.'
+        },
+        {
+          id: 'rs2',
+          date: '2026-11-08',
+          category: 'Struktur',
+          title: 'Pengecoran Kolom Utama & Balok Tangga Lt. 2',
+          fieldNote: '10 titik kolom lantai 2 selesai cor K-300',
+          description: 'Pengecoran kolom struktural lantai dua dan bordes tangga baja menggunakan bucket cor serta pemadatan vibrator internal.',
+          visibility: 'Published',
+          photos: 2,
+          photoNames: ['cor-kolom-lt2.jpg', 'pembesian-bordes.jpg'],
+          workers: [
+            { id: 'ws4', name: 'Pak Ridwan', attendance: 'Hadir', task: 'Mandor kontrol elevasi & uji slump beton' },
+            { id: 'ws5', name: 'Pak Tono', attendance: 'Hadir', task: 'Operator vibrator & pengecekan bekisting' }
+          ],
+          tools: 'Vibrator beton 2 unit, Slump cone, Theodolite, Scaffolding',
+          internalNotes: 'Hasil slump 9.5 cm, permukaan beton padat tanpa keropos.'
+        },
+        {
+          id: 'rs3',
+          date: '2026-11-20',
+          category: 'Struktur',
+          title: 'Pemasangan Bekisting Balok Lantai 2',
+          fieldNote: 'Diinput oleh Raka Pratama (Staff) · Menunggu review Admin',
+          description: 'Pemasangan panel bekisting multiplex 18 mm dan perkuatan tie-rod balok induk lantai 2 zona timur sebelum perakitan tulangan.',
+          visibility: 'Draft',
+          photos: 2,
+          photoNames: ['bekisting-balok-lt2.jpg', 'perancah-zona-timur.jpg'],
+          workers: [
+            { id: 'ws6', name: 'Pak Ridwan', attendance: 'Hadir', task: 'Setting bekisting panel balok induk' },
+            { id: 'ws7', name: 'Pak Dedi', attendance: 'Hadir', task: 'Penguncian tie-rod & perkuatan shoring' }
+          ],
+          tools: 'Waterpass laser, Bor impact, Shoring jack 32 unit, Kunci tie-rod',
+          internalNotes: 'Draft oleh Raka Pratama (Staff). Cek ulang elevasi as 3–4 sebelum dicor.'
+        }
+      ],
+      shopping: [
+        {
+          id: 'ss1',
+          date: '2026-10-25',
+          material: 'Bata Ekspos Terakota Custom',
+          specification: 'Press mesin bakar suhu tinggi · 22 x 10.5 x 5.5 cm',
+          quantity: 4500,
+          unit: 'pcs',
+          status: 'Sudah Dibeli',
+          visibility: 'Published',
+          supplier: 'Keramik Terakota Plered',
+          unitCost: 4800
+        },
+        {
+          id: 'ss2',
+          date: '2026-11-05',
+          material: 'Profil Baja WF 200',
+          specification: 'WF 200x100x5.5x8 · Panjang 12 m SNI',
+          quantity: 18,
+          unit: 'batang',
+          status: 'Dalam Proses',
+          visibility: 'Published',
+          supplier: 'PT Gunung Baja Indonesia',
+          unitCost: 2850000
+        },
+        {
+          id: 'ss3',
+          date: '2026-11-22',
+          material: 'Kabel NYM 3x2.5mm Supreme',
+          specification: 'Roll 50 m · Standar LMK (Pengajuan Raka Pratama)',
+          quantity: 15,
+          unit: 'roll',
+          status: 'Belum Dibeli',
+          visibility: 'Draft',
+          supplier: '',
+          unitCost: 0
+        }
+      ],
+      usage: [
+        {
+          id: 'us1',
+          date: '2026-11-15',
+          material: 'Bata Ekspos Terakota Custom',
+          quantity: 2100,
+          unit: 'pcs',
+          area: 'Dinding fasad lobi & resepsionis Lt. 1',
+          visibility: 'Approved'
+        },
+        {
+          id: 'us2',
+          date: '2026-11-20',
+          material: 'Profil Baja WF 200',
+          quantity: 6,
+          unit: 'batang',
+          area: 'Balok tangga ekspos & mezzanine Lt. 2',
+          visibility: 'Draft'
+        }
+      ],
+      legal: [
+        {
+          id: 'ls1',
+          name: 'SPK Konstruksi Utama & Termin Pembayaran',
+          version: 'v1.0',
+          date: '2026-07-10',
+          visibility: 'Published'
+        },
+        {
+          id: 'ls2',
+          name: 'Draft Addendum Penyesuaian Fasad Terakota',
+          version: 'v0.9',
+          date: '2026-11-16',
+          visibility: 'Internal Only'
+        }
+      ],
+      invoices: [
+        {
+          id: 'is1',
+          number: 'INV-NA-035-001',
+          revision: 0,
+          purpose: 'Termin 1 — DP & Mobilisasi',
+          amount: 120000000,
+          dueDate: '2026-07-25',
+          issueDate: '2026-07-10',
+          status: 'Paid',
+          documentFile: 'INV-NA-035-001-Mobilisasi.pdf',
+          payments: [
+            {
+              id: 'ps1',
+              date: '2026-07-20',
+              claimed: 120000000,
+              approved: 120000000,
+              status: 'Approved',
+              purpose: 'Pelunasan DP & mobilisasi proyek Senopati',
+              receipt: 'RCPT-035-001',
+              receiptFile: 'Kwitansi-RCPT-035-001.pdf',
+              proof: 'Transfer-BCA-INV-035-001.jpg'
+            }
+          ],
+          replacedBy: null,
+          reason: ''
+        },
+        {
+          id: 'is2',
+          number: 'INV-NA-035-002',
+          revision: 0,
+          purpose: 'Termin 2 — Struktur Lantai 1 & 2',
+          amount: 150000000,
+          dueDate: '2026-11-28',
+          issueDate: '2026-10-25',
+          status: 'Pending Verification',
+          documentFile: 'INV-NA-035-002-StrukturLt1-2.pdf',
+          payments: [
+            {
+              id: 'ps2',
+              date: '2026-11-04',
+              claimed: 90000000,
+              approved: 90000000,
+              status: 'Approved',
+              purpose: 'Pembayaran parsial tahap 1 Termin 2',
+              receipt: 'RCPT-035-002A',
+              receiptFile: 'Kwitansi-RCPT-035-002A.pdf',
+              proof: 'Transfer-Mandiri-035-002A.jpg'
+            },
+            {
+              id: 'ps3',
+              date: '2026-11-22',
+              claimed: 65000000,
+              approved: 0,
+              status: 'Pending',
+              purpose: 'Pelunasan Termin 2 + deposit pekerjaan tambah terakota',
+              receipt: null,
+              proof: 'Bukti-Transfer-Pelunasan-035-002B.jpg'
+            }
+          ],
+          replacedBy: null,
+          reason: ''
+        },
+        {
+          id: 'is3',
+          number: 'INV-NA-035-003',
+          revision: 0,
+          purpose: 'Termin 3 — Pekerjaan Atap & MEP',
+          amount: 110000000,
+          dueDate: '2026-11-10',
+          issueDate: '2026-10-27',
+          status: 'Unpaid',
+          documentFile: 'INV-NA-035-003-AtapMEP.pdf',
+          payments: [],
+          replacedBy: null,
+          reason: ''
+        }
+      ],
+      activity: [
+        {
+          id: 'as6',
+          date: '2026-11-22 10:40',
+          actor: 'Bima Santoso',
+          action: 'Uploaded payment proof',
+          detail: 'Invoice INV-NA-035-002 · Claimed Rp 65.000.000 · Purpose: Pelunasan Termin 2 + deposit pekerjaan tambah terakota',
+          crudType: 'CREATE',
+          module: 'Billing & Payments',
+          category: 'upload',
+          visibility: 'Published'
+        },
+        {
+          id: 'as5',
+          date: '2026-11-20 15:15',
+          actor: 'Raka Pratama (Staff)',
+          action: 'Draft daily log created',
+          detail: 'Daily log "Pemasangan Bekisting Balok Lantai 2" disimpan sebagai Draft untuk review Admin.',
+          crudType: 'CREATE',
+          module: 'Field Operations',
+          internal: true,
+          visibility: 'Draft'
+        },
+        {
+          id: 'as4',
+          date: '2026-11-18 11:20',
+          actor: 'Raka Pratama (Staff)',
+          action: 'Removed superseded draft material request',
+          detail: 'Menghapus pengajuan draft kabel NYA lama sebelum diganti ke Kabel NYM 3x2.5mm Supreme.',
+          crudType: 'DELETE',
+          module: 'Shopping & Materials',
+          internal: true,
+          visibility: 'Draft'
+        },
+        {
+          id: 'as3',
+          date: '2026-11-16 14:05',
+          actor: 'Admin NA Associates',
+          action: 'Legal document updated',
+          detail: 'Draft Addendum Penyesuaian Fasad Terakota (v0.9) disimpan sebagai Internal Only.',
+          crudType: 'UPDATE',
+          module: 'Legal & Contracts',
+          internal: true,
+          visibility: 'Internal Only'
+        },
+        {
+          id: 'as2',
+          date: '2026-10-28 16:30',
+          actor: 'Admin NA Associates',
+          action: 'Output file published',
+          detail: 'Fasad Depan — Daylight Architectural Render.jpg dipublikasikan ke Portal Klien.',
+          crudType: 'UPDATE',
+          module: 'Output & Design',
+          visibility: 'Published'
+        },
+        {
+          id: 'as1',
+          date: '2026-07-10 09:00',
+          actor: 'Admin NA Associates',
+          action: 'Project created',
+          detail: 'ATELIER SENOPATI MIXED-USE (NA-035) dibuat dan ditugaskan ke Bima Santoso.',
+          crudType: 'CREATE',
+          module: 'Projects',
+          visibility: 'Published'
+        }
       ]
     }
   ],

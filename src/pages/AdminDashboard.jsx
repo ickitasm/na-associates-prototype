@@ -1,13 +1,13 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Camera, Check,
+  ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Camera, Check,
   CheckCircle2, ChevronDown, ChevronRight, ChevronLeft, ClipboardList, Clock3, CreditCard,
   Download, Edit3, ExternalLink, EyeOff, FileCheck2, FileImage, FileText, Globe, HardHat,
-  Home, Image, LayoutDashboard, MapPin, Menu, MoreHorizontal, MoreVertical, Package, Plus,
+  Home, Image, LayoutDashboard, LogOut, MapPin, Menu, MoreHorizontal, MoreVertical, Package, Plus,
   RotateCcw, Search, Settings, ShieldCheck, ShoppingBag, Trash2, Upload, User, UserPlus,
   Users, Wallet, X, Eye, Activity, AlertCircle, Sun, Moon
 } from 'lucide-react';
-import { Brand, ProgressBar, StatusTag, EmptyState, AdminPageHeader, Metric, ActivityTable, InfoHint, WhatsAppIcon } from '../components/ui';
+import { Brand, ProgressBar, StatusTag, EmptyState, AdminPageHeader, Metric, ActivityTable, InfoHint, WhatsAppIcon, ACTIVITY_MODULES, getActivityCrudType, getActivityModule } from '../components/ui';
 import { money, dateFmt, syncProjectFromMilestones, createClientNotification, groupReportsByMonthAndWeek } from '../lib/utils';
 
 const pushPublishedNotif = (setDb, projectId, title, body) => {
@@ -21,10 +21,141 @@ const adminNav = [
   ['dashboard','Dashboard',LayoutDashboard],['projects','Projects',Building2],['clients','Clients & Accounts',Users],['operations','Field Operations',HardHat],['documents','Output, Design & Legal',FileText],['materials','Shopping & Materials',Package],['billing','Billing & Payments',Wallet],['notifications','Notifications',Bell],['activity','Activity Log',Activity],['content','Website Content',GlobeIcon],['settings','Settings',Settings]
 ];
 function GlobeIcon(props) { return <ExternalLink {...props}/>; }
-function AdminShell({ db,setDb,projects,clients,selectedProject,selectedProjectId,setSelectedProjectId,tab,setTab,onLogout,onReset,onNotify,setModal,updateProject,addActivity,theme,toggleTheme }) {
+function AdminShell({ db,setDb,projects,clients,selectedProject,selectedProjectId,setSelectedProjectId,tab,setTab,onLogout,onReset,onNotify,setModal,updateProject,addActivity,addStudioActivity,theme,toggleTheme }) {
   const [sidebarOpen,setSidebarOpen] = useState(false);
   const [sidebarCollapsed,setSidebarCollapsed] = useState(false);
-  return <div className={`admin-app ${sidebarCollapsed?'sidebar-collapsed':''}`}>{sidebarOpen && <div className="admin-nav-backdrop" onClick={()=>setSidebarOpen(false)} aria-hidden="true"/>}<aside className={`admin-sidebar ${sidebarOpen?'admin-sidebar-open':''}`}><div className="admin-brand" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><div><Brand inverse/><span className="admin-label">STUDIO MANAGEMENT</span></div><button className="icon-btn mobile-close-btn" onClick={()=>setSidebarOpen(false)} style={{color:'#e9ebe3'}} title="Tutup Menu"><X size={18}/></button></div><div className="admin-nav-title">WORKSPACE</div><nav className="admin-nav">{adminNav.map(([id,label,Icon])=><button key={id} onClick={()=>{setTab(id);setSidebarOpen(false);}} className={tab===id?'active':''}><Icon size={17}/><span>{label}</span>{id==='billing' && <i className="nav-count">{db.projects.reduce((s,p)=>s+p.invoices.reduce((t,i)=>t+i.payments.filter(x=>x.status==='Pending').length,0),0)||''}</i>}</button>)}</nav><div className="admin-sidebar-bottom"><div className="admin-profile"><span className="avatar">NA</span><div><strong>NA Associates</strong><small>Primary Admin</small></div><MoreHorizontal size={16}/></div><button className="admin-reset" onClick={onReset}><RotateCcw size={14}/> Reset workspace data</button><button className="admin-logout" onClick={onLogout}><ArrowLeft size={15}/> Back to public website</button></div></aside><main className="admin-main"><header className="admin-topbar"><div className="admin-top-left"><button className="icon-btn mobile-menu" onClick={()=>setSidebarOpen(v=>!v)}><Menu/></button><button className="icon-btn sidebar-collapse-btn" onClick={()=>setSidebarCollapsed(v=>!v)} title={sidebarCollapsed?'Buka Panel Admin':'Tutup Panel Admin'} aria-label="Toggle admin sidebar">{sidebarCollapsed?<ChevronRight size={18}/>:<ChevronLeft size={18}/>}</button><div className="breadcrumb">NA Associates <ChevronRight size={13}/> <strong>{adminNav.find(x=>x[0]===tab)?.[1]}</strong></div></div><div className="admin-top-actions"><button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title={theme==='dark'?'Switch to light mode':'Switch to night mode'} aria-label="Toggle theme">{theme==='dark'?<Sun size={17}/>:<Moon size={17}/>}</button><button className="icon-btn" onClick={()=>setTab('notifications')}><Bell size={18}/><i className="notification-dot"/></button><span className="avatar">NA</span></div></header><div className="admin-content">{tab==='dashboard' && <AdminDashboard db={db} setTab={setTab} setModal={setModal} setSelectedProjectId={setSelectedProjectId}/>} {tab==='projects' && <AdminProjects projects={projects} clients={clients} setSelectedProjectId={setSelectedProjectId} setTab={setTab} setModal={setModal}/>} {tab==='clients' && <AdminClients clients={clients} projects={projects} setModal={setModal}/>} {tab==='operations' && <AdminOperations projects={projects} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} updateProject={updateProject} addActivity={addActivity} setModal={setModal} setDb={setDb} onNotify={onNotify}/>} {tab==='documents' && <AdminDocuments projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal} setDb={setDb}/>} {tab==='materials' && <AdminMaterials projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>} {tab==='billing' && <AdminBilling projects={projects} clients={clients} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>} {tab==='notifications' && <AdminNotifications db={db} setDb={setDb}/>} {tab==='activity' && <AdminActivity projects={projects}/>} {tab==='content' && <AdminContent/>} {tab==='settings' && <AdminSettings onReset={onReset} admins={db.admins||[]} allowedAdminEmails={db.allowedAdminEmails||[]} allowedStaffEmails={db.allowedStaffEmails||[]} setDb={setDb} setModal={setModal} theme={theme} toggleTheme={toggleTheme}/>}</div></main><button type="button" className={`mobile-admin-nav ${sidebarOpen?'is-open':''}`} onClick={()=>setSidebarOpen(v=>!v)} aria-expanded={sidebarOpen}><Menu size={17}/><span>{adminNav.find(x=>x[0]===tab)?.[1]||'Dashboard'}</span><ChevronDown size={16} className="mobile-nav-chevron"/></button></div>;
+  const [accountMenuOpen,setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
+  const primaryAdmin = (db.admins || []).find(a => a.isPrimary) || db.admins?.[0];
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const handlePointerDown = (e) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setAccountMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [accountMenuOpen]);
+
+  return (
+    <div className={`admin-app ${sidebarCollapsed?'sidebar-collapsed':''}`}>
+      {sidebarOpen && <div className="admin-nav-backdrop" onClick={()=>setSidebarOpen(false)} aria-hidden="true"/>}
+      <aside className={`admin-sidebar ${sidebarOpen?'admin-sidebar-open':''}`}>
+        <div className="admin-brand" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div><Brand inverse/><span className="admin-label">STUDIO MANAGEMENT</span></div>
+          <button className="icon-btn mobile-close-btn" onClick={()=>setSidebarOpen(false)} style={{color:'#e9ebe3'}} title="Tutup Menu"><X size={18}/></button>
+        </div>
+        <div className="admin-nav-title">WORKSPACE</div>
+        <nav className="admin-nav">
+          {adminNav.map(([id,label,Icon])=>(
+            <button key={id} onClick={()=>{setTab(id);setSidebarOpen(false);}} className={tab===id?'active':''}>
+              <Icon size={17}/>
+              <span>{label}</span>
+              {id==='billing' && <i className="nav-count">{db.projects.reduce((s,p)=>s+p.invoices.reduce((t,i)=>t+i.payments.filter(x=>x.status==='Pending').length,0),0)||''}</i>}
+            </button>
+          ))}
+        </nav>
+        <div className="admin-sidebar-bottom">
+          <div className="admin-profile">
+            <span className="avatar">NA</span>
+            <div><strong>{primaryAdmin?.name || 'NA Associates'}</strong><small>Primary Admin</small></div>
+            <MoreHorizontal size={16}/>
+          </div>
+        </div>
+      </aside>
+      <main className="admin-main">
+        <header className="admin-topbar">
+          <div className="admin-top-left">
+            <button className="icon-btn mobile-menu" onClick={()=>setSidebarOpen(v=>!v)}><Menu/></button>
+            <button className="icon-btn sidebar-collapse-btn" onClick={()=>setSidebarCollapsed(v=>!v)} title={sidebarCollapsed?'Buka Panel Admin':'Tutup Panel Admin'} aria-label="Toggle admin sidebar">
+              {sidebarCollapsed?<ChevronRight size={18}/>:<ChevronLeft size={18}/>}
+            </button>
+            <div className="breadcrumb">NA Associates <ChevronRight size={13}/> <strong>{adminNav.find(x=>x[0]===tab)?.[1]}</strong></div>
+          </div>
+          <div className="admin-top-actions">
+            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title={theme==='dark'?'Switch to light mode':'Switch to night mode'} aria-label="Toggle theme">
+              {theme==='dark'?<Sun size={17}/>:<Moon size={17}/>}
+            </button>
+            <button className="icon-btn" onClick={()=>setTab('notifications')}><Bell size={18}/><i className="notification-dot"/></button>
+            <div className="account-menu-wrap" ref={accountMenuRef}>
+              <button
+                type="button"
+                className={`avatar-menu-trigger ${accountMenuOpen ? 'is-open' : ''}`}
+                onClick={() => setAccountMenuOpen(v => !v)}
+                aria-expanded={accountMenuOpen}
+                aria-haspopup="menu"
+                aria-label="Admin account menu"
+              >
+                <span className="avatar">NA</span>
+              </button>
+              {accountMenuOpen && (
+                <div className="account-dropdown" role="menu">
+                  <div className="account-dropdown-head">
+                    <span className="avatar">NA</span>
+                    <div>
+                      <strong>{primaryAdmin?.name || 'NA Associates'}</strong>
+                      <small>{primaryAdmin?.email || 'Primary Admin'}</small>
+                    </div>
+                  </div>
+                  <div className="account-dropdown-actions">
+                    <button
+                      type="button"
+                      className="account-dropdown-item"
+                      role="menuitem"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        onReset();
+                      }}
+                    >
+                      <RotateCcw size={14} />
+                      <span>Reset workspace data</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="account-signout-btn"
+                      role="menuitem"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        onLogout();
+                      }}
+                    >
+                      <LogOut size={14} />
+                      <span>Sign out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+        <div className="admin-content">
+          {tab==='dashboard' && <AdminDashboard db={db} setTab={setTab} setModal={setModal} setSelectedProjectId={setSelectedProjectId}/>}
+          {tab==='projects' && <AdminProjects projects={projects} clients={clients} setSelectedProjectId={setSelectedProjectId} setTab={setTab} setModal={setModal}/>}
+          {tab==='clients' && <AdminClients clients={clients} projects={projects} setModal={setModal}/>}
+          {tab==='operations' && <AdminOperations projects={projects} selectedProjectId={selectedProjectId} setSelectedProjectId={setSelectedProjectId} updateProject={updateProject} addActivity={addActivity} setModal={setModal} setDb={setDb} onNotify={onNotify}/>}
+          {tab==='documents' && <AdminDocuments projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal} setDb={setDb}/>}
+          {tab==='materials' && <AdminMaterials projects={projects} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>}
+          {tab==='billing' && <AdminBilling projects={projects} clients={clients} updateProject={updateProject} addActivity={addActivity} setModal={setModal}/>}
+          {tab==='notifications' && <AdminNotifications db={db} setDb={setDb}/>}
+          {tab==='activity' && <AdminActivity projects={projects} studioActivity={db.studioActivity || []}/>}
+          {tab==='content' && <AdminContent/>}
+          {tab==='settings' && <AdminSettings onReset={onReset} admins={db.admins||[]} allowedAdminEmails={db.allowedAdminEmails||[]} allowedStaffEmails={db.allowedStaffEmails||[]} setDb={setDb} setModal={setModal} theme={theme} toggleTheme={toggleTheme} addStudioActivity={addStudioActivity}/>}
+        </div>
+      </main>
+      <button type="button" className={`mobile-admin-nav ${sidebarOpen?'is-open':''}`} onClick={()=>setSidebarOpen(v=>!v)} aria-expanded={sidebarOpen}>
+        <Menu size={17}/><span>{adminNav.find(x=>x[0]===tab)?.[1]||'Dashboard'}</span><ChevronDown size={16} className="mobile-nav-chevron"/>
+      </button>
+    </div>
+  );
 }
 
 function AdminDashboard({ db,setTab,setModal,setSelectedProjectId }) {
@@ -132,7 +263,7 @@ function AdminDashboard({ db,setTab,setModal,setSelectedProjectId }) {
             </button>
           </h3>
         </div>
-        <ActivityTable projects={projects} limit={5}/>
+        <ActivityTable projects={projects} studioActivity={db.studioActivity || []} limit={5}/>
       </section>
     </>
   );
@@ -319,7 +450,7 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
         progress:nextProg
       };
     });
-    addActivity(p.id,'Project reactivated',`Admin mengaktifkan kembali status proyek ${p.name}.`);
+    addActivity(p.id,'Project reactivated',`Admin mengaktifkan kembali status proyek ${p.name}.`, undefined, { crudType: 'UPDATE', module: 'Projects' });
     pushPublishedNotif(setDb,p.id,'Proyek Diaktifkan Kembali',`Status proyek ${p.name} diaktifkan kembali oleh studio.`);
   };
 
@@ -471,7 +602,7 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
               className="btn btn-small btn-outline"
               onClick={()=>{
                 updateProject(p.id,x=>({...x,status:'Ready to Resume'}));
-                addActivity(p.id,'Project ready to resume','Admin marked project ready for resume review.');
+                addActivity(p.id,'Project ready to resume','Admin marked project ready for resume review.', undefined, { crudType: 'UPDATE', module: 'Projects' });
               }}
             >
               Mark ready to resume
@@ -483,7 +614,7 @@ function AdminOperations({ projects,selectedProjectId,setSelectedProjectId,updat
               className="btn btn-small btn-dark project-status-primary"
               onClick={()=>{
                 updateProject(p.id,x=>syncProjectFromMilestones({...x,status:'Active',holdReason:'',billingPaused:false}));
-                addActivity(p.id,'Project resumed','Admin confirmed project resume.');
+                addActivity(p.id,'Project resumed','Admin confirmed project resume.', undefined, { crudType: 'UPDATE', module: 'Projects' });
               }}
             >
               Confirm resume
@@ -955,7 +1086,7 @@ function AdminDocuments({projects,updateProject,addActivity,setModal,setDb}) {
     )}
   </>;
 }
-function AdminMaterials({projects,updateProject,addActivity,setModal}) { const [pid,setPid]=useState(projects[0]?.id); const p=projects.find(x=>x.id===pid)||projects[0]; return <><AdminPageHeader title="Shopping & Materials" infoHint="Manage material procurement lists, internal unit cost estimates (hidden from Clients), publication visibility, and on-site material usage logs." action="Add material" onAction={()=>setModal({type:'new-material',project:p})}/><div className="admin-toolbar"><select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><span className="subtle-tag">{p?.code}</span></div><div className="admin-panel"><div className="admin-panel-head"><h3>Shopping list / Procurement</h3></div><div className="material-table">{(p?.shopping||[]).map(s=><div className="material-row" key={s.id}><div className="material-main"><strong>{s.material}</strong><small>{s.specification} · Need by {dateFmt(s.date)}</small></div><div>{s.quantity} {s.unit}</div><div className="material-cost"><small>INTERNAL ESTIMATE</small><strong>{money(s.unitCost*s.quantity)}</strong></div><select value={s.status} onChange={e=>updateProject(p.id,x=>({...x,shopping:x.shopping.map(y=>y.id===s.id?{...y,status:e.target.value}:y)}))}><option>Belum Dibeli</option><option>Dalam Proses</option><option>Sudah Dibeli</option></select><div className="material-publish"><StatusTag value={s.visibility}/><button className="btn btn-small btn-outline" onClick={()=>{updateProject(p.id,x=>({...x,shopping:x.shopping.map(y=>y.id===s.id?{...y,visibility:y.visibility==='Published'?'Draft':'Published'}:y)}));addActivity(p.id,'Shopping list visibility changed',`${s.material} visibility diperbarui.`);}}>{s.visibility==='Published'?'Unpublish':'Publish'}</button></div></div>)}{!p?.shopping?.length&&<EmptyState title="No materials yet" detail="Add requirements for this project."/>}</div></div><div className="admin-panel"><div className="admin-panel-head"><h3>Material usage</h3><button className="btn btn-outline btn-small" onClick={()=>setModal({type:'new-usage',project:p})}><Plus size={14}/> Record usage</button></div>{(p?.usage||[]).map(u=><div className="usage-row" key={u.id}><span><Package size={17}/></span><div><strong>{u.material}</strong><small>{dateFmt(u.date)} · {u.area}</small></div><strong>{u.quantity} {u.unit}</strong></div>)}{!p?.usage?.length&&<EmptyState title="No usage records" detail="Record material usage from daily site activity."/>}</div></>; }
+function AdminMaterials({projects,updateProject,addActivity,setModal}) { const [pid,setPid]=useState(projects[0]?.id); const p=projects.find(x=>x.id===pid)||projects[0]; return <><AdminPageHeader title="Shopping & Materials" infoHint="Manage material procurement lists, internal unit cost estimates (hidden from Clients), publication visibility, and on-site material usage logs." action="Add material" onAction={()=>setModal({type:'new-material',project:p})}/><div className="admin-toolbar"><select value={pid} onChange={e=>setPid(e.target.value)}>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><span className="subtle-tag">{p?.code}</span></div><div className="admin-panel"><div className="admin-panel-head"><h3>Shopping list / Procurement</h3></div><div className="material-table">{(p?.shopping||[]).map(s=><div className="material-row" key={s.id}><div className="material-main"><strong>{s.material}</strong><small>{s.specification} · Need by {dateFmt(s.date)}</small></div><div>{s.quantity} {s.unit}</div><div className="material-cost"><small>INTERNAL ESTIMATE</small><strong>{money(s.unitCost*s.quantity)}</strong></div><select value={s.status} onChange={e=>{const nextStatus=e.target.value;updateProject(p.id,x=>({...x,shopping:x.shopping.map(y=>y.id===s.id?{...y,status:nextStatus}:y)}));addActivity(p.id,'Material status updated',`${s.material} status diubah menjadi ${nextStatus}.`,undefined,{crudType:'UPDATE',module:'Shopping & Materials',internal:true});}}><option>Belum Dibeli</option><option>Dalam Proses</option><option>Sudah Dibeli</option></select><div className="material-publish"><StatusTag value={s.visibility}/><button className="btn btn-small btn-outline" onClick={()=>{const nextVis=s.visibility==='Published'?'Draft':'Published';updateProject(p.id,x=>({...x,shopping:x.shopping.map(y=>y.id===s.id?{...y,visibility:nextVis}:y)}));addActivity(p.id,'Shopping list visibility changed',`${s.material} visibility diperbarui menjadi ${nextVis}.`,undefined,{crudType:'UPDATE',module:'Shopping & Materials',visibility:nextVis,...(nextVis!=='Published'?{internal:true}:{})});}}>{s.visibility==='Published'?'Unpublish':'Publish'}</button></div></div>)}{!p?.shopping?.length&&<EmptyState title="No materials yet" detail="Add requirements for this project."/>}</div></div><div className="admin-panel"><div className="admin-panel-head"><h3>Material usage</h3><button className="btn btn-outline btn-small" onClick={()=>setModal({type:'new-usage',project:p})}><Plus size={14}/> Record usage</button></div>{(p?.usage||[]).map(u=><div className="usage-row" key={u.id}><span><Package size={17}/></span><div><strong>{u.material}</strong><small>{dateFmt(u.date)} · {u.area}</small></div><strong>{u.quantity} {u.unit}</strong></div>)}{!p?.usage?.length&&<EmptyState title="No usage records" detail="Record material usage from daily site activity."/>}</div></>; }
 function AdminBilling({projects,clients,updateProject,addActivity,setModal}) {
   const [pid,setPid]=useState(projects[0]?.id);
   const [invoiceMenuState,setInvoiceMenuState]=useState(null);
@@ -1021,7 +1152,7 @@ function AdminBilling({projects,clients,updateProject,addActivity,setModal}) {
       <Metric className="staff-metric-card" icon={Wallet} label="VERIFIED PAYMENTS" value={money(verifiedTotal)}/>
       <Metric className="staff-metric-card" icon={AlertCircle} label="OUTSTANDING" value={money(outstandingTotal)}/>
     </div>
-    {holdCandidates.length>0&&p?.status==='Active'&&<div className="admin-panel hold-recommendation"><div><strong><AlertCircle size={16}/> Hold recommendation · H+7</strong><p>{holdCandidates.map(i=>i.number).join(', ')} has remaining payment beyond seven days after due date. Pending verification pauses this clock.</p></div><button className="btn btn-small btn-dark" onClick={()=>{if(window.confirm('Confirm placing this project on hold? Existing portal access and payment uploads will remain available.')){updateProject(p.id,x=>({...x,status:'On Hold',holdReason:`Tagihan termin ${holdCandidates.map(i=>i.number).join(', ')} melewati batas waktu H+7.`}));addActivity(p.id,'Project placed on hold','H+7 payment recommendation confirmed by Admin.');}}}>Confirm hold</button></div>}
+    {holdCandidates.length>0&&p?.status==='Active'&&<div className="admin-panel hold-recommendation"><div><strong><AlertCircle size={16}/> Hold recommendation · H+7</strong><p>{holdCandidates.map(i=>i.number).join(', ')} has remaining payment beyond seven days after due date. Pending verification pauses this clock.</p></div><button className="btn btn-small btn-dark" onClick={()=>{if(window.confirm('Confirm placing this project on hold? Existing portal access and payment uploads will remain available.')){updateProject(p.id,x=>({...x,status:'On Hold',holdReason:`Tagihan termin ${holdCandidates.map(i=>i.number).join(', ')} melewati batas waktu H+7.`}));addActivity(p.id,'Project placed on hold','H+7 payment recommendation confirmed by Admin.',undefined,{crudType:'UPDATE',module:'Projects'});}}}>Confirm hold</button></div>}
     <div className="admin-panel billing-panel">
       <div className="admin-panel-head">
         <h3>Payment verification</h3>
@@ -1137,7 +1268,7 @@ function InvoiceAdminRow({invoice,project,client,addActivity,isMenuOpen,onOpenMe
         target="_blank"
         rel="noopener noreferrer"
         className="btn btn-small btn-whatsapp billing-wa-btn"
-        onClick={()=>addActivity(project.id,'WhatsApp notification triggered','Admin mengirim pengingat WhatsApp ke klien untuk invoice '+invoice.number)}
+        onClick={()=>addActivity(project.id,'WhatsApp notification triggered','Admin mengirim pengingat WhatsApp ke klien untuk invoice '+invoice.number, undefined, { crudType: 'UPDATE', module: 'Billing & Payments', internal: true })}
       >
         <WhatsAppIcon size={13}/> WhatsApp
       </a>
@@ -1154,18 +1285,112 @@ function InvoiceAdminRow({invoice,project,client,addActivity,isMenuOpen,onOpenMe
   </div>;
 }
 function AdminNotifications({db,setDb}) { return <><AdminPageHeader title="Notifications" infoHint="Monitor studio-wide system alerts, client payment proof submissions, and published project updates."/><div className="admin-panel"><div className="admin-panel-head"><h3>Recent notifications</h3><button className="under-link" onClick={()=>setDb(old=>({...old,notifications:old.notifications.map(n=>({...n,read:true}))}))}>Mark all read</button></div>{db.notifications.map(n=><div className={`notification-row ${n.read?'read':''}`} key={n.id}><span className="notification-icon"><Bell size={17}/></span><div><strong>{n.title}</strong><p>{n.body}</p><small>{dateFmt(n.date)}</small></div>{!n.read&&<i className="unread-dot"/>}</div>)}</div></>; }
-function AdminActivity({projects}) { return <><AdminPageHeader title="Activity Log" infoHint="Chronological, immutable audit trail recording all Admin, Staff, and Client actions across active projects."/><div className="admin-panel"><ActivityTable projects={projects}/></div><div className="admin-panel note-panel"><ShieldCheck size={19}/><div><strong>Production security note</strong><p>Activity records are synchronized and recorded across all active projects.</p></div></div></>; }
+function AdminActivity({projects, studioActivity = []}) {
+  const [crudFilter, setCrudFilter] = useState('ALL');
+  const [moduleFilter, setModuleFilter] = useState('ALL');
+  const [projectFilter, setProjectFilter] = useState('ALL');
+
+  const combined = [
+    ...projects.flatMap(p => (p.activity || []).map(a => ({ ...a, projectId: p.id }))),
+    ...(studioActivity || []).map(a => ({ ...a, projectId: a.projectId || 'studio' }))
+  ];
+
+  const scopedForCounts = combined.filter(item => {
+    if (projectFilter !== 'ALL' && item.projectId !== projectFilter) return false;
+    if (moduleFilter !== 'ALL' && getActivityModule(item) !== moduleFilter) return false;
+    return true;
+  });
+
+  const crudCounts = {
+    ALL: scopedForCounts.length,
+    CREATE: scopedForCounts.filter(item => getActivityCrudType(item) === 'CREATE').length,
+    UPDATE: scopedForCounts.filter(item => getActivityCrudType(item) === 'UPDATE').length,
+    DELETE: scopedForCounts.filter(item => getActivityCrudType(item) === 'DELETE').length
+  };
+
+  return (
+    <>
+      <AdminPageHeader
+        title="Activity Log"
+        infoHint="Chronological audit trail recording all Admin, Staff, and Client CREATE, UPDATE, and DELETE actions across projects and studio settings."
+      />
+      <div className="admin-panel">
+        <div className="admin-panel-head">
+          <h3>Studio &amp; Project Audit Trail</h3>
+          <span className="subtle-tag">{crudCounts[crudFilter]} entries</span>
+        </div>
+
+        <div className="staff-activity-filters" role="tablist" aria-label="Filter activity by CRUD type">
+          {[
+            ['ALL', 'All'],
+            ['CREATE', 'Created'],
+            ['UPDATE', 'Updated'],
+            ['DELETE', 'Deleted']
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={crudFilter === key}
+              className={`staff-activity-filter-pill ${crudFilter === key ? 'is-active' : ''}`}
+              onClick={() => setCrudFilter(key)}
+            >
+              <span>{label}</span>
+              <span className="staff-activity-filter-count">{crudCounts[key]}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="admin-toolbar">
+          <select value={moduleFilter} onChange={e => setModuleFilter(e.target.value)} aria-label="Filter activity by module">
+            <option value="ALL">All Modules (8)</option>
+            {ACTIVITY_MODULES.map(mod => (
+              <option key={mod} value={mod}>{mod}</option>
+            ))}
+          </select>
+          <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)} aria-label="Filter activity by project or studio scope">
+            <option value="ALL">All Projects &amp; Studio</option>
+            <option value="studio">Studio Global</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="admin-activity-scroll">
+          <ActivityTable
+            projects={projects}
+            studioActivity={studioActivity}
+            crudFilter={crudFilter}
+            moduleFilter={moduleFilter}
+            projectFilter={projectFilter}
+            showCrudBadge
+          />
+        </div>
+      </div>
+      <div className="admin-panel note-panel">
+        <ShieldCheck size={19}/>
+        <div>
+          <strong>Production security note</strong>
+          <p>Activity records are synchronized and recorded across all active projects and studio operations.</p>
+        </div>
+      </div>
+    </>
+  );
+}
 function AdminContent() { return <><AdminPageHeader title="Website Content" infoHint="Preview and manage content sections for the public-facing NA Associates website."/><div className="admin-content-grid">{[['Projects','Portfolio items and project detail pages','Manage portfolio'],['Services','Service descriptions and supporting images','Edit services'],['About','Studio profile and approach','Edit about'],['Career','Career introduction and positions','Edit career'],['Contact','Studio email, phone, and WhatsApp','Edit contact'],['Homepage','Hero text and featured projects','Edit homepage']].map(([title,desc,cta])=><div className="admin-panel content-manage-card" key={title}><span><FileText size={19}/></span><h3>{title}</h3><p>{desc}</p><button className="under-link" onClick={()=>alert('Content editor belum dihubungkan.')}>{cta} <ArrowUpRight size={14}/></button></div>)}</div></>; }
-function AdminSettings({onReset,admins,allowedAdminEmails,allowedStaffEmails,setDb,setModal,theme,toggleTheme}) {
+function AdminSettings({onReset,admins,allowedAdminEmails,allowedStaffEmails,setDb,setModal,theme,toggleTheme,addStudioActivity}) {
   const [newEmail, setNewEmail] = useState('');
   const [newStaffEmail, setNewStaffEmail] = useState('');
   const addAdminEmail = (e) => {
     e.preventDefault();
     if (!newEmail || !newEmail.includes('@')) return;
+    const normalized = newEmail.trim().toLowerCase();
     setDb(old => ({
       ...old,
-      allowedAdminEmails: Array.from(new Set([...(old.allowedAdminEmails || []), newEmail.trim().toLowerCase()]))
+      allowedAdminEmails: Array.from(new Set([...(old.allowedAdminEmails || []), normalized]))
     }));
+    addStudioActivity?.('Admin whitelist updated', `Email Google Admin "${normalized}" ditambahkan ke whitelist.`, 'Admin NA Associates', { crudType: 'CREATE', module: 'Settings & Studio', internal: true });
     setNewEmail('');
   };
   const removeAdminEmail = (email) => {
@@ -1173,14 +1398,17 @@ function AdminSettings({onReset,admins,allowedAdminEmails,allowedStaffEmails,set
       ...old,
       allowedAdminEmails: (old.allowedAdminEmails || []).filter(e => e !== email)
     }));
+    addStudioActivity?.('Admin whitelist removed', `Email Google Admin "${email}" dihapus dari whitelist.`, 'Admin NA Associates', { crudType: 'DELETE', module: 'Settings & Studio', internal: true });
   };
   const addStaffEmail = (e) => {
     e.preventDefault();
     if (!newStaffEmail || !newStaffEmail.includes('@')) return;
+    const normalized = newStaffEmail.trim().toLowerCase();
     setDb(old => ({
       ...old,
-      allowedStaffEmails: Array.from(new Set([...(old.allowedStaffEmails || []), newStaffEmail.trim().toLowerCase()]))
+      allowedStaffEmails: Array.from(new Set([...(old.allowedStaffEmails || []), normalized]))
     }));
+    addStudioActivity?.('Staff whitelist updated', `Email Google Staff "${normalized}" ditambahkan ke whitelist.`, 'Admin NA Associates', { crudType: 'CREATE', module: 'Settings & Studio', internal: true });
     setNewStaffEmail('');
   };
   const removeStaffEmail = (email) => {
@@ -1188,6 +1416,7 @@ function AdminSettings({onReset,admins,allowedAdminEmails,allowedStaffEmails,set
       ...old,
       allowedStaffEmails: (old.allowedStaffEmails || []).filter(e => e !== email)
     }));
+    addStudioActivity?.('Staff whitelist removed', `Email Google Staff "${email}" dihapus dari whitelist.`, 'Admin NA Associates', { crudType: 'DELETE', module: 'Settings & Studio', internal: true });
   };
 
   return <><AdminPageHeader title="Settings" infoHint="Configure workspace theme, studio profile, Primary Admin accounts, Google OAuth login whitelists for Admin/Staff, and prototype data reset."/><div className="admin-panel settings-section"><div className="settings-row"><div><strong>Workspace theme</strong><p>Toggle between Architectural Charcoal (Night Mode) and Editorial Light mode.</p></div><button className="btn btn-outline btn-small" onClick={toggleTheme}>{theme==='dark'?<><Sun size={14}/> Light mode</>:<><Moon size={14}/> Night mode</>}</button></div><div className="settings-row"><div><strong>Studio profile</strong><p>NA Associates · Architecture & Design · Jakarta, Indonesia</p></div><button className="btn btn-outline btn-small" onClick={()=>alert('Studio profile editor belum aktif.')}>Edit profile</button></div><div className="settings-row"><div><strong>Admin accounts</strong><p>Only the Primary Admin can invite or promote another Admin. All Admin accounts share operational permissions.</p><div className="admin-account-list">{admins.map(a=><span key={a.id}><strong>{a.name}</strong><small>{a.email} · {a.isPrimary?'Primary Admin':'Admin'}</small></span>)}</div></div><button className="btn btn-outline btn-small" onClick={()=>setModal({type:'invite-admin'})}><UserPlus size={14}/> Invite Admin</button></div><div className="settings-row"><div><strong>Admin Google Login Whitelist</strong><p>Daftar email Google yang diizinkan masuk ke Dashboard Admin. Sistem memeriksa database allowedAdminEmails.</p><div className="admin-account-list">{(allowedAdminEmails || ['owner@example.com', 'admin@na-associates.id', 'mike777rafael@gmail.com']).map(em=><span key={em} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'8px'}}><strong>{em}</strong><button type="button" className="icon-btn" style={{padding:'2px'}} onClick={()=>removeAdminEmail(em)}><X size={12}/></button></span>)}</div><form onSubmit={addAdminEmail} style={{display:'flex',gap:'8px',marginTop:'10px'}}><input type="email" placeholder="tambah-admin@studio.com" value={newEmail} onChange={e=>setNewEmail(e.target.value)} style={{padding:'6px 8px',fontSize:'9px',border:'1px solid #dcded5',background:'#f8f7f3',flex:'1',color:'var(--ink)'}}/><button type="submit" className="btn btn-small btn-dark">Tambah Email</button></form><small style={{display:'block',marginTop:'6px',fontSize:'8px',color: '#889083', lineHeight: '1.5'}}>Cara mendaftarkan: Masukkan email Google admin baru di atas. Admin dapat langsung melakukan Login dengan Google menggunakan email tersebut pada modal login utama.</small></div></div><div className="settings-row"><div><strong>Staff / Karyawan Google Login Whitelist</strong><p>Daftar email Google yang diizinkan masuk ke Dashboard Staff (Field Operations, Output Draft, & Materials). Sistem memeriksa database allowedStaffEmails.</p><div className="admin-account-list">{(allowedStaffEmails || []).map(em=><span key={em} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'8px'}}><strong>{em}</strong><button type="button" className="icon-btn" style={{padding:'2px'}} onClick={()=>removeStaffEmail(em)}><X size={12}/></button></span>)}</div><form onSubmit={addStaffEmail} style={{display:'flex',gap:'8px',marginTop:'10px'}}><input type="email" placeholder="tambah-staff@na-associates.id" value={newStaffEmail} onChange={e=>setNewStaffEmail(e.target.value)} style={{padding:'6px 8px',fontSize:'9px',border:'1px solid #dcded5',background:'#f8f7f3',flex:'1',color:'var(--ink)'}}/><button type="submit" className="btn btn-small btn-dark">Tambah Staff</button></form><small style={{display:'block',marginTop:'6px',fontSize:'8px',color: '#889083', lineHeight: '1.5'}}>Cara mendaftarkan: Masukkan email Google karyawan/arsitek lapangan di atas. Akun Staff hanya dapat membuat dan mengedit Draft tanpa akses Billing maupun kontrol Publish.</small></div></div><div className="settings-row"><div><strong>Backend connection</strong><p>Supabase Auth, Database, and Storage are not connected in this prototype.</p></div><StatusTag value="Not connected"/></div><div className="settings-row"><div><strong>Reset workspace data</strong><p>Restore all sample projects, invoices, and activity to their initial state.</p></div><button className="btn btn-outline btn-small" onClick={onReset}><RotateCcw size={14}/> Reset data</button></div></div></>;

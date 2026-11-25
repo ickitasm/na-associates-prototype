@@ -256,20 +256,69 @@ export function InfoHint({ text, label = 'Informasi' }) {
   );
 }
 
+export const ACTIVITY_MODULES = [
+  'Field Operations',
+  'Output & Design',
+  'Legal & Contracts',
+  'Shopping & Materials',
+  'Billing & Payments',
+  'Projects',
+  'Clients & Accounts',
+  'Settings & Studio'
+];
+
 export function getActivityCrudType(a) {
   if (a?.crudType === 'CREATE' || a?.crudType === 'UPDATE' || a?.crudType === 'DELETE') return a.crudType;
   const text = `${a?.action || ''} ${a?.detail || ''}`.toLowerCase();
   if (/delet|hapus|removed|dihapus/.test(text)) return 'DELETE';
-  if (/edit|updat|revis|diperbarui|diubah|resum|hold|roll\s*back|changed|verif|approv|reject/.test(text)) return 'UPDATE';
+  if (/edit|updat|revis|diperbarui|diubah|resum|hold|roll\s*back|changed|verif|approv|reject|whatsapp|reactivat|complet|selesai|publish|unpublish|archiv/.test(text)) return 'UPDATE';
   return 'CREATE';
 }
 
-export function ActivityTable({ projects, limit, crudFilter = 'ALL', showCrudBadge = true }) {
-  const items = projects
-    .flatMap((p) => (p.activity || []).map((a) => ({ ...a, project: p.name, _crud: getActivityCrudType(a) })))
-    .filter((a) => crudFilter === 'ALL' || a._crud === crudFilter)
+export function getActivityModule(a) {
+  if (a?.module && ACTIVITY_MODULES.includes(a.module)) return a.module;
+  const text = `${a?.module || ''} ${a?.category || ''} ${a?.action || ''} ${a?.detail || ''}`.toLowerCase();
+  if (/legal|contract|kontrak|spk|addendum/.test(text)) return 'Legal & Contracts';
+  if (/output|design|file|render|floor plan|ded|3d|gambar|dokumen/.test(text)) return 'Output & Design';
+  if (/shopping|material|usage|pemakaian|stok|pengadaan|procurement/.test(text)) return 'Shopping & Materials';
+  if (a?.category === 'upload' || a?.category === 'verification' || /invoice|inv-|payment|pembayaran|kwitansi|receipt|whatsapp|tagihan|bukti/.test(text)) return 'Billing & Payments';
+  if (/client account|akun klien|klien.*dibuat|invite.*client|client.*archiv|client.*activ/.test(text)) return 'Clients & Accounts';
+  if (/admin.*invit|undangan admin|whitelist|staff.*email|admin.*email|settings|studio|reset workspace/.test(text)) return 'Settings & Studio';
+  if (/project created|project cover|project.*hold|project.*resum|project.*reactivat|project completed|roll\s*back|proyek.*ditahan|proyek selesai|proyek diaktifkan|cover/.test(text)) return 'Projects';
+  return 'Field Operations';
+}
+
+export function ActivityTable({
+  projects = [],
+  studioActivity = [],
+  limit,
+  crudFilter = 'ALL',
+  moduleFilter = 'ALL',
+  projectFilter = 'ALL',
+  showCrudBadge = true
+}) {
+  const projectItems = projects.flatMap((p) =>
+    (p.activity || []).map((a) => ({
+      ...a,
+      projectId: p.id,
+      project: p.name,
+      _crud: getActivityCrudType(a),
+      _module: getActivityModule(a)
+    }))
+  );
+  const studioItems = (studioActivity || []).map((a) => ({
+    ...a,
+    projectId: a.projectId || 'studio',
+    project: a.projectName || 'Studio Global',
+    _crud: getActivityCrudType(a),
+    _module: getActivityModule(a)
+  }));
+  const items = [...projectItems, ...studioItems]
+    .filter((a) => (projectFilter === 'ALL' || a.projectId === projectFilter))
+    .filter((a) => (crudFilter === 'ALL' || a._crud === crudFilter))
+    .filter((a) => (moduleFilter === 'ALL' || a._module === moduleFilter))
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
-    .slice(0, limit || 100);
+    .slice(0, limit || 150);
   return (
     <div className="activity-table">
       {items.map((a) => (
@@ -279,7 +328,7 @@ export function ActivityTable({ projects, limit, crudFilter = 'ALL', showCrudBad
             {showCrudBadge && (
               <div className="activity-row-head">
                 <span className={`crud-badge crud-${a._crud.toLowerCase()}`}>{a._crud}</span>
-                {a.module && <span className="activity-module-tag">{a.module}</span>}
+                <span className="activity-module-tag">{a._module}</span>
               </div>
             )}
             <strong>{a.action}</strong>
@@ -288,7 +337,7 @@ export function ActivityTable({ projects, limit, crudFilter = 'ALL', showCrudBad
           </div>
         </div>
       ))}
-      {!items.length && <EmptyState title="No activity recorded" detail="Changes to project records will appear here." />}
+      {!items.length && <EmptyState title="No activity recorded" detail="Changes to project or studio records will appear here." />}
     </div>
   );
 }

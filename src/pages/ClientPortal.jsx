@@ -92,24 +92,35 @@ function ClientTopbar({ client, projects = [], notifications = [], onBack, onLog
                   <small>{client?.username ? `@${client.username}` : (client?.email || 'Client account')}</small>
                 </div>
               </div>
-              <button
-                type="button"
-                className="account-signout-btn"
-                role="menuitem"
-                onClick={() => {
-                  setAccountMenuOpen(false);
-                  onLogout();
-                }}
-              >
-                <LogOut size={15}/>
-                <span>Sign out</span>
-              </button>
+              <div className="account-dropdown-actions">
+                <button
+                  type="button"
+                  className="account-dropdown-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    onReset();
+                  }}
+                >
+                  <RotateCcw size={15}/>
+                  <span>Reset workspace data</span>
+                </button>
+                <button
+                  type="button"
+                  className="account-signout-btn"
+                  role="menuitem"
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    onLogout();
+                  }}
+                >
+                  <LogOut size={15}/>
+                  <span>Sign out</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
-        <button className="icon-btn mobile-menu" onClick={onReset} title="Reset data" aria-label="Reset data">
-          <RotateCcw size={16}/>
-        </button>
       </div>
     </header>
   );

@@ -843,7 +843,13 @@ function ReportDetailModalView({ report, project, isClient, isStaff = false, set
       ...p,
       reports: (p.reports || []).map(r => r.id === report.id ? { ...r, visibility: nextVis } : r)
     }));
-    addActivity(project.id, 'Report visibility changed', `${report.title} diubah menjadi ${nextVis}.`);
+    addActivity(
+      project.id,
+      'Report visibility changed',
+      `${report.title} diubah menjadi ${nextVis}.`,
+      undefined,
+      { crudType: 'UPDATE', module: 'Field Operations', visibility: nextVis, ...(nextVis !== 'Published' ? { internal: true } : {}) }
+    );
     if (!isStaff && nextVis === 'Published') {
       pushPublishedNotif(
         setDb,
@@ -999,7 +1005,7 @@ function ReportDetailModalView({ report, project, isClient, isStaff = false, set
   );
 }
 
-function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProject, updateProject, addActivity, notify, role, changeRole, enterClient, enterAdmin, enterStaff }) {
+function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProject, updateProject, addActivity, addStudioActivity, notify, role, changeRole, enterClient, enterAdmin, enterStaff }) {
   const [form, setForm] = useState({});
   const [error, setError] = useState('');
   if (!modal) return null;
@@ -1157,7 +1163,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
           status: 'On Hold',
           holdReason: reason
         }));
-        addActivity(targetProject.id, 'Project placed on hold', `Proyek ditahan (On Hold). Alasan: ${reason}`);
+        addActivity(targetProject.id, 'Project placed on hold', `Proyek ditahan (On Hold). Alasan: ${reason}`, undefined, { crudType: 'UPDATE', module: 'Projects' });
         finish('Proyek berhasil ditandai On Hold.');
       })}>
         <div className="field">
@@ -1213,7 +1219,9 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
         addActivity(
           targetProject.id,
           'Project month rolled back (Mundur Bulan)',
-          `Admin melakukan roll back progres proyek (${currentProg}% → ${clampedTarget}%, status tetap Active). Alasan: ${reason}`
+          `Admin melakukan roll back progres proyek (${currentProg}% → ${clampedTarget}%, status tetap Active). Alasan: ${reason}`,
+          undefined,
+          { crudType: 'UPDATE', module: 'Projects' }
         );
         finish(`Project berhasil di-rollback ke ${clampedTarget}%. Status tetap Active untuk pekerjaan lanjutan.`);
       })}>
@@ -1254,7 +1262,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
           if (!targetProject) throw new Error('Proyek tidak ditemukan.');
           if (!form.cover) throw new Error('Pilih gambar cover baru terlebih dahulu.');
           updateProject(targetProject.id, x => ({ ...x, cover: form.cover }));
-          addActivity(targetProject.id, 'Project cover updated', 'Gambar cover / thumbnail proyek diperbarui oleh Admin.');
+          addActivity(targetProject.id, 'Project cover updated', 'Gambar cover / thumbnail proyek diperbarui oleh Admin.', undefined, { crudType: 'UPDATE', module: 'Projects' });
           finish('Gambar cover proyek berhasil diperbarui.');
         })}
       >
@@ -1294,8 +1302,8 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
       </form>
     );
   }
-  if (modal.type === 'create-project') body = <form onSubmit={submit(() => { const id = uid('project'); const p = { id, code: form.code || `NA-${String(db.projects.length + 32).padStart(3, '0')}`, name: form.name, location: form.location, category: form.category || 'Residential', landArea: form.landArea || '—', buildingArea: form.buildingArea || '—', year: '2026', status: 'Active', progress: 0, clientId: form.clientId || null, cover: form.cover || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=85', startDate: form.startDate || '2026-11-02', targetDate: form.targetDate || '2027-11-02', nextMilestone: '—', nextMilestoneDate: null, nextPayment: null, milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: [{ id: uid('act'), date: nowLabel(), actor: 'Admin NA Associates', action: 'Project created', detail: `${form.name} dibuat.` }] }; setDb(old => ({ ...old, projects: [p, ...old.projects], clients: old.clients.map(c => c.id === form.clientId ? { ...c, projects: [...c.projects, id] } : c) })); finish('Project berhasil dibuat.'); })}><div className="form-grid">{input('Project name', 'name', 'e.g. Rumah Sore', 'text', true)}{input('Project code', 'code', 'e.g. NA-032')}{input('Location', 'location', 'City / area', 'text', true)}{select('Category', 'category', [['Residential', 'Residential'], ['Commercial', 'Commercial'], ['Common / Other', 'Common / Other']])}{input('Land area', 'landArea', 'e.g. 240 m²')}{input('Building area', 'buildingArea', 'e.g. 185 m²')}{select('Assign client', 'clientId', [['', 'Unassigned'], ...db.clients.map(c => [c.id, c.name])])}{input('Target completion', 'targetDate', '', 'date')}</div><div className="field"><span>Cover Image (Local File Upload)</span><label className="upload-box" style={{marginTop:'4px'}}><Upload size={18}/><span><strong>{form.coverName ? `Cover terpilih: ${form.coverName}` : 'Pilih file gambar cover (PNG, JPG, WebP)'}</strong><small>Gambar dikonversi menjadi preview lokal</small></span><input type="file" accept="image/png, image/jpeg, image/webp" onChange={e => { const file = e.target.files?.[0]; if (file) { set('coverName', file.name); const reader = new FileReader(); reader.onload = (evt) => { set('cover', evt.target.result); }; reader.readAsDataURL(file); } }}/></label>{form.cover && <div style={{marginTop:'8px',height:'110px',width:'100%',borderRadius:'4px',overflow:'hidden',border:'1px solid #d5d8cf'}}><img src={form.cover} alt="Cover preview" style={{width:'100%',height:'100%',objectFit:'cover'}}/></div>}</div>{footer('Create project')}</form>;
-  if (modal.type === 'invite-admin') body = <form onSubmit={submit(() => { if (!form.name || !form.email) throw new Error('Name dan email wajib diisi.'); const admin = { id: uid('admin'), name: form.name, email: form.email, isPrimary: false, status: 'Invited' }; setDb(old => ({ ...old, admins: [...(old.admins || []), admin] })); finish('Undangan Admin berhasil dibuat.'); })}><div className="form-grid">{input('Admin name', 'name', 'Full name', 'text', true)}{input('Admin email', 'email', 'name@studio.com', 'email', true)}</div><div className="modal-footnote">Only the Primary Admin can create Admin invitations. All Admins share operational rights; only the Primary Admin can add other Admins.</div>{footer('Create Admin invitation')}</form>;
+  if (modal.type === 'create-project') body = <form onSubmit={submit(() => { const id = uid('project'); const p = { id, code: form.code || `NA-${String(db.projects.length + 32).padStart(3, '0')}`, name: form.name, location: form.location, category: form.category || 'Residential', landArea: form.landArea || '—', buildingArea: form.buildingArea || '—', year: '2026', status: 'Active', progress: 0, clientId: form.clientId || null, cover: form.cover || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=85', startDate: form.startDate || '2026-11-02', targetDate: form.targetDate || '2027-11-02', nextMilestone: '—', nextMilestoneDate: null, nextPayment: null, milestones: [], files: [], reports: [], shopping: [], usage: [], legal: [], invoices: [], activity: [{ id: uid('act'), date: nowLabel(), actor: 'Admin NA Associates', action: 'Project created', detail: `${form.name} dibuat.`, crudType: 'CREATE', module: 'Projects' }] }; setDb(old => ({ ...old, projects: [p, ...old.projects], clients: old.clients.map(c => c.id === form.clientId ? { ...c, projects: [...c.projects, id] } : c) })); finish('Project berhasil dibuat.'); })}><div className="form-grid">{input('Project name', 'name', 'e.g. Rumah Sore', 'text', true)}{input('Project code', 'code', 'e.g. NA-032')}{input('Location', 'location', 'City / area', 'text', true)}{select('Category', 'category', [['Residential', 'Residential'], ['Commercial', 'Commercial'], ['Common / Other', 'Common / Other']])}{input('Land area', 'landArea', 'e.g. 240 m²')}{input('Building area', 'buildingArea', 'e.g. 185 m²')}{select('Assign client', 'clientId', [['', 'Unassigned'], ...db.clients.map(c => [c.id, c.name])])}{input('Target completion', 'targetDate', '', 'date')}</div><div className="field"><span>Cover Image (Local File Upload)</span><label className="upload-box" style={{marginTop:'4px'}}><Upload size={18}/><span><strong>{form.coverName ? `Cover terpilih: ${form.coverName}` : 'Pilih file gambar cover (PNG, JPG, WebP)'}</strong><small>Gambar dikonversi menjadi preview lokal</small></span><input type="file" accept="image/png, image/jpeg, image/webp" onChange={e => { const file = e.target.files?.[0]; if (file) { set('coverName', file.name); const reader = new FileReader(); reader.onload = (evt) => { set('cover', evt.target.result); }; reader.readAsDataURL(file); } }}/></label>{form.cover && <div style={{marginTop:'8px',height:'110px',width:'100%',borderRadius:'4px',overflow:'hidden',border:'1px solid #d5d8cf'}}><img src={form.cover} alt="Cover preview" style={{width:'100%',height:'100%',objectFit:'cover'}}/></div>}</div>{footer('Create project')}</form>;
+  if (modal.type === 'invite-admin') body = <form onSubmit={submit(() => { if (!form.name || !form.email) throw new Error('Name dan email wajib diisi.'); const admin = { id: uid('admin'), name: form.name, email: form.email, isPrimary: false, status: 'Invited' }; setDb(old => ({ ...old, admins: [...(old.admins || []), admin] })); addStudioActivity?.('Admin invitation sent', `Undangan Admin untuk ${admin.name} (${admin.email}) dibuat.`, 'Admin NA Associates', { crudType: 'CREATE', module: 'Settings & Studio', internal: true }); finish('Undangan Admin berhasil dibuat.'); })}><div className="form-grid">{input('Admin name', 'name', 'Full name', 'text', true)}{input('Admin email', 'email', 'name@studio.com', 'email', true)}</div><div className="modal-footnote">Only the Primary Admin can create Admin invitations. All Admins share operational rights; only the Primary Admin can add other Admins.</div>{footer('Create Admin invitation')}</form>;
   if (modal.type === 'invite-client') body = <form onSubmit={submit(() => {
     if (!form.name || !form.username) throw new Error('Nama dan Username klien wajib diisi.');
     const id = uid('client');
@@ -1315,6 +1323,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
       clients: [c, ...(old.clients || [])],
       projects: old.projects.map(p => assigned.includes(p.id) ? { ...p, clientId: id } : p)
     }));
+    addStudioActivity?.('Client account created', `Akun klien "${c.name}" (@${c.username}) dibuat.`, 'Admin NA Associates', { crudType: 'CREATE', module: 'Clients & Accounts', internal: true });
     finish(`Akun klien "${c.name}" (Username: ${c.username}) berhasil dibuat.`);
   })}><div className="form-grid">
     {input('Username', 'username', 'e.g. aditya', 'text', true)}
@@ -1347,6 +1356,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
           ...old,
           clients: (old.clients || []).map(c => (c.id === client.id ? { ...c, status: nextStatus } : c))
         }));
+        addStudioActivity?.('Client account status updated', `Status akun klien "${client.name}" diubah menjadi ${nextStatus}.`, 'Admin NA Associates', { crudType: 'UPDATE', module: 'Clients & Accounts', internal: true });
         finish(
           isArchived
             ? `Akun klien "${client.name}" berhasil diaktifkan kembali.`
@@ -1439,7 +1449,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
             'Uploaded payment proof',
             `Invoice ${invoice.number} · Claimed ${money(amount)}${purpose ? ` · Purpose: ${purpose}` : ''} · File: ${fileName}`,
             db.clients.find(c => c.id === project.clientId)?.name || 'Client',
-            { category: 'upload', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }
+            { crudType: 'CREATE', module: 'Billing & Payments', category: 'upload', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }
           );
           finish('Bukti pembayaran berhasil diunggah.');
         })}
@@ -1545,7 +1555,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
             'Approved client payment proof',
             `Invoice ${modal.invoice.number} · Verified ${money(approved)}${reason ? ` · ${reason}` : ''}${excess > 0 ? ` · Overpayment ${money(excess)}: ${form.overpaymentDecision}` : ''}`,
             'Admin Studio',
-            { category: 'verification', visibility: 'Published', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }
+            { crudType: 'UPDATE', module: 'Billing & Payments', category: 'verification', visibility: 'Published', date: new Date().toISOString().slice(0, 16).replace('T', ' ') }
           );
           pushPublishedNotif(
             setDb,
@@ -1668,7 +1678,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
               status: i.payments.some(x => x.id !== modal.payment.id && x.status === 'Pending') ? 'Pending Verification' : i.payments.some(x => x.status === 'Approved') ? 'Partially Paid' : 'Unpaid'
             } : i)
           }));
-          addActivity(project.id, 'Rejected client payment proof', `Invoice ${modal.invoice.number} · Verified ${money(0)} · Reason: ${form.reason}`, 'Admin Studio', { category: 'verification', visibility: 'Published', date: new Date().toISOString().slice(0, 16).replace('T', ' ') });
+          addActivity(project.id, 'Rejected client payment proof', `Invoice ${modal.invoice.number} · Verified ${money(0)} · Reason: ${form.reason}`, 'Admin Studio', { crudType: 'UPDATE', module: 'Billing & Payments', category: 'verification', visibility: 'Published', date: new Date().toISOString().slice(0, 16).replace('T', ' ') });
           pushPublishedNotif(setDb, project.id, 'Bukti Pembayaran Ditolak', `Bukti pembayaran untuk ${modal.invoice.number} (${project.name}) ditolak. Alasan: ${form.reason}`);
           finish('Bukti pembayaran ditolak. Bukti lama tetap tersimpan.');
         })}
@@ -1723,7 +1733,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
             note: (form.description || '').trim()
           };
           updateProject(project.id, p => ({ ...p, invoices: [inv, ...p.invoices] }));
-          addActivity(project.id, 'Invoice issued', `${num} (${purpose}) diterbitkan sebesar ${money(amount)}.`);
+          addActivity(project.id, 'Invoice issued', `${num} (${purpose}) diterbitkan sebesar ${money(amount)}.`, undefined, { crudType: 'CREATE', module: 'Billing & Payments' });
           finish('Invoice berhasil dibuat.');
         })}
       >
@@ -1819,7 +1829,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
           const paid = newInv.payments.reduce((s, p) => s + p.approved, 0);
           newInv.status = paid >= amount ? 'Paid' : paid > 0 ? 'Partially Paid' : 'Unpaid';
           updateProject(project.id, p => ({ ...p, invoices: p.invoices.map(i => i.id === modal.invoice.id ? { ...i, status: 'Cancelled', replacedBy: newId, reason: form.reason } : i).concat(newInv) }));
-          addActivity(project.id, 'Invoice revised', `${modal.invoice.number} diganti dengan ${newInv.number} (${purpose}). Reason: ${form.reason}`);
+          addActivity(project.id, 'Invoice revised', `${modal.invoice.number} diganti dengan ${newInv.number} (${purpose}). Reason: ${form.reason}`, undefined, { crudType: 'UPDATE', module: 'Billing & Payments' });
           finish('Invoice direvisi. Histori invoice lama tetap dipertahankan.');
         })}
       >
@@ -2025,7 +2035,7 @@ function ModalHost({ modal, setModal, close, db, setDb, projects, selectedProjec
       {footer(isStaff ? 'Save draft changes' : 'Save changes')}
     </form>;
   }
-  if (modal.type === 'new-legal') body = <form onSubmit={submit(() => { const d = { id: uid('legal'), name: form.name, version: form.version || 'v1.0', date: form.date || '2026-11-02', visibility: form.visibility || 'Internal Only' }; updateProject(project.id, p => ({ ...p, legal: [d, ...p.legal] })); addActivity(project.id, 'Legal document added', d.name); if (!isStaff && d.visibility === 'Published') { pushPublishedNotif(setDb, project.id, 'Dokumen Legal Dipublikasikan', `Dokumen "${d.name}" (${d.version}) untuk proyek ${project.name} telah dipublikasikan.`); } finish('Legal document berhasil ditambahkan.'); })}>{input('Document name', 'name', 'e.g. Addendum 02', 'text', true)}<div className="form-grid">{input('Version', 'version', 'v1.0')}{input('Document date', 'date', '', 'date')}{select('Visibility', 'visibility', [['Internal Only', 'Internal Only'], ['Published', 'Published to Client']])}</div>{footer('Add legal document')}</form>;
+  if (modal.type === 'new-legal') body = <form onSubmit={submit(() => { const d = { id: uid('legal'), name: form.name, version: form.version || 'v1.0', date: form.date || '2026-11-02', visibility: form.visibility || 'Internal Only' }; updateProject(project.id, p => ({ ...p, legal: [d, ...p.legal] })); addActivity(project.id, 'Legal document added', `${d.name} (${d.version}) ditambahkan.`, undefined, { crudType: 'CREATE', module: 'Legal & Contracts', visibility: d.visibility, ...(d.visibility !== 'Published' ? { internal: true } : {}) }); if (!isStaff && d.visibility === 'Published') { pushPublishedNotif(setDb, project.id, 'Dokumen Legal Dipublikasikan', `Dokumen "${d.name}" (${d.version}) untuk proyek ${project.name} telah dipublikasikan.`); } finish('Legal document berhasil ditambahkan.'); })}>{input('Document name', 'name', 'e.g. Addendum 02', 'text', true)}<div className="form-grid">{input('Version', 'version', 'v1.0')}{input('Document date', 'date', '', 'date')}{select('Visibility', 'visibility', [['Internal Only', 'Internal Only'], ['Published', 'Published to Client']])}</div>{footer('Add legal document')}</form>;
   if (modal.type === 'edit-legal') {
     const existing = modal.legal || {};
     body = <form onSubmit={submit(() => {
