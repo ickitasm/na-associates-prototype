@@ -370,7 +370,7 @@ function ProjectsPage({ go }) {
   ];
   const visible = projects.filter(p => (category === 'All' || p.cat === category) && (status === 'All' || p.status === status) && `${p.name} ${p.loc}`.toLowerCase().includes(q.toLowerCase()));
   return <>
-    <PageIntro eyebrow="PORTOFOLIO / 2024—2026" title="Karya" italic="pilihan." desc="Kumpulan ruang yang dibentuk oleh konteks lokasi, ketajaman fungsi, dan keseharian para penghuninya."/>
+    <PageIntro title="Karya" italic="pilihan." desc="Kumpulan ruang yang dibentuk oleh konteks lokasi, ketajaman fungsi, dan keseharian para penghuninya."/>
     <section className="wrap portfolio-section">
       <div className="portfolio-toolbar">
         <div className="filter-pills">
@@ -443,7 +443,7 @@ function ServicesPage({ go }) {
     ['04','Koordinasi Proyek','Pendampingan desain dan dukungan dokumentasi secara berkala sepanjang perjalanan pembangunan proyek Anda.']
   ];
   return <>
-    <PageIntro eyebrow="KAPABILITAS KAMI" title="Apa yang kami" italic="kerjakan." desc="Pendekatan arsitektur dan desain yang terukur, dari diskusi pertama hingga penyelesaian detail terkecil."/>
+    <PageIntro title="Apa yang kami" italic="kerjakan." desc="Pendekatan arsitektur dan desain yang terukur, dari diskusi pertama hingga penyelesaian detail terkecil."/>
     <section className="wrap service-page-list">
       {items.map(([n,t,d]) => <div className="service-page-row" key={n}><span>{n}</span><h2>{t}</h2><p>{d}</p><ArrowUpRight size={19}/></div>)}
     </section>
@@ -458,7 +458,7 @@ function ServicesPage({ go }) {
 
 function AboutPage({ go }) {
   return <>
-    <PageIntro eyebrow="TENTANG NA ASSOCIATES" title="Praktik yang dibangun di atas" italic="pertimbangan." desc="Kami memandang setiap proyek sebagai dialog antara manusia, ruang, dan kemungkinan baru."/>
+    <PageIntro title="Praktik yang dibangun di atas" italic="pertimbangan." desc="Kami memandang setiap proyek sebagai dialog antara manusia, ruang, dan kemungkinan baru."/>
     <section className="wrap about-layout">
       <img src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1400&q=85" alt="Studio NA Associates"/>
       <div>
@@ -475,7 +475,7 @@ function AboutPage({ go }) {
 function ContactPage() {
   const [sent,setSent] = useState(false);
   return <>
-    <PageIntro eyebrow="KONTAK / MULAI DISKUSI" title="Ceritakan tentang" italic="proyek Anda." desc="Memiliki gagasan ruang, lahan yang siap dirancang, atau sekadar ingin berkonsultasi? Kami senang mendengarnya."/>
+    <PageIntro title="Ceritakan tentang" italic="proyek Anda." desc="Memiliki gagasan ruang, lahan yang siap dirancang, atau sekadar ingin berkonsultasi? Kami senang mendengarnya."/>
     <section className="wrap contact-layout">
       <form className="public-form" onSubmit={e => {e.preventDefault();setSent(true);}}>
         <div className="form-grid">
@@ -510,7 +510,7 @@ function ContactPage() {
 function CareerPage() {
   const [sent,setSent] = useState(false);
   return <>
-    <PageIntro eyebrow="KARIER / BERGABUNG BERSAMA KAMI" title="Beri ruang untuk" italic="kemungkinan baru." desc="Kami selalu terbuka bertemu individu yang cermat, kreatif, dan peduli terhadap kualitas lingkungan binaan."/>
+    <PageIntro title="Beri ruang untuk" italic="kemungkinan baru." desc="Kami selalu terbuka bertemu individu yang cermat, kreatif, dan peduli terhadap kualitas lingkungan binaan."/>
     <section className="wrap career-layout">
       <div>
         <div className="eyebrow">DISKUSI TERBUKA</div>
